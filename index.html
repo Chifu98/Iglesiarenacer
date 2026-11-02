@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iglesia Renacer - Control de Miembros y Peticiones</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            church: {
+              50: '#f0f4f8',
+              100: '#d9e2ec',
+              500: '#334e68',
+              800: '#102a43',
+              900: '#0b1b2b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-200">
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-view" class="fixed inset-0 z-50 bg-church-900 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700">
+      <div class="text-center mb-8">
+        <div class="inline-flex bg-amber-500/20 p-4 rounded-2xl border border-amber-500/30 text-amber-400 mb-3">
+          <i data-lucide="church" class="w-10 h-10"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Iglesia Renacer</h2>
+        <p class="text-xs text-amber-500 font-medium mt-1">Control Congregacional - Acceso</p>
+      </div>
+
+      <div id="login-error" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs rounded-xl text-center font-medium">
+        Credenciales incorrectas o usuario inactivo.
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Usuario</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+              <i data-lucide="user" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="login-username" required placeholder="Nombre de usuario" autocomplete="username" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Contraseña</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+              <i data-lucide="key" class="w-4 h-4"></i>
+            </span>
+            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl shadow-lg hover:shadow-amber-500/20 transition flex items-center justify-center gap-2 text-sm mt-6">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Iniciar Sesión</span>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/60 text-center">
+        <p class="font-mono font-semibold text-amber-500">BIENVENIDO A <span class="font-mono font-semibold text-amber-500">IGLESIA RENACER</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-container" class="hidden min-h-full flex flex-col flex-grow">
+
+    <!-- TOP HEADER / NAVBAR -->
+    <header class="bg-church-900 border-b border-church-800 text-white sticky top-0 z-30 shadow-md">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="bg-amber-500/20 p-2.5 rounded-xl border border-amber-500/30 text-amber-400">
+            <i data-lucide="church" class="w-7 h-7"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              Iglesia Renacer
+            </h1>
+            <p class="text-xs text-amber-400/90 font-medium">Sistema de Registro y Control Congregacional</p>
+          </div>
+        </div>
+
+        <!-- Action & Dark Mode Toggle -->
+        <div class="flex items-center gap-3">
+          <!-- User info badge -->
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-church-800 rounded-xl border border-slate-700 text-xs">
+            <span id="current-user-name" class="font-semibold text-amber-400">Admin</span>
+            <span id="current-user-role-badge" class="px-2 py-0.5 rounded-md text-[10px] uppercase font-bold bg-amber-500/20 text-amber-300">ADMIN</span>
+          </div>
+
+          <!-- User Management Button (Admin only) -->
+          <button id="btn-manage-users" onclick="openUsersModal()" title="Gestión de Usuarios y Base de Datos" class="hidden p-2.5 rounded-xl bg-church-800 hover:bg-slate-700 text-amber-400 hover:text-white transition flex items-center justify-center border border-slate-700">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </button>
+
+          <!-- Dark Mode Toggle Button -->
+          <button onclick="toggleDarkMode()" 
+                  id="theme-toggle"
+                  title="Cambiar Modo Oscuro/Claro"
+                  class="p-2.5 rounded-xl bg-church-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center justify-center border border-slate-700">
+            <i data-lucide="moon" id="theme-toggle-dark-icon" class="w-5 h-5 hidden"></i>
+            <i data-lucide="sun" id="theme-toggle-light-icon" class="w-5 h-5 hidden"></i>
+          </button>
+
+          <!-- Add Request Button -->
+          <button id="btn-add-request" onclick="openRequestModal()" 
+                  class="bg-church-800 hover:bg-church-700 text-amber-400 border border-amber-500/40 font-semibold px-3 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-sm">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Nueva Petición</span>
+          </button>
+
+          <!-- Add Member Button -->
+          <button id="btn-add-member" onclick="openModal()" 
+                  class="bg-amber-500 hover:bg-amber-600 text-church-900 font-semibold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-amber-500/20 transition flex items-center gap-2 text-sm">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Nuevo Hermano</span>
+          </button>
+
+          <!-- Logout Button -->
+          <button onclick="handleLogout()" title="Cerrar Sesión" class="p-2.5 rounded-xl bg-rose-900/40 hover:bg-rose-900/80 text-rose-300 transition flex items-center justify-center border border-rose-700/50">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+      <!-- SUMMARY METRICS CARDS -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Card 1: Total -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Miembros</p>
+            <h3 id="stat-total" class="text-3xl font-bold text-slate-900 dark:text-white mt-1">0</h3>
+            <span class="text-xs text-slate-400 dark:text-slate-500 mt-1 inline-block">Registrados</span>
+          </div>
+          <div class="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+            <i data-lucide="users" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 2: Activos -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Activos</p>
+            <h3 id="stat-active" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">0</h3>
+            <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 inline-block" id="stat-active-pct">0% del total</span>
+          </div>
+          <div class="p-3 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
+            <i data-lucide="user-check" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 3: En Visita -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">En Visita</p>
+            <h3 id="stat-visits" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">0</h3>
+            <div class="flex items-center gap-2 mt-1">
+              <button onclick="shareVisits('txt')" title="Descargar como .txt" class="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5">
+                <i data-lucide="file-text" class="w-3 h-3"></i>.TXT
+              </button>
+              <span class="text-slate-300">|</span>
+              <button onclick="shareVisits('image')" title="Generar Imagen" class="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5">
+                <i data-lucide="image" class="w-3 h-3"></i>IMG
+              </button>
+              <span class="text-slate-300">|</span>
+              <button onclick="shareVisits('whatsapp')" title="Compartir WhatsApp" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 font-semibold">
+                <i data-lucide="share-2" class="w-3 h-3"></i>WSP
+              </button>
+            </div>
+          </div>
+          <div class="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+            <i data-lucide="user-plus" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 4: Ministerios -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Ministerios</p>
+            <h3 id="stat-ministries" class="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-1">0</h3>
+            <span class="text-xs text-slate-400 dark:text-slate-500 mt-1 inline-block">Grupos de servicio</span>
+          </div>
+          <div class="p-3 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
+            <i data-lucide="heart-handshake" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Card 5: Peticiones -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Peticiones</p>
+            <h3 id="stat-requests" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">0</h3>
+            <span class="text-xs text-slate-400 dark:text-slate-500 mt-1 inline-block">Oración registrada</span>
+          </div>
+          <div class="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+            <i data-lucide="book-open" class="w-6 h-6"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- BIRTHDAYS SHARE MODULE SECTION -->
+      <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="cake" class="w-5 h-5 text-amber-500"></i>
+              Módulo de Cumpleaños del Mes
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Visualiza y comparte los cumpleañeros filtrados por mes</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <!-- Month Selector -->
+            <select id="share-birthday-month" 
+                    onchange="renderBirthdayModule()"
+                    class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+              <option value="01">Enero</option>
+              <option value="02">Febrero</option>
+              <option value="03">Marzo</option>
+              <option value="04">Abril</option>
+              <option value="05">Mayo</option>
+              <option value="06">Junio</option>
+              <option value="07">Julio</option>
+              <option value="08">Agosto</option>
+              <option value="09">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+
+            <!-- Export/Share Buttons -->
+            <div class="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+              <button onclick="shareBirthdays('txt')" title="Descargar como TXT" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                <i data-lucide="file-text" class="w-4 h-4"></i> .TXT
+              </button>
+              <button onclick="shareBirthdays('image')" title="Descargar como Imagen" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                <i data-lucide="image" class="w-4 h-4"></i> Imagen
+              </button>
+              <button onclick="shareBirthdays('whatsapp')" title="Compartir en WhatsApp" class="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm">
+                <i data-lucide="share-2" class="w-4 h-4"></i> WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Birthday Module Live Container -->
+        <div id="birthday-module-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+          <!-- Dynamic cards inserted here -->
+        </div>
+        <div id="birthday-module-empty" class="hidden text-center py-6 text-xs text-slate-400">
+          No hay hermanos registrados que cumplan años en este mes.
+        </div>
+      </section>
+
+      <!-- PRAYER REQUESTS MODULE SECTION -->
+      <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="message-square-heart" class="w-5 h-5 text-amber-500"></i>
+              Módulo de Peticiones de Oración
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Seguimiento de motivos de oración presentados por la congregación</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <div class="relative flex-grow sm:flex-grow-0 sm:w-56">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="search" class="w-4 h-4"></i>
+              </div>
+              <input type="text" 
+                     id="search-request-input"
+                     onkeyup="renderRequests()"
+                     placeholder="Buscar peticiones..." 
+                     class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+
+            <select id="filter-request-time" 
+                    onchange="renderRequests()" 
+                    class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+              <option value="all">Todas las Peticiones</option>
+              <option value="last-day">Último Día (24 hrs)</option>
+            </select>
+
+            <div class="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
+              <button onclick="shareRequests('txt')" title="Descargar como archivo TXT" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                <i data-lucide="file-text" class="w-4 h-4"></i> .TXT
+              </button>
+              <button onclick="shareRequests('image')" title="Descargar Imagen estilizada" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                <i data-lucide="image" class="w-4 h-4"></i> Imagen
+              </button>
+              <button onclick="shareRequests('whatsapp')" title="Compartir en WhatsApp" class="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm">
+                <i data-lucide="share-2" class="w-4 h-4"></i> WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="requests-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamic request cards go here -->
+        </div>
+
+        <div id="requests-empty-state" class="hidden text-center py-8">
+          <p class="text-xs text-slate-500 dark:text-slate-400">No hay peticiones de oración que coincidan con el filtro seleccionado.</p>
+        </div>
+      </section>
+
+      <!-- SEARCH & FILTERS CONTROLS (MEMBERS) -->
+      <section class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex flex-col md:flex-row gap-4 justify-between items-center">
+        
+        <!-- Search input -->
+        <div class="relative w-full md:w-80">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <i data-lucide="search" class="w-4 h-4"></i>
+          </div>
+          <input type="text" 
+                 id="search-input"
+                 onkeyup="renderTable()"
+                 placeholder="Buscar hermano por nombre, teléfono..." 
+                 class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500">
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap sm:flex-nowrap gap-3 w-full md:w-auto">
+          <select id="filter-marital-status" 
+                  onchange="renderTable()" 
+                  class="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+            <option value="">Todos los Est. Civiles</option>
+            <option value="Soltero (a)">Soltero (a)</option>
+            <option value="Novio (a)">Novio (a)</option>
+            <option value="Casado (a)">Casado (a)</option>
+            <option value="Viudo (a)">Viudo (a)</option>
+          </select>
+
+          <select id="filter-ministry" 
+                  onchange="renderTable()" 
+                  class="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+            <option value="">Todos los Ministerios</option>
+            <option value="Alabanza">Alabanza</option>
+            <option value="Servidor">Servidores</option>
+            <option value="Niños">Niños</option>
+            <option value="Jóvenes">Jóvenes</option>
+            <option value="Oración">Oración</option>
+            <option value="Evangelismo">Evangelismo</option>
+            <option value="General">General</option>
+          </select>
+
+          <select id="filter-status" 
+                  onchange="renderTable()" 
+                  class="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+            <option value="">Todos los Estados</option>
+            <option value="Activo">Activo</option>
+            <option value="En Visita">En Visita</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+
+          <button onclick="resetFilters()" 
+                  title="Limpiar Filtros" 
+                  class="px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 rounded-lg text-sm font-medium transition">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- DIRECTORY TABLE (FIXED STRUCTURE) -->
+      <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100/70 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                <th class="py-3.5 px-4">Hermano / Contacto</th>
+                <th class="py-3.5 px-4">Ministerio</th>
+                <th class="py-3.5 px-4">Estado Civil</th>
+                <th class="py-3.5 px-4">Bautizado</th>
+                <th class="py-3.5 px-4">Estado</th>
+                <th class="py-3.5 px-4">Cumpleaños</th>
+                <th class="py-3.5 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="members-table-body" class="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+              <!-- Dynamic rows will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+        <div id="empty-state" class="hidden text-center py-12">
+          <div class="inline-flex p-3 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-400 mb-2">
+            <i data-lucide="users" class="w-6 h-6"></i>
+          </div>
+          <p class="text-sm font-medium text-slate-600 dark:text-slate-300">No se encontraron hermanos</p>
+          <p class="text-xs text-slate-400 mt-0.5">Intenta cambiar los términos de búsqueda o los filtros aplicados.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: GESTIÓN DE USUARIOS Y BASE DE DATOS (ADMIN) -->
+  <div id="users-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-church-900 px-6 py-4 flex justify-between items-center text-white">
+        <h3 class="font-bold text-lg flex items-center gap-2">
+          <i data-lucide="shield" class="w-5 h-5 text-amber-400"></i>
+          <span>Administración y Copias de Seguridad</span>
+        </h3>
+        <button onclick="closeUsersModal()" class="text-slate-300 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-6 overflow-y-auto">
+        <!-- PANEL IMPORTAR / EXPORTAR BASE DE DATOS -->
+        <div class="bg-amber-500/10 border border-amber-500/30 p-4 rounded-xl space-y-3">
+          <div class="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            <span>Copia de Seguridad de la Base de Datos (JSON)</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300">
+            Exporta o restaura toda la información registrada (miembros, peticiones y usuarios).
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <button onclick="exportFullDatabase()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-lg text-xs shadow flex items-center gap-2 transition">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Exportar Copia de Seguridad
+            </button>
+
+            <label class="px-4 py-2 bg-church-800 hover:bg-church-900 text-white font-semibold rounded-lg text-xs shadow flex items-center gap-2 cursor-pointer transition">
+              <i data-lucide="upload" class="w-4 h-4 text-amber-400"></i>
+              Importar Copia de Seguridad
+              <input type="file" id="input-import-json" accept=".json" onchange="importFullDatabase(event)" class="hidden">
+            </label>
+          </div>
+        </div>
+
+        <!-- Formulario Crear/Editar Usuario -->
+        <form id="user-form" onsubmit="handleUserSubmit(event)" class="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+          <input type="hidden" id="user-id">
+          <h4 id="user-form-title" class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Crear Nuevo Usuario</h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre / Alias *</label>
+              <input type="text" id="user-input-name" required placeholder="Ej: Pastor Juan" class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Usuario *</label>
+              <input type="text" id="user-input-username" required placeholder="ej: jmendoza" class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Contraseña *</label>
+              <input type="password" id="user-input-password" placeholder="••••••••" class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Tipo de Privilegio *</label>
+              <select id="user-input-role" required class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                <option value="lectura">Lectura (Solo consulta)</option>
+                <option value="escritura">Escritura (Crea y edita registros)</option>
+                <option value="admin">Administrador (Acceso Total)</option>
+              </select>
+            </div>
+
+            <div class="flex items-end gap-2">
+              <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-lg text-xs shadow transition">
+                Guardar Usuario
+              </button>
+              <button type="button" onclick="resetUserForm()" class="px-3 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-medium hover:bg-slate-300 transition">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Tabla de Usuarios -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Usuarios Registrados</h4>
+          <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300">
+                <tr>
+                  <th class="py-2.5 px-3">Nombre</th>
+                  <th class="py-2.5 px-3">Usuario</th>
+                  <th class="py-2.5 px-3">Privilegio</th>
+                  <th class="py-2.5 px-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
+                <!-- Dynamic user rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMAGE ZOOM VIEWER -->
+  <div id="image-zoom-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center hidden p-4" onclick="closeZoomModal()">
+    <div class="relative max-w-lg w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 p-2" onclick="event.stopPropagation()">
+      <button onclick="closeZoomModal()" class="absolute top-4 right-4 z-10 p-2 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <img id="zoomed-image" src="" class="w-full h-auto max-h-[80vh] object-contain rounded-xl mx-auto" alt="Foto Ampliada">
+    </div>
+  </div>
+
+  <!-- MODAL FORM: CREATE / EDIT MEMBER -->
+  <div id="member-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col">
+      
+      <div class="bg-church-900 px-6 py-4 flex justify-between items-center text-white">
+        <h3 id="modal-title" class="font-bold text-lg flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-5 h-5 text-amber-400"></i>
+          <span>Agregar Nuevo Hermano</span>
+        </h3>
+        <button onclick="closeModal()" class="text-slate-300 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="member-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
+        <input type="hidden" id="member-id">
+
+        <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div id="avatar-preview-container" class="w-16 h-16 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-lg overflow-hidden shrink-0 border-2 border-amber-400/50">
+            <span id="avatar-preview-initials">--</span>
+            <img id="avatar-preview-img" class="w-full h-full object-cover hidden" alt="Foto de perfil">
+          </div>
+          <div class="flex-grow">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Fotografía de Perfil</label>
+            <input type="file" id="input-avatar-file" accept="image/*" onchange="previewAvatar(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-church-900 hover:file:bg-amber-600 cursor-pointer">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Nombre Completo *</label>
+          <input type="text" id="input-name" required placeholder="Ej: Juan Pérez Morales" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Teléfono / WhatsApp *</label>
+            <input type="text" id="input-phone" required placeholder="+56 9 1234 5678" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Correo Electrónico</label>
+            <input type="email" id="input-email" placeholder="hermano@correo.com" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Dirección / Residencia</label>
+          <input type="text" id="input-address" placeholder="Calle, Número, Comuna" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Estado Civil *</label>
+            <select id="input-marital-status" required onchange="handleMaritalStatusChange()" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <option value="Soltero (a)">Soltero (a)</option>
+              <option value="Novio (a)">Novio (a)</option>
+              <option value="Casado (a)">Casado (a)</option>
+              <option value="Viudo (a)">Viudo (a)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Ministerio</label>
+            <select id="input-ministry" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <option value="General">General</option>
+              <option value="Alabanza">Alabanza</option>
+              <option value="Servidor">Servidores</option>
+              <option value="Niños">Niños</option>
+              <option value="Jóvenes">Jóvenes</option>
+              <option value="Oración">Oración</option>
+              <option value="Evangelismo">Evangelismo</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="spouse-section" class="hidden bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+          <label id="spouse-section-label" class="block text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Información de la Pareja / Cónyuge</label>
+          
+          <div class="flex items-center gap-4">
+            <label class="inline-flex items-center text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input type="radio" name="spouse_type" value="link" checked onchange="toggleSpouseInputType()" class="text-amber-500 focus:ring-amber-500">
+              <span class="ml-2">Enlazar con miembro existente</span>
+            </label>
+            <label class="inline-flex items-center text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+              <input type="radio" name="spouse_type" value="text" onchange="toggleSpouseInputType()" class="text-amber-500 focus:ring-amber-500">
+              <span class="ml-2">Escribir nombre</span>
+            </label>
+          </div>
+
+          <div id="spouse-select-container">
+            <select id="input-spouse-id" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <!-- Dynamic options -->
+            </select>
+          </div>
+
+          <div id="spouse-text-container" class="hidden">
+            <input type="text" id="input-spouse-name" placeholder="Nombre completo" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Estado *</label>
+            <select id="input-status" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <option value="Activo">Activo</option>
+              <option value="En Visita">En Visita</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">¿Bautizado? *</label>
+            <select id="input-baptized" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Fecha de Cumpleaños *</label>
+          <input type="date" id="input-birthday" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Observaciones / Notas Pastorales</label>
+          <textarea id="input-notes" rows="2" placeholder="Peticiones de oración, talentos u observaciones..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-church-800 hover:bg-church-900 text-white rounded-lg text-sm font-medium shadow-md transition">
+            Guardar Hermano
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL FORM: CREATE PRAYER REQUEST -->
+  <div id="request-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+      <div class="bg-church-900 px-6 py-4 flex justify-between items-center text-white">
+        <h3 class="font-bold text-lg flex items-center gap-2">
+          <i data-lucide="file-plus" class="w-5 h-5 text-amber-400"></i>
+          <span>Registrar Petición de Oración</span>
+        </h3>
+        <button onclick="closeRequestModal()" class="text-slate-300 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="request-form" onsubmit="handleRequestSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Hermano que solicita *</label>
+          <select id="request-member-select" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <!-- Dynamic options -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Detalle de la Petición *</label>
+          <textarea id="request-description" rows="3" required placeholder="Escriba el motivo de la petición..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="closeRequestModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-church-900 font-semibold rounded-lg text-sm shadow-md transition">
+            Guardar Petición
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL VIEW -->
+  <div id="details-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+      <div class="bg-slate-100 dark:bg-slate-900 px-6 py-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
+        <h3 class="font-bold text-slate-800 dark:text-white text-lg">Ficha del Hermano</h3>
+        <button onclick="closeDetailsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div class="flex items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div id="view-avatar-container" class="w-14 h-14 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-base shrink-0 overflow-hidden border-2 border-amber-400/50">
+            <span id="view-avatar-initials">--</span>
+            <img id="view-avatar-img" class="w-full h-full object-cover hidden cursor-pointer" alt="Foto" onclick="zoomImage(this.src)">
+          </div>
+          <div>
+            <h4 class="text-lg font-bold text-slate-900 dark:text-white" id="view-name">--</h4>
+            <span id="view-status-badge" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold mt-0.5">--</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Teléfono</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-phone">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Correo Electrónico</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-email">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Estado Civil</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-marital-status">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase" id="view-spouse-label">Pareja / Cónyuge</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-spouse">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Ministerio / Rol</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-ministry">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Bautizado</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-baptized">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Cumpleaños</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-date">--</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Dirección</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-address">--</p>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 dark:border-slate-700 pt-3">
+          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Observaciones Pastorales</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700" id="view-notes">--</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // SECURITY UTILITY: DOM XSS Mitigation (CWE-79 / CAPEC-63)
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    const INITIAL_USERS = [
+      {
+        id: "u_admin",
+        name: "Administrador Principal",
+        username: "admin",
+        password: "admin123",
+        role: "admin"
+      }
+    ];
+
+    const INITIAL_MEMBERS = [
+      {
+        id: "1",
+        name: "Carlos Eduardo Mendoza",
+        phone: "+56 9 8765 4321",
+        email: "carlos.mendoza@email.com",
+        address: "Av. Las Condes 4500",
+        maritalStatus: "Casado (a)",
+        spouseType: "text",
+        spouseName: "Elena Ramos",
+        spouseId: "",
+        ministry: "Alabanza",
+        status: "Activo",
+        baptized: "Sí",
+        birthday: "1990-03-15",
+        notes: "Líder de guitarra y apoyo en sonido.",
+        avatar: ""
+      },
+      {
+        id: "2",
+        name: "María José Gutiérrez",
+        phone: "+56 9 1122 3344",
+        email: "mariajose@email.com",
+        address: "Calle Los Aromos 123",
+        maritalStatus: "Soltero (a)",
+        spouseType: "none",
+        spouseName: "",
+        spouseId: "",
+        ministry: "Niños",
+        status: "Activo",
+        baptized: "Sí",
+        birthday: "1995-08-10",
+        notes: "Maestra de la clase de párvulos.",
+        avatar: ""
+      },
+      {
+        id: "3",
+        name: "Esteban Andrés Silva",
+        phone: "+56 9 5566 7788",
+        email: "esteban.silva@email.com",
+        address: "Pasaje El Roble 89",
+        maritalStatus: "Novio (a)",
+        spouseType: "none",
+        spouseName: "",
+        spouseId: "",
+        ministry: "Jóvenes",
+        status: "Activo",
+        baptized: "Sí",
+        birthday: "1998-11-20",
+        notes: "Participa activamente en las reuniones de jóvenes los sábados.",
+        avatar: ""
+      },
+      {
+        id: "4",
+        name: "Lucía Fernández",
+        phone: "+56 9 4433 2211",
+        email: "lucia.f@email.com",
+        address: "Av. Providencia 1200",
+        maritalStatus: "Viudo (a)",
+        spouseType: "none",
+        spouseName: "",
+        spouseId: "",
+        ministry: "Oración",
+        status: "Activo",
+        baptized: "Sí",
+        birthday: "1982-05-04",
+        notes: "Coordinadora de la cadena de oración matutina.",
+        avatar: ""
+      },
+      {
+        id: "5",
+        name: "Roberto Gómez Ruiz",
+        phone: "+56 9 9988 7766",
+        email: "roberto.g@email.com",
+        address: "Camino Antiguo 56",
+        maritalStatus: "Soltero (a)",
+        spouseType: "none",
+        spouseName: "",
+        spouseId: "",
+        ministry: "Servidor",
+        status: "En Visita",
+        baptized: "No",
+        birthday: "1992-11-12",
+        notes: "Primera vez en la iglesia en octubre. Mostró interés en bautizarse.",
+        avatar: ""
+      }
+    ];
+
+    const INITIAL_REQUESTS = [
+      {
+        id: "r1",
+        memberId: "1",
+        text: "Oración por salud familiar y fortaleza en el trabajo.",
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: "r2",
+        memberId: "3",
+        text: "Petición por exámenes universitarios de fin de semestre.",
+        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+
+    let users = [];
+    let currentUser = null;
+    let members = [];
+    let prayerRequests = [];
+    let currentAvatarBase64 = "";
+
+    function loadData() {
+      const storedUsers = localStorage.getItem('iglesia_renacer_users');
+      if (storedUsers) {
+        try { users = JSON.parse(storedUsers); } catch(e) { users = INITIAL_USERS; }
+      } else {
+        users = INITIAL_USERS;
+        saveUsers();
+      }
+
+      const storedMembers = localStorage.getItem('iglesia_renacer_members');
+      if (storedMembers) {
+        try { members = JSON.parse(storedMembers); } catch(e) { members = INITIAL_MEMBERS; }
+      } else {
+        members = INITIAL_MEMBERS;
+        saveMembers();
+      }
+
+      const storedRequests = localStorage.getItem('iglesia_renacer_requests');
+      if (storedRequests) {
+        try { prayerRequests = JSON.parse(storedRequests); } catch(e) { prayerRequests = INITIAL_REQUESTS; }
+      } else {
+        prayerRequests = INITIAL_REQUESTS;
+        saveRequests();
+      }
+
+      const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+      document.getElementById('share-birthday-month').value = currentMonth;
+
+      checkAuth();
+    }
+
+    function saveUsers() {
+      localStorage.setItem('iglesia_renacer_users', JSON.stringify(users));
+    }
+
+    function saveMembers() {
+      localStorage.setItem('iglesia_renacer_members', JSON.stringify(members));
+    }
+
+    function saveRequests() {
+      localStorage.setItem('iglesia_renacer_requests', JSON.stringify(prayerRequests));
+    }
+
+    /* AUTH & PERMISSIONS SYSTEM */
+    function checkAuth() {
+      const storedSession = localStorage.getItem('iglesia_renacer_session');
+      if (storedSession) {
+        try {
+          const user = JSON.parse(storedSession);
+          const validUser = users.find(u => u.id === user.id);
+          if (validUser) {
+            currentUser = validUser;
+            showAppView();
+            return;
+          }
+        } catch(e){}
+      }
+      showLoginView();
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const userVal = document.getElementById('login-username').value.trim();
+      const passVal = document.getElementById('login-password').value.trim();
+      const errorDiv = document.getElementById('login-error');
+
+      const found = users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
+      if (found) {
+        currentUser = found;
+        localStorage.setItem('iglesia_renacer_session', JSON.stringify(found));
+        errorDiv.classList.add('hidden');
+        showAppView();
+      } else {
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('iglesia_renacer_session');
+      currentUser = null;
+      showLoginView();
+    }
+
+    function showLoginView() {
+      document.getElementById('login-view').classList.remove('hidden');
+      document.getElementById('app-container').classList.add('hidden');
+    }
+
+    function showAppView() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+
+      document.getElementById('current-user-name').textContent = currentUser.name;
+      const badge = document.getElementById('current-user-role-badge');
+      badge.textContent = currentUser.role.toUpperCase();
+
+      applyRolePermissions();
+      renderDashboard();
+      renderTable();
+      renderRequests();
+      renderBirthdayModule();
+    }
+
+    function applyRolePermissions() {
+      const isLectura = currentUser.role === 'lectura';
+      const isAdmin = currentUser.role === 'admin';
+
+      const btnAddMember = document.getElementById('btn-add-member');
+      const btnAddRequest = document.getElementById('btn-add-request');
+      const btnManageUsers = document.getElementById('btn-manage-users');
+
+      if (isLectura) {
+        btnAddMember.classList.add('hidden');
+        btnAddRequest.classList.add('hidden');
+      } else {
+        btnAddMember.classList.remove('hidden');
+        btnAddRequest.classList.remove('hidden');
+      }
+
+      if (isAdmin) {
+        btnManageUsers.classList.remove('hidden');
+      } else {
+        btnManageUsers.classList.add('hidden');
+      }
+    }
+
+    /* USER MANAGEMENT (ADMIN ROLE) */
+    function openUsersModal() {
+      if (currentUser.role !== 'admin') return;
+      resetUserForm();
+      renderUsersTable();
+      document.getElementById('users-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeUsersModal() {
+      document.getElementById('users-modal').classList.add('hidden');
+    }
+
+    function resetUserForm() {
+      document.getElementById('user-form').reset();
+      document.getElementById('user-id').value = '';
+      document.getElementById('user-form-title').textContent = 'Crear Nuevo Usuario';
+      document.getElementById('user-input-password').required = true;
+    }
+
+    function handleUserSubmit(e) {
+      e.preventDefault();
+      if (currentUser.role !== 'admin') return;
+
+      const id = document.getElementById('user-id').value;
+      const name = document.getElementById('user-input-name').value.trim();
+      const username = document.getElementById('user-input-username').value.trim();
+      const password = document.getElementById('user-input-password').value.trim();
+      const role = document.getElementById('user-input-role').value;
+
+      const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== id);
+      if (existing) {
+        alert("El nombre de usuario ya se encuentra registrado.");
+        return;
+      }
+
+      if (id) {
+        const idx = users.findIndex(u => u.id === id);
+        if (idx !== -1) {
+          users[idx].name = name;
+          users[idx].username = username;
+          users[idx].role = role;
+          if (password) users[idx].password = password;
+        }
+      } else {
+        const newUser = {
+          id: 'u_' + Date.now(),
+          name,
+          username,
+          password,
+          role
+        };
+        users.push(newUser);
+      }
+
+      saveUsers();
+      resetUserForm();
+      renderUsersTable();
+    }
+
+    /* IMPORT / EXPORT DATABASE LOGIC */
+    function exportFullDatabase() {
+      if (currentUser.role !== 'admin') return;
+
+      const fullData = {
+        app: "Iglesia Renacer - Control Congregacional",
+        exportedAt: new Date().toISOString(),
+        version: "1.0",
+        data: {
+          users: users,
+          members: members,
+          prayerRequests: prayerRequests
+        }
+      };
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      const jsonString = JSON.stringify(fullData, null, 2);
+      downloadFile(jsonString, `Iglesia_Renacer_Backup_${dateStr}.json`, 'application/json');
+    }
+
+    function importFullDatabase(event) {
+      if (currentUser.role !== 'admin') return;
+
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          
+          if (!parsed.data || !Array.isArray(parsed.data.members) || !Array.isArray(parsed.data.users) || !Array.isArray(parsed.data.prayerRequests)) {
+            alert("El archivo subido no corresponde a un formato válido de copia de seguridad de Iglesia Renacer.");
+            event.target.value = '';
+            return;
+          }
+
+          const confirmImport = confirm(`¿Estás seguro de restaurar esta copia de seguridad?\n\n- Miembros: ${parsed.data.members.length}\n- Peticiones: ${parsed.data.prayerRequests.length}\n- Usuarios: ${parsed.data.users.length}\n\nNota: Se reemplazarán todos los datos actuales.`);
+          
+          if (confirmImport) {
+            users = parsed.data.users;
+            members = parsed.data.members;
+            prayerRequests = parsed.data.prayerRequests;
+
+            saveUsers();
+            saveMembers();
+            saveRequests();
+
+            const activeUserStillExists = users.find(u => u.id === currentUser.id);
+            if (!activeUserStillExists) {
+              currentUser = users[0] || INITIAL_USERS[0];
+              localStorage.setItem('iglesia_renacer_session', JSON.stringify(currentUser));
+            }
+
+            renderUsersTable();
+            renderDashboard();
+            renderTable();
+            renderRequests();
+            renderBirthdayModule();
+            applyRolePermissions();
+
+            alert("¡Base de datos restaurada con éxito!");
+          }
+        } catch (err) {
+          alert("Error al leer el archivo JSON: asegúrate de que sea un archivo de copia de seguridad válido.");
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function editUser(id) {
+      const u = users.find(usr => usr.id === id);
+      if (!u) return;
+
+      document.getElementById('user-id').value = u.id;
+      document.getElementById('user-input-name').value = u.name;
+      document.getElementById('user-input-username').value = u.username;
+      document.getElementById('user-input-password').value = '';
+      document.getElementById('user-input-password').required = false;
+      document.getElementById('user-input-role').value = u.role;
+      document.getElementById('user-form-title').textContent = 'Editar Usuario';
+    }
+
+    function deleteUser(id) {
+      if (id === currentUser.id) {
+        alert("No puedes eliminar tu propio usuario activo.");
+        return;
+      }
+
+      if (confirm("¿Estás seguro de eliminar este usuario?")) {
+        users = users.filter(u => u.id !== id);
+        saveUsers();
+        renderUsersTable();
+      }
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      tbody.innerHTML = '';
+
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
+
+        let roleBadge = "bg-slate-100 text-slate-700 border-slate-300";
+        if (u.role === 'admin') roleBadge = "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300";
+        if (u.role === 'escritura') roleBadge = "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300";
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">${escapeHtml(u.name)}</td>
+          <td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">${escapeHtml(u.username)}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase ${roleBadge}">
+              ${escapeHtml(u.role)}
+            </span>
+          </td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="editUser('${escapeHtml(u.id)}')" title="Editar" class="p-1 text-slate-400 hover:text-blue-600">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+            </button>
+            ${u.id !== currentUser.id ? `
+            <button onclick="deleteUser('${escapeHtml(u.id)}')" title="Eliminar" class="p-1 text-slate-400 hover:text-rose-600">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    /* RENDER DASHBOARD & METRICS */
+    function renderDashboard() {
+      const total = members.length;
+      const active = members.filter(m => m.status === 'Activo').length;
+      const visits = members.filter(m => m.status === 'En Visita').length;
+      const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
+      const activeMinistries = new Set(members.map(m => m.ministry).filter(m => m && m !== 'General')).size;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-active').textContent = active;
+      document.getElementById('stat-visits').textContent = visits;
+      document.getElementById('stat-active-pct').textContent = `${activePct}% del total`;
+      document.getElementById('stat-ministries').textContent = activeMinistries;
+      document.getElementById('stat-requests').textContent = prayerRequests.length;
+    }
+
+    function zoomImage(src) {
+      if (!src) return;
+      document.getElementById('zoomed-image').src = src;
+      document.getElementById('image-zoom-modal').classList.remove('hidden');
+    }
+
+    function closeZoomModal() {
+      document.getElementById('image-zoom-modal').classList.add('hidden');
+    }
+
+    function previewAvatar(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentAvatarBase64 = e.target.result;
+          const img = document.getElementById('avatar-preview-img');
+          const initials = document.getElementById('avatar-preview-initials');
+          img.src = currentAvatarBase64;
+          img.classList.remove('hidden');
+          initials.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function getBirthdayMembersForSelectedMonth() {
+      const monthSelect = document.getElementById('share-birthday-month').value;
+      return members.filter(m => {
+        if (!m.birthday) return false;
+        const parts = m.birthday.split('-');
+        return parts.length >= 2 && parts[1] === monthSelect;
+      });
+    }
+
+    function renderBirthdayModule() {
+      const container = document.getElementById('birthday-module-list');
+      const emptyState = document.getElementById('birthday-module-empty');
+      const birthdayMembers = getBirthdayMembersForSelectedMonth();
+
+      container.innerHTML = '';
+
+      if (birthdayMembers.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        birthdayMembers.forEach(m => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 flex items-center justify-between";
+          
+          const initials = m.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+          let avatarHtml = `<div class="w-8 h-8 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0">${escapeHtml(initials)}</div>`;
+          if (m.avatar) {
+            avatarHtml = `<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-amber-400/40"><img src="${escapeHtml(m.avatar)}" class="w-full h-full object-cover"></div>`;
+          }
+
+          let birthYearText = "";
+          if (m.birthday) {
+            const parts = m.birthday.split('-');
+            if (parts.length === 3) {
+              const year = parts[0];
+              const dayMonth = `${parts[2]}/${parts[1]}`;
+              birthYearText = `🎂 ${dayMonth} (${year})`;
+            }
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center gap-2.5 overflow-hidden">
+              ${avatarHtml}
+              <div class="truncate">
+                <p class="text-xs font-semibold text-slate-800 dark:text-white truncate">${escapeHtml(m.name)}</p>
+                <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">${escapeHtml(birthYearText)}</p>
+              </div>
+            </div>
+            <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('¡Feliz Cumpleaños ' + m.name + '! Que Dios te bendiga grandemente en este día. 🎂🎉 - Iglesia Renacer')}" target="_blank" title="Felicitar por WhatsApp" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition shrink-0">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+            </a>
+          `;
+          container.appendChild(card);
+        });
+      }
+      lucide.createIcons();
+    }
+
+    function shareBirthdays(format) {
+      const monthSelect = document.getElementById('share-birthday-month').value;
+      const monthNames = {
+        "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril", 
+        "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto", 
+        "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
+      };
+
+      const birthdayMembers = getBirthdayMembersForSelectedMonth();
+
+      if (birthdayMembers.length === 0) {
+        alert(`No hay hermanos registrados con fecha de cumpleaños en el mes de ${monthNames[monthSelect]}.`);
+        return;
+      }
+
+      let textContent = `🎂 CUMPLEAÑEROS DE ${monthNames[monthSelect].toUpperCase()} - IGLESIA RENACER\n\n`;
+      birthdayMembers.forEach((m, idx) => {
+        textContent += `${idx + 1}. ${m.name} - Fecha: ${m.birthday} (Tel: ${m.phone})\n`;
+      });
+
+      if (format === 'txt') {
+        downloadFile(textContent, `Cumpleanos_${monthNames[monthSelect]}.txt`, 'text/plain');
+      } else if (format === 'whatsapp') {
+        const encodedText = encodeURIComponent(textContent);
+        window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+      } else if (format === 'image') {
+        generateImage(`Cumpleaños de ${monthNames[monthSelect]}`, birthdayMembers.map(m => `${m.name} (${m.birthday})`), `Cumpleanos_${monthNames[monthSelect]}.png`);
+      }
+    }
+
+    function getFilteredRequests() {
+      const searchVal = document.getElementById('search-request-input').value.toLowerCase().trim();
+      const timeFilter = document.getElementById('filter-request-time').value;
+      const now = new Date();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+
+      return prayerRequests.filter(req => {
+        const member = members.find(m => m.id === req.memberId);
+        const memberName = member ? member.name.toLowerCase() : '';
+        const matchesSearch = req.text.toLowerCase().includes(searchVal) || memberName.includes(searchVal);
+
+        let matchesTime = true;
+        if (timeFilter === 'last-day') {
+          const reqDate = new Date(req.createdAt);
+          matchesTime = (now - reqDate) <= oneDayMs;
+        }
+
+        return matchesSearch && matchesTime;
+      });
+    }
+
+    function renderRequests() {
+      const container = document.getElementById('requests-container');
+      const emptyState = document.getElementById('requests-empty-state');
+      const filtered = getFilteredRequests();
+      const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'escritura');
+
+      container.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+
+        filtered.forEach(req => {
+          const member = members.find(m => m.id === req.memberId);
+          const memberName = member ? member.name : 'Hermano General';
+          const memberMinistry = member ? (member.ministry || 'General') : 'Sin ministerio';
+          
+          const reqDate = new Date(req.createdAt);
+          const timeFormatted = reqDate.toLocaleDateString() + ' ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          const card = document.createElement('div');
+          card.className = "bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-3";
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200/50">
+                  ${escapeHtml(memberMinistry)}
+                </span>
+                <span class="text-xs text-slate-400 flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3 h-3"></i> ${escapeHtml(timeFormatted)}
+                </span>
+              </div>
+              <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mt-2">"${escapeHtml(req.text)}"</p>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800 text-xs">
+              <span class="font-semibold text-slate-700 dark:text-slate-300">Hermano: ${escapeHtml(memberName)}</span>
+              ${canEdit ? `
+              <button onclick="deleteRequest('${escapeHtml(req.id)}')" title="Eliminar petición" class="text-slate-400 hover:text-rose-600 transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>` : ''}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    function shareRequests(format) {
+      const filtered = getFilteredRequests();
+      if (filtered.length === 0) {
+        alert("No hay peticiones de oración para exportar.");
+        return;
+      }
+
+      const dateStr = new Date().toLocaleDateString('es-ES');
+      let textContent = `🙏 PETICIONES DE ORACIÓN - IGLESIA RENACER (${dateStr})\n\n`;
+      
+      filtered.forEach((req, index) => {
+        const member = members.find(m => m.id === req.memberId);
+        const name = member ? member.name : 'Hermano';
+        textContent += `${index + 1}. ${name}: "${req.text}"\n`;
+      });
+
+      if (format === 'txt') {
+        downloadFile(textContent, `Peticiones_Oracion_${dateStr.replace(/\//g, '-')}.txt`, 'text/plain');
+      } else if (format === 'whatsapp') {
+        const encodedText = encodeURIComponent(textContent);
+        window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+      } else if (format === 'image') {
+        generateImage("Peticiones de Oración", filtered.map(r => {
+          const m = members.find(mem => mem.id === r.memberId);
+          return `${m ? m.name : 'Hermano'}: "${r.text}"`;
+        }), "peticiones_oracion.png");
+      }
+    }
+
+    function shareVisits(format) {
+      const visits = members.filter(m => m.status === 'En Visita');
+      if (visits.length === 0) {
+        alert("No hay registros de personas en estado 'En Visita' para exportar.");
+        return;
+      }
+
+      const dateStr = new Date().toLocaleDateString('es-ES');
+      let textContent = `🤝 LISTA DE VISITAS - IGLESIA RENACER (${dateStr})\n\n`;
+      
+      visits.forEach((v, index) => {
+        textContent += `${index + 1}. ${v.name} - Tel: ${v.phone} (${v.notes || 'Sin notas'})\n`;
+      });
+
+      if (format === 'txt') {
+        downloadFile(textContent, `Visitas_${dateStr.replace(/\//g, '-')}.txt`, 'text/plain');
+      } else if (format === 'whatsapp') {
+        const encodedText = encodeURIComponent(textContent);
+        window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+      } else if (format === 'image') {
+        generateImage("Hermanos En Visita", visits.map(v => `${v.name} - Tel: ${v.phone}`), "lista_visitas.png");
+      }
+    }
+
+    function downloadFile(content, fileName, contentType) {
+      const a = document.createElement("a");
+      const file = new Blob([content], { type: contentType });
+      a.href = URL.createObjectURL(file);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function generateImage(title, items, filename) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const width = 800;
+      const lineHeight = 40;
+      const padding = 50;
+      const height = padding * 2 + 100 + items.length * lineHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#102a43');
+      gradient.addColorStop(1, '#0b1b2b');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 28px Inter, sans-serif';
+      ctx.fillText('Iglesia Renacer', padding, padding + 30);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px Inter, sans-serif';
+      ctx.fillText(title, padding, padding + 70);
+
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padding, padding + 85);
+      ctx.lineTo(width - padding, padding + 85);
+      ctx.stroke();
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '16px Inter, sans-serif';
+      
+      let y = padding + 125;
+      items.forEach((item, idx) => {
+        const text = `${idx + 1}. ${item}`;
+        ctx.fillText(text.length > 75 ? text.substring(0, 72) + '...' : text, padding, y);
+        y += lineHeight;
+      });
+
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('members-table-body');
+      const emptyState = document.getElementById('empty-state');
+      if (!tbody) return;
+
+      const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+      const maritalFilter = document.getElementById('filter-marital-status').value;
+      const ministryFilter = document.getElementById('filter-ministry').value;
+      const statusFilter = document.getElementById('filter-status').value;
+
+      const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'escritura');
+
+      tbody.innerHTML = '';
+
+      const filtered = members.filter(m => {
+        const matchesSearch = 
+          m.name.toLowerCase().includes(searchVal) || 
+          m.phone.toLowerCase().includes(searchVal) || 
+          (m.email && m.email.toLowerCase().includes(searchVal));
+        
+        const matchesMarital = maritalFilter === '' || m.maritalStatus === maritalFilter;
+        const matchesMinistry = ministryFilter === '' || m.ministry === ministryFilter;
+        const matchesStatus = statusFilter === '' || m.status === statusFilter;
+
+        return matchesSearch && matchesMarital && matchesMinistry && matchesStatus;
+      });
+
+      if (filtered.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+      } else {
+        if (emptyState) emptyState.classList.add('hidden');
+
+        filtered.forEach(m => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50 transition border-b border-slate-100 dark:border-slate-700";
+
+          let statusBadgeClass = "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600";
+          if (m.status === 'Activo') statusBadgeClass = "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
+          if (m.status === 'En Visita') statusBadgeClass = "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800";
+          if (m.status === 'Inactivo') statusBadgeClass = "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800";
+
+          const initials = m.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+
+          let avatarHtml = `<div class="w-9 h-9 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0">${escapeHtml(initials)}</div>`;
+          if (m.avatar) {
+            avatarHtml = `<div class="w-9 h-9 rounded-full overflow-hidden shrink-0 border border-amber-400/40 cursor-pointer hover:opacity-80 transition" onclick="zoomImage('${escapeHtml(m.avatar)}')" title="Ver foto ampliada"><img src="${escapeHtml(m.avatar)}" class="w-full h-full object-cover" alt="Foto"></div>`;
+          }
+
+          tr.innerHTML = `
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-3">
+                ${avatarHtml}
+                <div>
+                  <p class="font-semibold text-slate-900 dark:text-white">${escapeHtml(m.name)}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(m.phone)} ${m.email ? '• ' + escapeHtml(m.email) : ''}</p>
+                </div>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                ${escapeHtml(m.ministry || 'General')}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
+              ${escapeHtml(m.maritalStatus || 'Soltero (a)')}
+            </td>
+            <td class="py-3 px-4">
+              <span class="text-xs font-medium ${m.baptized === 'Sí' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'}">
+                ${m.baptized === 'Sí' ? '✓ Bautizado' : 'Pendiente'}
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadgeClass}">
+                ${escapeHtml(m.status)}
+              </span>
+            </td>
+            <td class="py-3 px-4 text-xs text-slate-500 dark:text-slate-400">
+              ${m.birthday ? escapeHtml(formatDate(m.birthday)) : 'N/A'}
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="viewDetails('${escapeHtml(m.id)}')" title="Ver Detalle" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-church-800 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+                ${canEdit ? `
+                <button onclick="editMember('${escapeHtml(m.id)}')" title="Editar Miembro" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="deleteMember('${escapeHtml(m.id)}')" title="Eliminar" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>` : ''}
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    function handleMaritalStatusChange() {
+      const status = document.getElementById('input-marital-status').value;
+      const spouseSection = document.getElementById('spouse-section');
+      const spouseLabel = document.getElementById('spouse-section-label');
+      
+      if (status === 'Casado (a)' || status === 'Novio (a)') {
+        spouseSection.classList.remove('hidden');
+        spouseLabel.textContent = status === 'Casado (a)' ? 'Información del Cónyuge' : 'Información del Novio / Novia';
+        populateSpouseSelect();
+      } else {
+        spouseSection.classList.add('hidden');
+      }
+    }
+
+    function toggleSpouseInputType() {
+      const selectedType = document.querySelector('input[name="spouse_type"]:checked').value;
+      const selectContainer = document.getElementById('spouse-select-container');
+      const textContainer = document.getElementById('spouse-text-container');
+
+      if (selectedType === 'link') {
+        selectContainer.classList.remove('hidden');
+        textContainer.classList.add('hidden');
+      } else {
+        selectContainer.classList.add('hidden');
+        textContainer.classList.remove('hidden');
+      }
+    }
+
+    function populateSpouseSelect(currentMemberId = '') {
+      const select = document.getElementById('input-spouse-id');
+      select.innerHTML = '<option value="">-- Seleccionar Hermano(a) --</option>';
+      
+      members.forEach(m => {
+        if (m.id !== currentMemberId) {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.name;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function openModal(isEdit = false) {
+      if (currentUser.role === 'lectura') return;
+      const modal = document.getElementById('member-modal');
+      const title = document.getElementById('modal-title');
+      
+      if (!isEdit) {
+        document.getElementById('member-form').reset();
+        document.getElementById('member-id').value = '';
+        document.getElementById('input-birthday').value = new Date().toISOString().split('T')[0];
+        document.getElementById('input-marital-status').value = 'Soltero (a)';
+        currentAvatarBase64 = "";
+        
+        document.getElementById('avatar-preview-img').classList.add('hidden');
+        document.getElementById('avatar-preview-initials').classList.remove('hidden');
+        document.getElementById('avatar-preview-initials').textContent = '--';
+
+        handleMaritalStatusChange();
+        title.textContent = 'Agregar Nuevo Hermano';
+      } else {
+        title.textContent = 'Editar Información del Hermano';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('member-modal').classList.add('hidden');
+    }
+
+    function openRequestModal() {
+      if (currentUser.role === 'lectura') return;
+      const select = document.getElementById('request-member-select');
+      select.innerHTML = '';
+      members.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.name;
+        select.appendChild(opt);
+      });
+      document.getElementById('request-form').reset();
+      document.getElementById('request-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeRequestModal() {
+      document.getElementById('request-modal').classList.add('hidden');
+    }
+
+    function handleRequestSubmit(e) {
+      e.preventDefault();
+      if (currentUser.role === 'lectura') return;
+
+      const memberId = document.getElementById('request-member-select').value;
+      const text = document.getElementById('request-description').value.trim();
+
+      const newReq = {
+        id: 'r_' + Date.now(),
+        memberId: memberId,
+        text: text,
+        createdAt: new Date().toISOString()
+      };
+
+      prayerRequests.unshift(newReq);
+      saveRequests();
+      renderDashboard();
+      renderRequests();
+      closeRequestModal();
+    }
+
+    function deleteRequest(id) {
+      if (currentUser.role === 'lectura') return;
+      if (confirm("¿Estás seguro de eliminar esta petición de oración?")) {
+        prayerRequests = prayerRequests.filter(r => r.id !== id);
+        saveRequests();
+        renderDashboard();
+        renderRequests();
+      }
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      if (currentUser.role === 'lectura') return;
+
+      const id = document.getElementById('member-id').value;
+      const currentMemberId = id || Date.now().toString();
+      const name = document.getElementById('input-name').value.trim();
+      const maritalStatus = document.getElementById('input-marital-status').value;
+      
+      let spouseType = 'none';
+      let spouseName = '';
+      let spouseId = '';
+
+      if (maritalStatus === 'Casado (a)' || maritalStatus === 'Novio (a)') {
+        spouseType = document.querySelector('input[name="spouse_type"]:checked').value;
+        if (spouseType === 'link') {
+          spouseId = document.getElementById('input-spouse-id').value;
+          const foundSpouse = members.find(m => m.id === spouseId);
+          spouseName = foundSpouse ? foundSpouse.name : '';
+        } else {
+          spouseName = document.getElementById('input-spouse-name').value.trim();
+        }
+      }
+
+      const oldMember = members.find(m => m.id === currentMemberId);
+      if (oldMember && oldMember.spouseId && oldMember.spouseId !== spouseId) {
+        const oldSpouse = members.find(m => m.id === oldMember.spouseId);
+        if (oldSpouse && oldSpouse.spouseId === currentMemberId) {
+          oldSpouse.spouseId = '';
+          oldSpouse.spouseName = '';
+          oldSpouse.spouseType = 'none';
+        }
+      }
+
+      let avatarToSave = currentAvatarBase64;
+      if (!avatarToSave && oldMember) {
+        avatarToSave = oldMember.avatar || '';
+      }
+
+      const memberData = {
+        id: currentMemberId,
+        name: name,
+        phone: document.getElementById('input-phone').value.trim(),
+        email: document.getElementById('input-email').value.trim(),
+        address: document.getElementById('input-address').value.trim(),
+        maritalStatus: maritalStatus,
+        spouseType: spouseType,
+        spouseName: spouseName,
+        spouseId: spouseId,
+        ministry: document.getElementById('input-ministry').value,
+        status: document.getElementById('input-status').value,
+        baptized: document.getElementById('input-baptized').value,
+        birthday: document.getElementById('input-birthday').value,
+        notes: document.getElementById('input-notes').value.trim(),
+        avatar: avatarToSave
+      };
+
+      if (id) {
+        const index = members.findIndex(m => m.id === id);
+        if (index !== -1) members[index] = memberData;
+      } else {
+        members.unshift(memberData);
+      }
+
+      if ((maritalStatus === 'Casado (a)' || maritalStatus === 'Novio (a)') && spouseType === 'link' && spouseId) {
+        const targetSpouse = members.find(m => m.id === spouseId);
+        if (targetSpouse) {
+          targetSpouse.maritalStatus = maritalStatus;
+          targetSpouse.spouseType = 'link';
+          targetSpouse.spouseId = currentMemberId;
+          targetSpouse.spouseName = name;
+        }
+      }
+
+      saveMembers();
+      renderDashboard();
+      renderTable();
+      renderBirthdayModule();
+      closeModal();
+    }
+
+    function editMember(id) {
+      if (currentUser.role === 'lectura') return;
+      const member = members.find(m => m.id === id);
+      if (!member) return;
+
+      document.getElementById('member-id').value = member.id;
+      document.getElementById('input-name').value = member.name;
+      document.getElementById('input-phone').value = member.phone;
+      document.getElementById('input-email').value = member.email || '';
+      document.getElementById('input-address').value = member.address || '';
+      document.getElementById('input-marital-status').value = member.maritalStatus || 'Soltero (a)';
+      
+      currentAvatarBase64 = member.avatar || '';
+      const previewImg = document.getElementById('avatar-preview-img');
+      const previewInitials = document.getElementById('avatar-preview-initials');
+      
+      if (currentAvatarBase64) {
+        previewImg.src = currentAvatarBase64;
+        previewImg.classList.remove('hidden');
+        previewInitials.classList.add('hidden');
+      } else {
+        previewImg.classList.add('hidden');
+        previewInitials.classList.remove('hidden');
+        previewInitials.textContent = member.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+      }
+
+      handleMaritalStatusChange();
+      populateSpouseSelect(member.id);
+
+      if (member.maritalStatus === 'Casado (a)' || member.maritalStatus === 'Novio (a)') {
+        const spouseType = member.spouseType || 'link';
+        const radio = document.querySelector(`input[name="spouse_type"][value="${spouseType}"]`);
+        if (radio) radio.checked = true;
+        
+        toggleSpouseInputType();
+
+        if (spouseType === 'link') {
+          document.getElementById('input-spouse-id').value = member.spouseId || '';
+        } else {
+          document.getElementById('input-spouse-name').value = member.spouseName || '';
+        }
+      }
+
+      document.getElementById('input-ministry').value = member.ministry || 'General';
+      document.getElementById('input-status').value = member.status || 'Activo';
+      document.getElementById('input-baptized').value = member.baptized || 'Sí';
+      document.getElementById('input-birthday').value = member.birthday || '';
+      document.getElementById('input-notes').value = member.notes || '';
+
+      openModal(true);
+    }
+
+    function deleteMember(id) {
+      if (currentUser.role === 'lectura') return;
+      const member = members.find(m => m.id === id);
+      if (!member) return;
+
+      const confirmed = window.confirm(`¿Está seguro de eliminar a ${member.name} de los registros?`);
+      if (confirmed) {
+        if (member.spouseId) {
+          const partner = members.find(m => m.id === member.spouseId);
+          if (partner && partner.spouseId === id) {
+            partner.spouseId = '';
+            partner.spouseName = '';
+            partner.spouseType = 'none';
+          }
+        }
+
+        members = members.filter(m => m.id !== id);
+        saveMembers();
+        renderDashboard();
+        renderTable();
+        renderBirthdayModule();
+      }
+    }
+
+    function viewDetails(id) {
+      const member = members.find(m => m.id === id);
+      if (!member) return;
+
+      const initials = member.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+      const viewImg = document.getElementById('view-avatar-img');
+      const viewInitials = document.getElementById('view-avatar-initials');
+
+      if (member.avatar) {
+        viewImg.src = member.avatar;
+        viewImg.classList.remove('hidden');
+        viewInitials.classList.add('hidden');
+      } else {
+        viewImg.classList.add('hidden');
+        viewInitials.classList.remove('hidden');
+        viewInitials.textContent = initials;
+      }
+
+      document.getElementById('view-name').textContent = member.name;
+      
+      const badge = document.getElementById('view-status-badge');
+      badge.textContent = member.status;
+      badge.className = `inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+        member.status === 'Activo' ? 'bg-emerald-100 text-emerald-800' :
+        member.status === 'En Visita' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
+      }`;
+
+      document.getElementById('view-phone').textContent = member.phone || 'No registrado';
+      document.getElementById('view-email').textContent = member.email || 'No registrado';
+      document.getElementById('view-marital-status').textContent = member.maritalStatus || 'Soltero (a)';
+      
+      let spouseDisplay = 'N/A';
+      if (member.maritalStatus === 'Casado (a)' || member.maritalStatus === 'Novio (a)') {
+        if (member.spouseType === 'link' && member.spouseId) {
+          const spouseObj = members.find(m => m.id === member.spouseId);
+          spouseDisplay = spouseObj ? spouseObj.name : (member.spouseName || 'Hermano registrado');
+        } else {
+          spouseDisplay = member.spouseName || 'No especificado';
+        }
+      }
+
+      document.getElementById('view-spouse-label').textContent = member.maritalStatus === 'Casado (a)' ? 'Cónyuge' : 'Pareja / Novio(a)';
+      document.getElementById('view-spouse').textContent = spouseDisplay;
+
+      document.getElementById('view-ministry').textContent = member.ministry || 'General';
+      document.getElementById('view-baptized').textContent = member.baptized;
+      document.getElementById('view-address').textContent = member.address || 'Sin dirección';
+      document.getElementById('view-date').textContent = member.birthday ? formatDate(member.birthday) : 'N/A';
+      document.getElementById('view-notes').textContent = member.notes || 'Sin observaciones pastorales.';
+
+      document.getElementById('details-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDetailsModal() {
+      document.getElementById('details-modal').classList.add('hidden');
+    }
+
+    function resetFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-marital-status').value = '';
+      document.getElementById('filter-ministry').value = '';
+      document.getElementById('filter-status').value = '';
+      renderTable();
+    }
+
+    function updateThemeIcons(isDark) {
+      const darkIcon = document.getElementById('theme-toggle-dark-icon');
+      const lightIcon = document.getElementById('theme-toggle-light-icon');
+      if (isDark) {
+        darkIcon.classList.add('hidden');
+        lightIcon.classList.remove('hidden');
+      } else {
+        lightIcon.classList.add('hidden');
+        darkIcon.classList.remove('hidden');
+      }
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcons(isDark);
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.contains('dark');
+      if (isDark) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        updateThemeIcons(false);
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        updateThemeIcons(true);
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}`;
+      }
+      return dateStr;
+    }
+
+    window.onload = function() {
+      initTheme();
+      loadData();
+      lucide.createIcons();
+    };
+  </script>
+</body>
+</html>
