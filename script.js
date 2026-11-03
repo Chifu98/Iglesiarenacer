@@ -260,47 +260,69 @@ async function submitPublicMemberRegistration(event) {
   const form = document.getElementById("public-member-form");
   const button = document.getElementById("public-member-submit");
   if (document.getElementById("public-member-website").value.trim()) return;
+
   const name = document.getElementById("public-member-name").value.trim();
   const phone = document.getElementById("public-member-phone").value.trim();
   const email = document.getElementById("public-member-email").value.trim().toLowerCase();
+  const password = document.getElementById("public-member-password").value;
   const address = document.getElementById("public-member-address").value.trim();
   const maritalStatus = document.getElementById("public-member-marital").value;
   const spouseName = (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)")
-    ? document.getElementById("public-member-spouse").value.trim()
-    : "";
+    ? document.getElementById("public-member-spouse").value.trim() : "";
   const ministry = document.getElementById("public-member-ministry").value;
   const baptized = document.getElementById("public-member-baptized").value;
   const birthday = document.getElementById("public-member-birthday").value;
-  if (name.length < 3 || phone.length < 7 || !birthday) {
-    showPublicMemberMessage("Revisa el nombre, teléfono y fecha de nacimiento antes de enviar.");
+
+  if (name.length < 3 || phone.length < 7 || !email || !birthday || password.length < 8) {
+    showPublicMemberMessage("Revisa tus datos. El correo es obligatorio y la contraseña debe tener al menos 8 caracteres.");
     return;
   }
+
   button.disabled = true;
-  button.textContent = "Enviando solicitud...";
+  button.textContent = "Creando cuenta y solicitud...";
+  let requestId = null;
   try {
-    const { error } = await window.supabaseClient
+    const { data: request, error: requestError } = await window.supabaseClient
       .from("solicitudes_registro_miembros")
       .insert({
-        name,
-        phone,
-        email: email || null,
-        address: address || null,
+        name, phone, email, address: address || null,
         marital_status: maritalStatus,
         spouse_type: spouseName ? "text" : "none",
-        spouse_name: spouseName || null,
-        spouse_id: null,
-        ministry,
-        baptized,
-        birthday,
-        status: "Activo"
-      });
+        spouse_name: spouseName || null, spouse_id: null,
+        ministry, baptized, birthday, status: "Activo"
+      })
+      .select("id")
+      .single();
+    if (requestError) throw requestError;
+    requestId = request.id;
+
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre: name, tipo_cuenta: "hermano", solicitud_id: requestId },
+        emailRedirectTo: window.location.origin
+      }
+    });
     if (error) throw error;
+    if (!data.user) throw new Error("Supabase no devolvió la cuenta creada. Contacta al administrador antes de volver a intentarlo.");
+    if (data.session) await window.supabaseClient.auth.signOut();
+
     form.reset();
     togglePublicSpouseField();
-    showPublicMemberMessage("¡Solicitud recibida! Tus datos quedaron pendientes de revisión. Un administrador deberá aprobarlos antes de incorporarlos al registro oficial de miembros.", true);
+    showPublicMemberMessage(
+      "¡Solicitud y cuenta creadas! Revisa tu correo para confirmar la dirección, si se te solicita. Tu acceso seguirá bloqueado hasta que un administrador apruebe tu incorporación.",
+      true
+    );
   } catch (error) {
-    console.error("Error enviando registro público:", error);
-    showPublicMemberMessage("No se pudo enviar tu solicitud. " + (error.message || "Inténtalo nuevamente."));
+    console.error("Error creando solicitud/cuenta de hermano:", { error, requestId });
+    showPublicMemberMessage(
+      "No se pudo completar el registro. " +
+      (requestId
+        ? "La solicitud quedó registrada, pero la cuenta no se confirmó. Contacta al administrador para revisar y evitar solicitudes duplicadas. "
+        : "") +
+      (error.message || "Inténtalo nuevamente.")
+    );
   } finally {
     button.disabled = false;
     button.textContent = "Enviar solicitud de registro";
