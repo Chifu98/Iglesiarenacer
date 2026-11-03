@@ -60,4 +60,20 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.anuncios TO authenticated;
 CREATE INDEX IF NOT EXISTS anuncios_creado_en_idx
 ON public.anuncios (creado_en DESC);
 
+-- Habilitar sincronización en tiempo real para los clientes conectados.
+DO $
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime')
+     AND NOT EXISTS (
+       SELECT 1
+       FROM pg_publication_tables
+       WHERE pubname = 'supabase_realtime'
+         AND schemaname = 'public'
+         AND tablename = 'anuncios'
+     ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.anuncios;
+  END IF;
+END;
+$;
+
 COMMIT;
