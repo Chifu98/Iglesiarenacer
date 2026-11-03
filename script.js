@@ -149,7 +149,7 @@ async function loadProfilesFromCloud() {
 
   const { data, error } = await window.supabaseClient
     .from("perfiles_app")
-    .select("id,nombre,usuario,rol,activo,estado_solicitud")
+    .select("id,nombre,usuario,rol,activo,estado_solicitud,miembro_id")
     .order("nombre", { ascending: true });
 
   if (error) throw error;
@@ -160,7 +160,8 @@ async function loadProfilesFromCloud() {
     username: profile.usuario || profile.id,
     role: profile.rol,
     active: profile.activo,
-    requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente")
+    requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
+    memberId: profile.miembro_id || ""
   }));
 }
 
@@ -891,7 +892,7 @@ async function rejectSignup(userId) {
 
 async function changeUserRole(userId, newRole) {
   if (!currentUser || currentUser.role !== "admin") return;
-  const allowedRoles = ["admin", "escritura", "lectura"];
+  const allowedRoles = ["admin", "escritura", "lectura", "hermano"];
   const targetUser = users.find(user => user.id === userId);
   if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) {
     renderUsersTable();
@@ -917,6 +918,55 @@ async function changeUserRole(userId, newRole) {
   alert("Rol actualizado correctamente. Si el usuario tenía una sesión abierta, deberá actualizar la página para aplicar los nuevos permisos.");
 }
 
+
+async function linkUserToMember(userId, memberId) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const targetUser = users.find(user => user.id === userId);
+  if (!targetUser || userId === currentUser.id) {
+    renderUsersTable();
+    return;
+  }
+
+  const normalizedMemberId = memberId || null;
+  if (normalizedMemberId) {
+    const member = members.find(item => String(item.id) === String(normalizedMemberId));
+    if (!member) {
+      alert("El miembro seleccionado ya no está disponible. Actualiza los datos.");
+      renderUsersTable();
+      return;
+    }
+    const alreadyLinked = users.find(user => user.id !== userId && user.memberId === normalizedMemberId);
+    if (alreadyLinked) {
+      alert("Este miembro ya está vinculado a otra cuenta (" + alreadyLinked.name + "). Desvincúlalo primero si corresponde.");
+      renderUsersTable();
+      return;
+    }
+  }
+
+  const selectedMember = members.find(item => String(item.id) === String(normalizedMemberId));
+  const label = selectedMember ? selectedMember.name : "ningún miembro";
+  if (!confirm("¿Vincular la cuenta de " + targetUser.name + " con " + label + "?")) {
+    renderUsersTable();
+    return;
+  }
+
+  const { error } = await window.supabaseClient
+    .from("perfiles_app")
+    .update({ miembro_id: normalizedMemberId })
+    .eq("id", userId);
+  if (error) {
+    alert("No se pudo actualizar la vinculación: " + error.message);
+    renderUsersTable();
+    return;
+  }
+
+  await loadProfilesFromCloud();
+  renderUsersTable();
+  alert(normalizedMemberId
+    ? "Cuenta vinculada correctamente con el miembro seleccionado."
+    : "La cuenta quedó desvinculada del registro de miembros.");
+}
+
 function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
   tbody.innerHTML = "";
@@ -925,16 +975,23 @@ function renderUsersTable() {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
-    const roleOptions = ["admin", "escritura", "lectura"].map(role =>
+    const roleOptions = ["admin", "escritura", "lectura", "hermano"].map(role =>
       '<option value="' + role + '"' + (user.role === role ? " selected" : "") + '>' + role + '</option>'
     ).join("");
-    const roleControl = user.role === "hermano"
-      ? '<span class="inline-block px-2 py-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[10px] font-semibold">hermano</span>'
-      : '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
-        (user.id === currentUser.id ? "disabled " : "") +
-        'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
-        'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
-        (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+    const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
+      (user.id === currentUser.id ? "disabled " : "") +
+      'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
+      'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
+      (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+    const memberOptions = '<option value="">Sin vincular</option>' + members.map(member =>
+      '<option value="' + escapeHtml(member.id) + '"' + (user.memberId === member.id ? " selected" : "") + '>' +
+      escapeHtml(member.name) + '</option>'
+    ).join("");
+    const memberControl = '<select aria-label="Vincular miembro a ' + escapeHtml(user.name) + '" ' +
+      (user.id === currentUser.id ? "disabled " : "") +
+      'onchange="linkUserToMember(\'' + escapeHtml(user.id) + '\', this.value)" ' +
+      'class="min-w-[150px] max-w-[210px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' +
+      memberOptions + '</select>';
 
     let statusAction = "";
     if (user.active || user.requestStatus === "aprobado") {
@@ -950,7 +1007,8 @@ function renderUsersTable() {
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3">' + roleControl + '</td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Rol de acceso</div></div></td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
 
     tbody.appendChild(tr);
