@@ -11,8 +11,14 @@ function escapeHtml(str) {
 
 let users = [];
 let currentUser = null;
-function hasRole(role) { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role)); }
-function roleDisplayName(role) { return role === "hermano" ? "Miembro" : role; }
+function hasRole(role) {
+  if (!currentUser || !Array.isArray(currentUser.roles)) return false;
+  if (role === "escritura") return currentUser.roles.some(item => ["escritura", "pastor", "servidor"].includes(item));
+  return currentUser.roles.includes(role);
+}
+function roleDisplayName(role) {
+  return ({ hermano: "Miembro", pastor: "Pastor", servidor: "Servidor" })[role] || role;
+}
 function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
 let members = [];
 let prayerRequests = [];
@@ -861,7 +867,7 @@ async function rejectSignup(userId) {
 
 async function changeUserRole(userId, newRole) {
   if (!currentUser || !hasRole("admin")) return;
-  const allowedRoles = ["admin", "escritura", "lectura", "hermano"];
+  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "servidor", "hermano"];
   const targetUser = users.find(user => user.id === userId);
   if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) { renderUsersTable(); return; }
   if (targetUser.role === newRole) return;
@@ -934,6 +940,8 @@ function renderUsersTable() {
       { value: "hermano", label: "Miembro" },
       { value: "lectura", label: "Miembro + Lectura" },
       { value: "escritura", label: "Miembro + Escritura" },
+      { value: "pastor", label: "Miembro + Pastor" },
+      { value: "servidor", label: "Miembro + Servidor" },
       { value: "admin", label: "Miembro + Admin" }
     ];
     const currentExtraRole = (user.roles || ["hermano"]).find(role => role !== "hermano") || "hermano";
