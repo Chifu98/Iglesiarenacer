@@ -420,6 +420,7 @@ async function handleLogout() {
   users = [];
   members = [];
   prayerRequests = [];
+  announcements = [];
   showLoginView();
 }
 
@@ -456,6 +457,10 @@ function startRealtimeSync() {
     )
     .on("postgres_changes",
       { event: "*", schema: "public", table: "peticiones_oracion" },
+      scheduleCloudRefresh
+    )
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "anuncios" },
       scheduleCloudRefresh
     )
     .on("postgres_changes",
