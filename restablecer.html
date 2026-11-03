@@ -83,13 +83,14 @@
                     email,
                     {
                         redirectTo:
-                        "https://TU-DOMINIO.vercel.app/restablecer.html"
+                        "https://iglesiarenacer.vercel.app/restablecer.html"
                     }
                 );
 
             if (error) {
-                mensaje.textContent = "Error: " + error.message;
-                return;
+                console.error(error.message);
+            } else {
+                alert("Revisa tu correo electrónico.");
             }
 
             mensaje.textContent =
