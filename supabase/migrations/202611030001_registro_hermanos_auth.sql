@@ -6,6 +6,10 @@ ALTER TABLE public.solicitudes_registro_miembros
   ADD COLUMN IF NOT EXISTS auth_user_id uuid
   REFERENCES auth.users(id) ON DELETE SET NULL;
 
+-- El formulario público exige correo; evita solicitudes nuevas sin identidad de acceso.
+ALTER TABLE public.solicitudes_registro_miembros
+  ALTER COLUMN email SET NOT NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS solicitudes_registro_miembros_auth_user_id_uidx
   ON public.solicitudes_registro_miembros(auth_user_id)
   WHERE auth_user_id IS NOT NULL;
