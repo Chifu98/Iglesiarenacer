@@ -33,7 +33,7 @@ function mapDbMemberToApp(row) {
     status: row.status || "Activo",
     baptized: row.baptized || "No",
     birthday: row.birthday || "",
-    notes: row.notes || "",
+    notes: "", // Las notas pastorales se cargan por separado y solo para administradores.
     avatar: row.avatar || ""
   };
 }
@@ -53,7 +53,6 @@ function mapAppMemberToDb(member) {
     status: member.status || "Activo",
     baptized: member.baptized || null,
     birthday: member.birthday || null,
-    notes: member.notes || null,
     avatar: member.avatar || null,
     updated_at: new Date().toISOString()
   };
@@ -87,7 +86,19 @@ async function refreshCloudData() {
   if (membersResult.error) throw membersResult.error;
   if (requestsResult.error) throw requestsResult.error;
 
-  members = (membersResult.data || []).map(mapDbMemberToApp);
+  let privateNotes = new Map();
+  if (currentUser && currentUser.role === "admin") {
+    const notesResult = await client
+      .from("notas_pastorales")
+      .select("miembro_id,nota");
+    if (notesResult.error) throw notesResult.error;
+    privateNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
+  }
+
+  members = (membersResult.data || []).map(row => ({
+    ...mapDbMemberToApp(row),
+    notes: privateNotes.get(row.id) || ""
+  }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
 }
 
@@ -99,6 +110,23 @@ async function saveMembers() {
     .upsert(rows, { onConflict: "id" });
 
   if (error) throw error;
+
+  // Las notas pastorales se guardan en una tabla separada con RLS exclusiva de administradores.
+  if (currentUser && currentUser.role === "admin") {
+    const privateRows = members.map(member => ({
+      miembro_id: String(member.id),
+      nota: member.notes || "",
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.id
+    }));
+
+    if (privateRows.length) {
+      const { error: notesError } = await window.supabaseClient
+        .from("notas_pastorales")
+        .upsert(privateRows, { onConflict: "miembro_id" });
+      if (notesError) throw notesError;
+    }
+  }
 }
 
 async function saveRequests() {
@@ -284,6 +312,10 @@ function startRealtimeSync() {
       { event: "*", schema: "public", table: "peticiones_oracion" },
       scheduleCloudRefresh
     )
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "notas_pastorales" },
+      scheduleCloudRefresh
+    )
     .subscribe(status => {
       if (status === "CHANNEL_ERROR") {
         console.error("No se pudo iniciar la sincronización en tiempo real.");
@@ -328,6 +360,11 @@ function applyRolePermissions() {
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
   const btnManageUsers = document.getElementById("btn-manage-users");
+  const notesField = document.getElementById("notes-field");
+  const notesSection = document.getElementById("view-notes-section");
+
+  if (notesField) notesField.classList.toggle("hidden", !isAdmin);
+  if (notesSection) notesSection.classList.toggle("hidden", !isAdmin);
 
   if (isLectura) {
     btnAddMember.classList.add("hidden");
