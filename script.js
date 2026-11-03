@@ -1131,7 +1131,60 @@ async function loadAuditLog() {
 
 /* RENDER DASHBOARD & METRICS */
 /* RENDER DASHBOARD & METRICS */
+function renderPersonalWelcomeCard() {
+  const nameNode = document.getElementById("welcome-member-name");
+  const subtitleNode = document.getElementById("welcome-member-subtitle");
+  const avatar = document.getElementById("welcome-member-avatar");
+  const initialsNode = document.getElementById("welcome-member-initials");
+  const ministryNode = document.getElementById("welcome-member-ministry");
+  const statusNode = document.getElementById("welcome-member-status");
+  const profileButton = document.getElementById("welcome-view-profile");
+  if (!nameNode || !currentUser) return;
+
+  const linkedMember = currentUser.memberId
+    ? members.find(member => String(member.id) === String(currentUser.memberId))
+    : null;
+  const displayName = linkedMember ? linkedMember.name : (currentUser.name || "Hermano");
+  const initials = displayName.split(/\\s+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("").toUpperCase() || "R";
+
+  nameNode.textContent = displayName;
+  subtitleNode.textContent = linkedMember
+    ? "Qué bueno tenerte en casa. Este es tu espacio en la congregación."
+    : "Tu cuenta está activa en el sistema congregacional.";
+
+  if (linkedMember && linkedMember.avatar) {
+    avatar.src = linkedMember.avatar;
+    avatar.alt = "Fotografía de " + displayName;
+    avatar.classList.remove("hidden");
+    initialsNode.classList.add("hidden");
+  } else {
+    avatar.removeAttribute("src");
+    avatar.classList.add("hidden");
+    initialsNode.textContent = initials;
+    initialsNode.classList.remove("hidden");
+  }
+
+  ministryNode.textContent = linkedMember ? (linkedMember.ministry || "General") : "";
+  ministryNode.classList.toggle("hidden", !linkedMember);
+  statusNode.textContent = linkedMember ? (linkedMember.status || "Activo") : "";
+  statusNode.classList.toggle("hidden", !linkedMember);
+  statusNode.className = "px-3 py-1 rounded-full text-xs font-semibold " +
+    (linkedMember && linkedMember.status === "Activo"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300"
+      : "bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200");
+
+  profileButton.classList.toggle("hidden", !linkedMember);
+  profileButton.classList.toggle("flex", !!linkedMember);
+}
+
+function viewCurrentMemberProfile() {
+  if (!currentUser || !currentUser.memberId) return;
+  const linkedMember = members.find(member => String(member.id) === String(currentUser.memberId));
+  if (linkedMember) viewDetails(linkedMember.id);
+}
+
 function renderDashboard() {
+  renderPersonalWelcomeCard();
   const total = members.length;
   const active = members.filter(m => m.status === 'Activo').length;
   const visits = members.filter(m => m.status === 'En Visita').length;
