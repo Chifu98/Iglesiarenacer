@@ -466,6 +466,172 @@ async function handleUserSubmit(event) {
   alert("Por seguridad, las contraseñas no se crean ni almacenan desde esta página. Crea la cuenta en Supabase → Authentication → Users y luego registra su perfil en perfiles_app.");
 }
 
+/* COPIAS DE SEGURIDAD Y RESTAURACIÓN DIRECTAS DE SUPABASE (SOLO ADMIN) */
+async function readSupabaseTableForBackup(table) {
+  const pageSize = 1000;
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await window.supabaseClient
+      .from(table)
+      .select("*")
+      .range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+function setSupabaseBackupStatus(message, isError = false) {
+  const status = document.getElementById("supabase-backup-status");
+  if (!status) return;
+  status.textContent = message;
+  status.className = "text-xs " + (isError
+    ? "text-red-600 dark:text-red-400"
+    : "text-slate-500 dark:text-slate-400");
+}
+
+async function createSupabaseBackup() {
+  if (!currentUser || currentUser.role !== "admin") {
+    alert("Solo un administrador puede crear copias de seguridad.");
+    return;
+  }
+
+  const button = document.querySelector('button[onclick="createSupabaseBackup()"]');
+  if (button) button.disabled = true;
+  setSupabaseBackupStatus("Consultando Supabase y preparando el archivo...");
+
+  try {
+    const [membersRows, requestRows, notesRows] = await Promise.all([
+      readSupabaseTableForBackup("miembros_app"),
+      readSupabaseTableForBackup("peticiones_oracion"),
+      readSupabaseTableForBackup("notas_pastorales")
+    ]);
+
+    const backup = {
+      app: "Iglesia Renacer - Control Congregacional",
+      format: "renacer-supabase-backup",
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUser.name || "Administrador",
+      source: "Supabase",
+      data: {
+        miembros_app: membersRows,
+        peticiones_oracion: requestRows,
+        notas_pastorales: notesRows.map(row => ({
+          miembro_id: row.miembro_id,
+          nota: row.nota,
+          updated_at: row.updated_at
+        }))
+      }
+    };
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = "Iglesia_Renacer_Supabase_Backup_" + dateStr + ".json";
+    downloadFile(JSON.stringify(backup, null, 2), filename, "application/json");
+    setSupabaseBackupStatus(
+      "Copia creada: " + membersRows.length + " miembros, " +
+      requestRows.length + " peticiones y " + notesRows.length + " notas pastorales."
+    );
+  } catch (error) {
+    console.error("Error creando copia de Supabase:", error);
+    setSupabaseBackupStatus("No se pudo crear la copia: " + error.message, true);
+    alert("No se pudo crear la copia de seguridad: " + error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function restoreSupabaseBackup(event) {
+  if (!currentUser || currentUser.role !== "admin") {
+    alert("Solo un administrador puede restaurar copias de seguridad.");
+    event.target.value = "";
+    return;
+  }
+
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  setSupabaseBackupStatus("Validando el archivo de respaldo...");
+
+  try {
+    const parsed = JSON.parse(await file.text());
+    const data = parsed && parsed.data;
+    const validFormat = parsed &&
+      parsed.format === "renacer-supabase-backup" &&
+      parsed.schemaVersion === 1 &&
+      data &&
+      Array.isArray(data.miembros_app) &&
+      Array.isArray(data.peticiones_oracion) &&
+      Array.isArray(data.notas_pastorales);
+
+    if (!validFormat) {
+      throw new Error("El archivo no es una copia de Supabase válida de Iglesia Renacer o su versión no es compatible.");
+    }
+
+    const validMembers = data.miembros_app.every(row =>
+      row && typeof row.id === "string" && row.id.length > 0
+    );
+    const validRequests = data.peticiones_oracion.every(row =>
+      row && typeof row.id === "string" && row.id.length > 0
+    );
+    const validNotes = data.notas_pastorales.every(row =>
+      row && typeof row.miembro_id === "string" &&
+      typeof row.nota === "string"
+    );
+    if (!validMembers || !validRequests || !validNotes) {
+      throw new Error("El archivo contiene registros sin identificadores válidos.");
+    }
+
+    const confirmed = confirm(
+      "Vas a restaurar desde: " + file.name + "\n\n" +
+      "Miembros: " + data.miembros_app.length + "\n" +
+      "Peticiones: " + data.peticiones_oracion.length + "\n" +
+      "Notas pastorales: " + data.notas_pastorales.length + "\n\n" +
+      "Los registros con el mismo ID serán actualizados y los que falten serán recuperados. " +
+      "Los registros actuales que no estén en el archivo NO se eliminarán. " +
+      "¿Deseas continuar?"
+    );
+    if (!confirmed) {
+      setSupabaseBackupStatus("Restauración cancelada.");
+      return;
+    }
+
+    setSupabaseBackupStatus("Restaurando miembros...");
+    const upsertInBatches = async (table, rows, conflict) => {
+      const batchSize = 100;
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const { error } = await window.supabaseClient
+          .from(table)
+          .upsert(batch, { onConflict: conflict });
+        if (error) throw new Error("Error en " + table + ": " + error.message);
+      }
+    };
+
+    await upsertInBatches("miembros_app", data.miembros_app, "id");
+    setSupabaseBackupStatus("Restaurando peticiones...");
+    await upsertInBatches("peticiones_oracion", data.peticiones_oracion, "id");
+    setSupabaseBackupStatus("Restaurando notas pastorales...");
+    await upsertInBatches("notas_pastorales", data.notas_pastorales, "miembro_id");
+
+    await refreshCloudData();
+    renderDashboard();
+    renderTable();
+    renderRequests();
+    renderBirthdayModule();
+
+    setSupabaseBackupStatus("Restauración completada. Los datos ya están sincronizados con Supabase.");
+    alert("Restauración completada correctamente. Se recuperaron o actualizaron los registros del archivo.");
+  } catch (error) {
+    console.error("Error restaurando copia de Supabase:", error);
+    setSupabaseBackupStatus("No se pudo completar la restauración: " + error.message, true);
+    alert("No se pudo completar la restauración: " + error.message +
+      "\n\nLos registros procesados antes del error podrían haberse guardado. Revisa los datos antes de repetirla.");
+  } finally {
+    event.target.value = "";
+  }
+}
+
 function exportFullDatabase() {
   if (!currentUser || currentUser.role !== "admin") return;
 
