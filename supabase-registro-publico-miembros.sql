@@ -91,12 +91,20 @@ BEGIN
     RAISE EXCEPTION 'La solicitud ya fue revisada.';
   END IF;
 
+  IF solicitud.email IS NOT NULL AND EXISTS (
+    SELECT 1
+    FROM public.miembros_app AS m
+    WHERE lower(trim(m.email)) = lower(trim(solicitud.email))
+  ) THEN
+    RAISE EXCEPTION 'Ya existe un hermano registrado con ese correo electrónico.';
+  END IF;
+
   nuevo_miembro_id := gen_random_uuid()::TEXT;
 
   INSERT INTO public.miembros_app (
     id, name, phone, email, address, marital_status,
     spouse_type, spouse_name, spouse_id, ministry, status,
-    baptized, birthday, avatar, created_at, updated_at, created_by
+    baptized, birthday, avatar, created_at, updated_at
   ) VALUES (
     nuevo_miembro_id,
     solicitud.name,
@@ -113,8 +121,7 @@ BEGIN
     solicitud.birthday,
     NULL,
     NOW(),
-    NOW(),
-    auth.uid()
+    NOW()
   );
 
   UPDATE public.solicitudes_registro_miembros
