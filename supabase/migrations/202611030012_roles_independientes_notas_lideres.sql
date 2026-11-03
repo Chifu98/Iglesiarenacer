@@ -91,10 +91,11 @@ BEGIN
     WHEN 'servidor' THEN 6
     WHEN 'hermano' THEN 7
     ELSE 8 END)
-  INTO NEW.roles
+  INTO v_roles
   FROM unnest(v_roles) AS r;
 
-  NEW.rol := NEW.roles[1];
+  NEW.roles := v_roles;
+  NEW.rol := v_roles[1];
   RETURN NEW;
 END;
 $$;
