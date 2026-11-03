@@ -9,151 +9,259 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-const INITIAL_USERS = [
-  {
-    id: "u_admin",
-    name: "Administrador Principal",
-    username: "admin",
-    password: "admin123",
-    role: "admin"
-  }
-];
-
-const INITIAL_MEMBERS = [
-  {
-    id: "1",
-    name: "Carlos Eduardo Mendoza",
-    phone: "+56 9 8765 4321",
-    email: "ejemplo@email.com",
-    address: "Av. Las Condes 10000000",
-    maritalStatus: "Casado (a)",
-    spouseType: "text",
-    spouseName: "Elena Ramos",
-    spouseId: "",
-    ministry: "Alabanza",
-    status: "Activo",
-    baptized: "Sí",
-    birthday: "1990-03-15",
-    notes: "Líder de guitarra y apoyo en sonido.",
-    avatar: ""
-  }
-];
-
-const INITIAL_REQUESTS = [
-  {
-    id: "r1",
-    memberId: "1",
-    text: "Oración por salud familiar y fortaleza en el trabajo.",
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "r2",
-    memberId: "3",
-    text: "Petición por exámenes universitarios de fin de semestre.",
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-  }
-];
-
 let users = [];
 let currentUser = null;
 let members = [];
 let prayerRequests = [];
 let currentAvatarBase64 = "";
 
-function loadData() {
-  const storedUsers = localStorage.getItem('iglesia_renacer_users');
-  if (storedUsers) {
-    try { users = JSON.parse(storedUsers); } catch(e) { users = INITIAL_USERS; }
-  } else {
-    users = INITIAL_USERS;
-    saveUsers();
+let realtimeChannel = null;
+let realtimeRefreshTimer = null;
+
+function mapDbMemberToApp(row) {
+  return {
+    id: row.id,
+    name: row.name || "",
+    phone: row.phone || "",
+    email: row.email || "",
+    address: row.address || "",
+    maritalStatus: row.marital_status || "Soltero (a)",
+    spouseType: row.spouse_type || "none",
+    spouseName: row.spouse_name || "",
+    spouseId: row.spouse_id || "",
+    ministry: row.ministry || "General",
+    status: row.status || "Activo",
+    baptized: row.baptized || "No",
+    birthday: row.birthday || "",
+    notes: row.notes || "",
+    avatar: row.avatar || ""
+  };
+}
+
+function mapAppMemberToDb(member) {
+  return {
+    id: String(member.id),
+    name: member.name,
+    phone: member.phone || null,
+    email: member.email || null,
+    address: member.address || null,
+    marital_status: member.maritalStatus || null,
+    spouse_type: member.spouseType || null,
+    spouse_name: member.spouseName || null,
+    spouse_id: member.spouseId || null,
+    ministry: member.ministry || "General",
+    status: member.status || "Activo",
+    baptized: member.baptized || null,
+    birthday: member.birthday || null,
+    notes: member.notes || null,
+    avatar: member.avatar || null,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function mapDbRequestToApp(row) {
+  return {
+    id: row.id,
+    memberId: row.member_id || "",
+    text: row.description || "",
+    createdAt: row.created_at
+  };
+}
+
+function mapAppRequestToDb(request) {
+  return {
+    id: String(request.id),
+    member_id: request.memberId || null,
+    description: request.text,
+    created_at: request.createdAt || new Date().toISOString()
+  };
+}
+
+async function refreshCloudData() {
+  const client = window.supabaseClient;
+  const [membersResult, requestsResult] = await Promise.all([
+    client.from("miembros_app").select("*").order("created_at", { ascending: false }),
+    client.from("peticiones_oracion").select("*").order("created_at", { ascending: false })
+  ]);
+
+  if (membersResult.error) throw membersResult.error;
+  if (requestsResult.error) throw requestsResult.error;
+
+  members = (membersResult.data || []).map(mapDbMemberToApp);
+  prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
+}
+
+async function saveMembers() {
+  if (!members.length) return;
+  const rows = members.map(mapAppMemberToDb);
+  const { error } = await window.supabaseClient
+    .from("miembros_app")
+    .upsert(rows, { onConflict: "id" });
+
+  if (error) throw error;
+}
+
+async function saveRequests() {
+  if (!prayerRequests.length) return;
+  const rows = prayerRequests.map(mapAppRequestToDb);
+  const { error } = await window.supabaseClient
+    .from("peticiones_oracion")
+    .upsert(rows, { onConflict: "id" });
+
+  if (error) throw error;
+}
+
+async function loadProfilesFromCloud() {
+  if (!currentUser) return;
+
+  if (currentUser.role !== "admin") {
+    users = [currentUser];
+    return;
   }
 
-  const storedMembers = localStorage.getItem('iglesia_renacer_members');
-  if (storedMembers) {
-    try { members = JSON.parse(storedMembers); } catch(e) { members = INITIAL_MEMBERS; }
-  } else {
-    members = INITIAL_MEMBERS;
-    saveMembers();
+  const { data, error } = await window.supabaseClient
+    .from("perfiles_app")
+    .select("id,nombre,usuario,rol,activo")
+    .order("nombre", { ascending: true });
+
+  if (error) throw error;
+
+  users = (data || []).map(profile => ({
+    id: profile.id,
+    name: profile.nombre,
+    username: profile.usuario || profile.id,
+    role: profile.rol,
+    active: profile.activo
+  }));
+}
+
+async function loadData() {
+  const monthField = document.getElementById("share-birthday-month");
+  if (monthField) {
+    monthField.value = String(new Date().getMonth() + 1).padStart(2, "0");
   }
 
-  const storedRequests = localStorage.getItem('iglesia_renacer_requests');
-  if (storedRequests) {
-    try { prayerRequests = JSON.parse(storedRequests); } catch(e) { prayerRequests = INITIAL_REQUESTS; }
-  } else {
-    prayerRequests = INITIAL_REQUESTS;
-    saveRequests();
-  }
+  try {
+    const { data, error } = await window.supabaseClient.auth.getSession();
+    if (error) throw error;
 
-  const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
-  document.getElementById('share-birthday-month').value = currentMonth;
+    const session = data.session;
+    if (!session) {
+      currentUser = null;
+      stopRealtimeSync();
+      showLoginView();
+      return;
+    }
 
-  checkAuth();
-}
+    const { data: profile, error: profileError } = await window.supabaseClient
+      .from("perfiles_app")
+      .select("id,nombre,usuario,rol,activo")
+      .eq("id", session.user.id)
+      .maybeSingle();
 
-function saveUsers() {
-  localStorage.setItem('iglesia_renacer_users', JSON.stringify(users));
-}
+    if (profileError) throw profileError;
 
-function saveMembers() {
-  localStorage.setItem('iglesia_renacer_members', JSON.stringify(members));
-}
+    if (!profile || !profile.activo) {
+      await window.supabaseClient.auth.signOut();
+      currentUser = null;
+      showLoginView();
+      const errorDiv = document.getElementById("login-error");
+      errorDiv.textContent = "Tu cuenta no tiene un perfil activo. Contacta al administrador.";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
 
-function saveRequests() {
-  localStorage.setItem('iglesia_renacer_requests', JSON.stringify(prayerRequests));
-}
+    currentUser = {
+      id: profile.id,
+      name: profile.nombre,
+      username: profile.usuario || session.user.email,
+      email: session.user.email,
+      role: profile.rol
+    };
 
-/* AUTH & PERMISSIONS SYSTEM */
-function checkAuth() {
-  const storedSession = localStorage.getItem('iglesia_renacer_session');
-  if (storedSession) {
-    try {
-      const user = JSON.parse(storedSession);
-      const validUser = users.find(u => u.id === user.id);
-      if (validUser) {
-        currentUser = validUser;
-        showAppView();
-        return;
-      }
-    } catch(e){}
-  }
-  showLoginView();
-}
-
-function handleLogin(e) {
-  e.preventDefault();
-  const userVal = document.getElementById('login-username').value.trim();
-  const passVal = document.getElementById('login-password').value.trim();
-  const errorDiv = document.getElementById('login-error');
-
-  const found = users.find(u => u.username.toLowerCase() === userVal.toLowerCase() && u.password === passVal);
-  if (found) {
-    currentUser = found;
-    localStorage.setItem('iglesia_renacer_session', JSON.stringify(found));
-    errorDiv.classList.add('hidden');
+    await refreshCloudData();
+    await loadProfilesFromCloud();
     showAppView();
-  } else {
-    errorDiv.classList.remove('hidden');
+    startRealtimeSync();
+  } catch (error) {
+    console.error("Error cargando datos de Supabase:", error);
+    currentUser = null;
+    stopRealtimeSync();
+    showLoginView();
+    const errorDiv = document.getElementById("login-error");
+    errorDiv.textContent = "No se pudo cargar tu perfil o los datos. Revisa tu conexión y los permisos de Supabase.";
+    errorDiv.classList.remove("hidden");
   }
 }
 
-function handleLogout() {
-  localStorage.removeItem('iglesia_renacer_session');
+async function handleLogin(event) {
+  event.preventDefault();
+
+  const email = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value;
+  const errorDiv = document.getElementById("login-error");
+  errorDiv.classList.add("hidden");
+
+  const button = event.submitter || event.target.querySelector('button[type="submit"]');
+  if (button) button.disabled = true;
+
+  try {
+    const { error } = await window.supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (error) throw error;
+    await loadData();
+  } catch (error) {
+    console.error("Error de inicio de sesión:", error);
+    errorDiv.textContent = "Correo o contraseña incorrectos, o cuenta sin acceso.";
+    errorDiv.classList.remove("hidden");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function handlePasswordReset() {
+  const email = document.getElementById("login-username").value.trim();
+  if (!email) {
+    alert("Escribe primero tu correo electrónico en el campo de acceso.");
+    return;
+  }
+
+  const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: "https://iglesiarenacer.vercel.app/restablecer.html"
+  });
+
+  if (error) {
+    alert("No se pudo enviar el correo: " + error.message);
+    return;
+  }
+
+  alert("Te enviamos un enlace de recuperación. Revisa tu correo electrónico.");
+}
+
+async function handleLogout() {
+  stopRealtimeSync();
+  await window.supabaseClient.auth.signOut();
   currentUser = null;
+  users = [];
+  members = [];
+  prayerRequests = [];
   showLoginView();
 }
 
 function showLoginView() {
-  document.getElementById('login-view').classList.remove('hidden');
-  document.getElementById('app-container').classList.add('hidden');
+  document.getElementById("login-view").classList.remove("hidden");
+  document.getElementById("app-container").classList.add("hidden");
 }
 
 function showAppView() {
-  document.getElementById('login-view').classList.add('hidden');
-  document.getElementById('app-container').classList.remove('hidden');
+  document.getElementById("login-view").classList.add("hidden");
+  document.getElementById("app-container").classList.remove("hidden");
 
-  document.getElementById('current-user-name').textContent = currentUser.name;
-  const badge = document.getElementById('current-user-role-badge');
+  document.getElementById("current-user-name").textContent = currentUser.name;
+  const badge = document.getElementById("current-user-role-badge");
   badge.textContent = currentUser.role.toUpperCase();
 
   applyRolePermissions();
@@ -163,222 +271,220 @@ function showAppView() {
   renderBirthdayModule();
 }
 
-function applyRolePermissions() {
-  const isLectura = currentUser.role === 'lectura';
-  const isAdmin = currentUser.role === 'admin';
+function startRealtimeSync() {
+  stopRealtimeSync();
 
-  const btnAddMember = document.getElementById('btn-add-member');
-  const btnAddRequest = document.getElementById('btn-add-request');
-  const btnManageUsers = document.getElementById('btn-manage-users');
+  realtimeChannel = window.supabaseClient
+    .channel("iglesia-renacer-sync")
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "miembros_app" },
+      scheduleCloudRefresh
+    )
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "peticiones_oracion" },
+      scheduleCloudRefresh
+    )
+    .subscribe(status => {
+      if (status === "CHANNEL_ERROR") {
+        console.error("No se pudo iniciar la sincronización en tiempo real.");
+      }
+    });
+}
+
+function stopRealtimeSync() {
+  if (realtimeRefreshTimer) {
+    clearTimeout(realtimeRefreshTimer);
+    realtimeRefreshTimer = null;
+  }
+
+  if (realtimeChannel) {
+    window.supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+}
+
+function scheduleCloudRefresh() {
+  if (realtimeRefreshTimer) clearTimeout(realtimeRefreshTimer);
+
+  realtimeRefreshTimer = setTimeout(async () => {
+    if (!currentUser) return;
+
+    try {
+      await refreshCloudData();
+      renderDashboard();
+      renderTable();
+      renderRequests();
+      renderBirthdayModule();
+    } catch (error) {
+      console.error("Error sincronizando los datos:", error);
+    }
+  }, 350);
+}
+
+function applyRolePermissions() {
+  const isLectura = currentUser.role === "lectura";
+  const isAdmin = currentUser.role === "admin";
+
+  const btnAddMember = document.getElementById("btn-add-member");
+  const btnAddRequest = document.getElementById("btn-add-request");
+  const btnManageUsers = document.getElementById("btn-manage-users");
 
   if (isLectura) {
-    btnAddMember.classList.add('hidden');
-    btnAddRequest.classList.add('hidden');
+    btnAddMember.classList.add("hidden");
+    btnAddRequest.classList.add("hidden");
   } else {
-    btnAddMember.classList.remove('hidden');
-    btnAddRequest.classList.remove('hidden');
+    btnAddMember.classList.remove("hidden");
+    btnAddRequest.classList.remove("hidden");
   }
 
   if (isAdmin) {
-    btnManageUsers.classList.remove('hidden');
+    btnManageUsers.classList.remove("hidden");
   } else {
-    btnManageUsers.classList.add('hidden');
+    btnManageUsers.classList.add("hidden");
   }
 }
 
 /* USER MANAGEMENT (ADMIN ROLE) */
-function openUsersModal() {
-  if (currentUser.role !== 'admin') return;
-  resetUserForm();
-  renderUsersTable();
-  document.getElementById('users-modal').classList.remove('hidden');
-  lucide.createIcons();
+async function openUsersModal() {
+  if (!currentUser || currentUser.role !== "admin") return;
+
+  try {
+    await loadProfilesFromCloud();
+    renderUsersTable();
+    document.getElementById("users-modal").classList.remove("hidden");
+    lucide.createIcons();
+  } catch (error) {
+    console.error(error);
+    alert("No se pudieron consultar los usuarios: " + error.message);
+  }
 }
 
 function closeUsersModal() {
-  document.getElementById('users-modal').classList.add('hidden');
+  document.getElementById("users-modal").classList.add("hidden");
 }
 
 function resetUserForm() {
-  document.getElementById('user-form').reset();
-  document.getElementById('user-id').value = '';
-  document.getElementById('user-form-title').textContent = 'Crear Nuevo Usuario';
-  document.getElementById('user-input-password').required = true;
+  alert("Las cuentas se crean en Supabase → Authentication → Users. Después debes vincular su UUID en perfiles_app.");
 }
 
-function handleUserSubmit(e) {
-  e.preventDefault();
-  if (currentUser.role !== 'admin') return;
-
-  const id = document.getElementById('user-id').value;
-  const name = document.getElementById('user-input-name').value.trim();
-  const username = document.getElementById('user-input-username').value.trim();
-  const password = document.getElementById('user-input-password').value.trim();
-  const role = document.getElementById('user-input-role').value;
-
-  const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== id);
-  if (existing) {
-    alert("El nombre de usuario ya se encuentra registrado.");
-    return;
-  }
-
-  if (id) {
-    const idx = users.findIndex(u => u.id === id);
-    if (idx !== -1) {
-      users[idx].name = name;
-      users[idx].username = username;
-      users[idx].role = role;
-      if (password) users[idx].password = password;
-    }
-  } else {
-    const newUser = {
-      id: 'u_' + Date.now(),
-      name,
-      username,
-      password,
-      role
-    };
-    users.push(newUser);
-  }
-
-  saveUsers();
-  resetUserForm();
-  renderUsersTable();
+async function handleUserSubmit(event) {
+  event.preventDefault();
+  alert("Por seguridad, las contraseñas no se crean ni almacenan desde esta página. Crea la cuenta en Supabase → Authentication → Users y luego registra su perfil en perfiles_app.");
 }
 
-/* IMPORT / EXPORT DATABASE LOGIC */
 function exportFullDatabase() {
-  if (currentUser.role !== 'admin') return;
+  if (!currentUser || currentUser.role !== "admin") return;
 
   const fullData = {
     app: "Iglesia Renacer - Control Congregacional",
     exportedAt: new Date().toISOString(),
-    version: "1.0",
+    version: "2.0",
     data: {
-      users: users,
+      users: users.map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        role: user.role,
+        active: user.active
+      })),
       members: members,
       prayerRequests: prayerRequests
     }
   };
 
-  const dateStr = new Date().toISOString().split('T')[0];
-  const jsonString = JSON.stringify(fullData, null, 2);
-  downloadFile(jsonString, `Iglesia_Renacer_Backup_${dateStr}.json`, 'application/json');
+  const dateStr = new Date().toISOString().split("T")[0];
+  downloadFile(JSON.stringify(fullData, null, 2),
+    "Iglesia_Renacer_Backup_" + dateStr + ".json", "application/json");
 }
 
 function importFullDatabase(event) {
-  if (currentUser.role !== 'admin') return;
+  if (!currentUser || currentUser.role !== "admin") return;
 
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(loadEvent) {
     try {
-      const parsed = JSON.parse(e.target.result);
-      
-      if (!parsed.data || !Array.isArray(parsed.data.members) || !Array.isArray(parsed.data.users) || !Array.isArray(parsed.data.prayerRequests)) {
-        alert("El archivo subido no corresponde a un formato válido de copia de seguridad de Iglesia Renacer.");
-        event.target.value = '';
+      const parsed = JSON.parse(loadEvent.target.result);
+
+      if (!parsed.data ||
+          !Array.isArray(parsed.data.members) ||
+          !Array.isArray(parsed.data.prayerRequests)) {
+        alert("El archivo no tiene un formato válido de copia de seguridad.");
+        event.target.value = "";
         return;
       }
 
-      const confirmImport = confirm(`¿Estás seguro de restaurar esta copia de seguridad?\n\n- Miembros: ${parsed.data.members.length}\n- Peticiones: ${parsed.data.prayerRequests.length}\n- Usuarios: ${parsed.data.users.length}\n\nNota: Se reemplazarán todos los datos actuales.`);
-      
-      if (confirmImport) {
-        users = parsed.data.users;
-        members = parsed.data.members;
-        prayerRequests = parsed.data.prayerRequests;
+      const confirmed = confirm(
+        "Se importarán " + parsed.data.members.length +
+        " miembros y " + parsed.data.prayerRequests.length +
+        " peticiones a Supabase. Los perfiles de usuario no se importan. ¿Continuar?"
+      );
 
-        saveUsers();
-        saveMembers();
-        saveRequests();
-
-        const activeUserStillExists = users.find(u => u.id === currentUser.id);
-        if (!activeUserStillExists) {
-          currentUser = users[0] || INITIAL_USERS[0];
-          localStorage.setItem('iglesia_renacer_session', JSON.stringify(currentUser));
-        }
-
-        renderUsersTable();
-        renderDashboard();
-        renderTable();
-        renderRequests();
-        renderBirthdayModule();
-        applyRolePermissions();
-
-        alert("¡Base de datos restaurada con éxito!");
+      if (!confirmed) {
+        event.target.value = "";
+        return;
       }
-    } catch (err) {
-      alert("Error al leer el archivo JSON: asegúrate de que sea un archivo de copia de seguridad válido.");
+
+      members = parsed.data.members;
+      prayerRequests = parsed.data.prayerRequests;
+
+      await saveMembers();
+      await saveRequests();
+      await refreshCloudData();
+
+      renderDashboard();
+      renderTable();
+      renderRequests();
+      renderBirthdayModule();
+
+      alert("Importación completada. Los registros se sincronizarán con los demás dispositivos.");
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo importar la copia: " + error.message);
+      try { await refreshCloudData(); } catch (_) {}
     }
-    event.target.value = '';
+
+    event.target.value = "";
   };
+
   reader.readAsText(file);
 }
 
-function editUser(id) {
-  const u = users.find(usr => usr.id === id);
-  if (!u) return;
-
-  document.getElementById('user-id').value = u.id;
-  document.getElementById('user-input-name').value = u.name;
-  document.getElementById('user-input-username').value = u.username;
-  document.getElementById('user-input-password').value = '';
-  document.getElementById('user-input-password').required = false;
-  document.getElementById('user-input-role').value = u.role;
-  document.getElementById('user-form-title').textContent = 'Editar Usuario';
+function editUser() {
+  alert("La edición de perfiles se administra desde Supabase. No se modifican contraseñas desde esta página.");
 }
 
-function deleteUser(id) {
-  if (id === currentUser.id) {
-    alert("No puedes eliminar tu propio usuario activo.");
-    return;
-  }
-
-  if (confirm("¿Estás seguro de eliminar este usuario?")) {
-    users = users.filter(u => u.id !== id);
-    saveUsers();
-    renderUsersTable();
-  }
+function deleteUser() {
+  alert("Para desactivar una cuenta, desactiva el usuario en Supabase Auth y cambia activo a FALSE en perfiles_app.");
 }
 
 function renderUsersTable() {
-  const tbody = document.getElementById('users-table-body');
-  tbody.innerHTML = '';
+  const tbody = document.getElementById("users-table-body");
+  tbody.innerHTML = "";
 
-  users.forEach(u => {
-    const tr = document.createElement('tr');
+  users.forEach(user => {
+    const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
     let roleBadge = "bg-slate-100 text-slate-700 border-slate-300";
-    if (u.role === 'admin') roleBadge = "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300";
-    if (u.role === 'escritura') roleBadge = "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300";
+    if (user.role === "admin") roleBadge = "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300";
+    if (user.role === "escritura") roleBadge = "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300";
 
-    tr.innerHTML = `
-      <td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">${escapeHtml(u.name)}</td>
-      <td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">${escapeHtml(u.username)}</td>
-      <td class="py-2.5 px-3">
-        <span class="px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase ${roleBadge}">
-          ${escapeHtml(u.role)}
-        </span>
-      </td>
-      <td class="py-2.5 px-3 text-right">
-        <button onclick="editUser('${escapeHtml(u.id)}')" title="Editar" class="p-1 text-slate-400 hover:text-blue-600">
-          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-        </button>
-        ${u.id !== currentUser.id ? `
-        <button onclick="deleteUser('${escapeHtml(u.id)}')" title="Eliminar" class="p-1 text-slate-400 hover:text-rose-600">
-          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-        </button>` : ''}
-      </td>
-    `;
+    tr.innerHTML =
+      '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
+      '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
+      '<td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase ' + roleBadge + '">' + escapeHtml(user.role) + '</span></td>' +
+      '<td class="py-2.5 px-3 text-right text-slate-500">' + (user.active ? "Activo" : "Inactivo") + '</td>';
+
     tbody.appendChild(tr);
   });
 
   lucide.createIcons();
 }
 
+/* RENDER DASHBOARD & METRICS */
 /* RENDER DASHBOARD & METRICS */
 function renderDashboard() {
   const total = members.length;
@@ -882,116 +988,144 @@ function closeRequestModal() {
   document.getElementById('request-modal').classList.add('hidden');
 }
 
-function handleRequestSubmit(e) {
+async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (currentUser.role === 'lectura') return;
+  if (!currentUser || currentUser.role === "lectura") return;
 
-  const memberId = document.getElementById('request-member-select').value;
-  const text = document.getElementById('request-description').value.trim();
+  const memberId = document.getElementById("request-member-select").value;
+  const text = document.getElementById("request-description").value.trim();
 
   const newReq = {
-    id: 'r_' + Date.now(),
+    id: "r_" + Date.now(),
     memberId: memberId,
     text: text,
     createdAt: new Date().toISOString()
   };
 
   prayerRequests.unshift(newReq);
-  saveRequests();
-  renderDashboard();
-  renderRequests();
-  closeRequestModal();
-}
 
-function deleteRequest(id) {
-  if (currentUser.role === 'lectura') return;
-  if (confirm("¿Estás seguro de eliminar esta petición de oración?")) {
-    prayerRequests = prayerRequests.filter(r => r.id !== id);
-    saveRequests();
+  try {
+    await saveRequests();
     renderDashboard();
     renderRequests();
+    closeRequestModal();
+  } catch (error) {
+    console.error(error);
+    prayerRequests = prayerRequests.filter(request => request.id !== newReq.id);
+    alert("No se pudo guardar la petición: " + error.message);
   }
 }
 
-function handleFormSubmit(e) {
+async function deleteRequest(id) {
+  if (!currentUser || currentUser.role === "lectura") return;
+  if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
+
+  const { error } = await window.supabaseClient
+    .from("peticiones_oracion")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("No se pudo eliminar la petición: " + error.message);
+    return;
+  }
+
+  prayerRequests = prayerRequests.filter(request => request.id !== id);
+  renderDashboard();
+  renderRequests();
+}
+
+async function handleFormSubmit(e) {
   e.preventDefault();
-  if (currentUser.role === 'lectura') return;
+  if (!currentUser || currentUser.role === "lectura") return;
 
-  const id = document.getElementById('member-id').value;
+  const id = document.getElementById("member-id").value;
   const currentMemberId = id || Date.now().toString();
-  const name = document.getElementById('input-name').value.trim();
-  const maritalStatus = document.getElementById('input-marital-status').value;
-  
-  let spouseType = 'none';
-  let spouseName = '';
-  let spouseId = '';
+  const name = document.getElementById("input-name").value.trim();
+  const maritalStatus = document.getElementById("input-marital-status").value;
 
-  if (maritalStatus === 'Casado (a)' || maritalStatus === 'Novio (a)') {
-    spouseType = document.querySelector('input[name="spouse_type"]:checked').value;
-    if (spouseType === 'link') {
-      spouseId = document.getElementById('input-spouse-id').value;
-      const foundSpouse = members.find(m => m.id === spouseId);
-      spouseName = foundSpouse ? foundSpouse.name : '';
+  let spouseType = "none";
+  let spouseName = "";
+  let spouseId = "";
+
+  if (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)") {
+    const selectedType = document.querySelector('input[name="spouse_type"]:checked');
+    spouseType = selectedType ? selectedType.value : "none";
+
+    if (spouseType === "link") {
+      spouseId = document.getElementById("input-spouse-id").value;
+      const foundSpouse = members.find(member => member.id === spouseId);
+      spouseName = foundSpouse ? foundSpouse.name : "";
     } else {
-      spouseName = document.getElementById('input-spouse-name').value.trim();
+      spouseName = document.getElementById("input-spouse-name").value.trim();
     }
   }
 
-  const oldMember = members.find(m => m.id === currentMemberId);
+  const oldMember = members.find(member => member.id === currentMemberId);
   if (oldMember && oldMember.spouseId && oldMember.spouseId !== spouseId) {
-    const oldSpouse = members.find(m => m.id === oldMember.spouseId);
+    const oldSpouse = members.find(member => member.id === oldMember.spouseId);
     if (oldSpouse && oldSpouse.spouseId === currentMemberId) {
-      oldSpouse.spouseId = '';
-      oldSpouse.spouseName = '';
-      oldSpouse.spouseType = 'none';
+      oldSpouse.spouseId = "";
+      oldSpouse.spouseName = "";
+      oldSpouse.spouseType = "none";
     }
   }
 
   let avatarToSave = currentAvatarBase64;
-  if (!avatarToSave && oldMember) {
-    avatarToSave = oldMember.avatar || '';
-  }
+  if (!avatarToSave && oldMember) avatarToSave = oldMember.avatar || "";
 
   const memberData = {
     id: currentMemberId,
     name: name,
-    phone: document.getElementById('input-phone').value.trim(),
-    email: document.getElementById('input-email').value.trim(),
-    address: document.getElementById('input-address').value.trim(),
+    phone: document.getElementById("input-phone").value.trim(),
+    email: document.getElementById("input-email").value.trim(),
+    address: document.getElementById("input-address").value.trim(),
     maritalStatus: maritalStatus,
     spouseType: spouseType,
     spouseName: spouseName,
     spouseId: spouseId,
-    ministry: document.getElementById('input-ministry').value,
-    status: document.getElementById('input-status').value,
-    baptized: document.getElementById('input-baptized').value,
-    birthday: document.getElementById('input-birthday').value,
-    notes: document.getElementById('input-notes').value.trim(),
+    ministry: document.getElementById("input-ministry").value,
+    status: document.getElementById("input-status").value,
+    baptized: document.getElementById("input-baptized").value,
+    birthday: document.getElementById("input-birthday").value || "",
+    notes: document.getElementById("input-notes").value.trim(),
     avatar: avatarToSave
   };
 
   if (id) {
-    const index = members.findIndex(m => m.id === id);
+    const index = members.findIndex(member => member.id === id);
     if (index !== -1) members[index] = memberData;
   } else {
     members.unshift(memberData);
   }
 
-  if ((maritalStatus === 'Casado (a)' || maritalStatus === 'Novio (a)') && spouseType === 'link' && spouseId) {
-    const targetSpouse = members.find(m => m.id === spouseId);
+  if ((maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)") &&
+      spouseType === "link" && spouseId) {
+    const targetSpouse = members.find(member => member.id === spouseId);
     if (targetSpouse) {
       targetSpouse.maritalStatus = maritalStatus;
-      targetSpouse.spouseType = 'link';
+      targetSpouse.spouseType = "link";
       targetSpouse.spouseId = currentMemberId;
       targetSpouse.spouseName = name;
     }
   }
 
-  saveMembers();
-  renderDashboard();
-  renderTable();
-  renderBirthdayModule();
-  closeModal();
+  try {
+    await saveMembers();
+    renderDashboard();
+    renderTable();
+    renderBirthdayModule();
+    closeModal();
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo guardar el miembro en Supabase: " + error.message);
+    try {
+      await refreshCloudData();
+      renderDashboard();
+      renderTable();
+      renderBirthdayModule();
+    } catch (_) {}
+  }
 }
 
 function editMember(id) {
@@ -1046,24 +1180,44 @@ function editMember(id) {
   openModal(true);
 }
 
-function deleteMember(id) {
-  if (currentUser.role === 'lectura') return;
-  const member = members.find(m => m.id === id);
+async function deleteMember(id) {
+  if (!currentUser || currentUser.role === "lectura") return;
+
+  const member = members.find(item => item.id === id);
   if (!member) return;
 
-  const confirmed = window.confirm(`¿Está seguro de eliminar a ${member.name} de los registros?`);
-  if (confirmed) {
-    if (member.spouseId) {
-      const partner = members.find(m => m.id === member.spouseId);
-      if (partner && partner.spouseId === id) {
-        partner.spouseId = '';
-        partner.spouseName = '';
-        partner.spouseType = 'none';
-      }
-    }
+  if (!confirm("¿Está seguro de eliminar a " + member.name + " de los registros?")) return;
 
-    members = members.filter(m => m.id !== id);
-    saveMembers();
+  const { error } = await window.supabaseClient
+    .from("miembros_app")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("No se pudo eliminar el miembro: " + error.message);
+    return;
+  }
+
+  if (member.spouseId) {
+    const partner = members.find(item => item.id === member.spouseId);
+    if (partner && partner.spouseId === id) {
+      partner.spouseId = "";
+      partner.spouseName = "";
+      partner.spouseType = "none";
+    }
+  }
+
+  members = members.filter(item => item.id !== id);
+
+  try {
+    await saveMembers();
+    renderDashboard();
+    renderTable();
+    renderBirthdayModule();
+  } catch (saveError) {
+    console.error(saveError);
+    alert("El miembro fue eliminado, pero no se pudo actualizar el vínculo familiar: " + saveError.message);
+    await refreshCloudData();
     renderDashboard();
     renderTable();
     renderBirthdayModule();
@@ -1181,15 +1335,9 @@ function formatDate(dateStr) {
   return dateStr;
 }
 
-// Inicialización de Event Listeners y estado inicial
-document.addEventListener('DOMContentLoaded', function() {
+// Inicializar la aplicación una sola vez.
+document.addEventListener("DOMContentLoaded", function() {
   initTheme();
   loadData();
-  
-  const formLogin = document.getElementById('form-login');
-  if (formLogin) {
-    formLogin.addEventListener('submit', handleLogin);
-  }
-
   lucide.createIcons();
 });
