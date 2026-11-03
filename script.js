@@ -15,6 +15,7 @@ function hasRole(role) { return !!(currentUser && Array.isArray(currentUser.role
 function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
 let members = [];
 let prayerRequests = [];
+let announcements = [];
 let currentAvatarBase64 = "";
 
 let realtimeChannel = null;
@@ -80,13 +81,15 @@ function mapAppRequestToDb(request) {
 
 async function refreshCloudData() {
   const client = window.supabaseClient;
-  const [membersResult, requestsResult] = await Promise.all([
+  const [membersResult, requestsResult, announcementsResult] = await Promise.all([
     client.from("miembros_app").select("*").order("created_at", { ascending: false }),
-    client.from("peticiones_oracion").select("*").order("created_at", { ascending: false })
+    client.from("peticiones_oracion").select("*").order("created_at", { ascending: false }),
+    client.from("anuncios").select("*").order("creado_en", { ascending: false })
   ]);
 
   if (membersResult.error) throw membersResult.error;
   if (requestsResult.error) throw requestsResult.error;
+  if (announcementsResult.error) throw announcementsResult.error;
 
   let privateNotes = new Map();
   if (currentUser && hasRole("admin")) {
@@ -102,6 +105,7 @@ async function refreshCloudData() {
     notes: privateNotes.get(row.id) || ""
   }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
+  announcements = announcementsResult.data || [];
 }
 
 async function saveMembers() {
@@ -437,6 +441,7 @@ function showAppView() {
   renderDashboard();
   renderTable();
   renderRequests();
+  renderAnnouncements();
   renderBirthdayModule();
 }
 
@@ -491,6 +496,7 @@ function scheduleCloudRefresh() {
       renderDashboard();
       renderTable();
       renderRequests();
+      renderAnnouncements();
       renderBirthdayModule();
     } catch (error) {
       console.error("Error sincronizando los datos:", error);
@@ -1127,6 +1133,154 @@ async function loadAuditLog() {
     console.error("Error consultando auditoría:", error);
     status.textContent = "No se pudo consultar la auditoría: " + error.message;
   }
+}
+
+/* ANNOUNCEMENTS MODULE */
+function canManageAnnouncements() {
+  return !!currentUser && (hasRole("admin") || hasRole("escritura"));
+}
+
+function formatAnnouncementDate(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleString("es-CL", {
+    day: "2-digit", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+function renderAnnouncements() {
+  const container = document.getElementById("announcements-list");
+  const empty = document.getElementById("announcements-empty");
+  const createButton = document.getElementById("btn-new-announcement");
+  if (!container || !empty || !currentUser) return;
+
+  if (createButton) createButton.classList.toggle("hidden", !canManageAnnouncements());
+  container.innerHTML = "";
+
+  if (!announcements.length) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  announcements.forEach(item => {
+    const card = document.createElement("article");
+    card.className = "rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4 sm:p-5";
+    const header = document.createElement("div");
+    header.className = "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2";
+    const heading = document.createElement("div");
+    heading.className = "min-w-0";
+    const title = document.createElement("h4");
+    title.className = "font-bold text-slate-900 dark:text-white text-base";
+    title.textContent = item.titulo;
+    const meta = document.createElement("p");
+    meta.className = "text-[11px] text-slate-500 dark:text-slate-400 mt-1";
+    meta.textContent = "Publicado " + formatAnnouncementDate(item.creado_en);
+    heading.append(title, meta);
+    header.appendChild(heading);
+
+    if (canManageAnnouncements()) {
+      const actions = document.createElement("div");
+      actions.className = "flex items-center gap-2 shrink-0";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300";
+      edit.textContent = "Editar";
+      edit.addEventListener("click", () => openAnnouncementModal(item.id));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "text-xs px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-300";
+      remove.textContent = "Eliminar";
+      remove.addEventListener("click", () => deleteAnnouncement(item.id));
+      actions.append(edit, remove);
+      header.appendChild(actions);
+    }
+
+    const body = document.createElement("p");
+    body.className = "mt-4 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words";
+    body.textContent = item.contenido;
+    card.append(header, body);
+    container.appendChild(card);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+function openAnnouncementModal(id = "") {
+  if (!canManageAnnouncements()) return;
+  const form = document.getElementById("announcement-form");
+  form.reset();
+  document.getElementById("announcement-id").value = "";
+  document.getElementById("announcement-modal-title").textContent = "Nuevo anuncio";
+  if (id) {
+    const item = announcements.find(entry => entry.id === id);
+    if (!item) return;
+    document.getElementById("announcement-id").value = item.id;
+    document.getElementById("announcement-title").value = item.titulo;
+    document.getElementById("announcement-content").value = item.contenido;
+    document.getElementById("announcement-modal-title").textContent = "Editar anuncio";
+  }
+  document.getElementById("announcement-modal").classList.remove("hidden");
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeAnnouncementModal() {
+  document.getElementById("announcement-modal").classList.add("hidden");
+}
+
+async function handleAnnouncementSubmit(event) {
+  event.preventDefault();
+  if (!canManageAnnouncements()) return;
+
+  const id = document.getElementById("announcement-id").value;
+  const titulo = document.getElementById("announcement-title").value.trim();
+  const contenido = document.getElementById("announcement-content").value.trim();
+  if (titulo.length < 3 || contenido.length < 3) {
+    alert("El título y el contenido deben tener al menos 3 caracteres.");
+    return;
+  }
+
+  const button = document.getElementById("announcement-save");
+  button.disabled = true;
+  button.textContent = "Guardando...";
+  try {
+    let query;
+    if (id) {
+      query = window.supabaseClient.from("anuncios").update({
+        titulo, contenido, actualizado_en: new Date().toISOString()
+      }).eq("id", id);
+    } else {
+      query = window.supabaseClient.from("anuncios").insert({
+        titulo, contenido, creado_por: currentUser.id
+      });
+    }
+    const { error } = await query;
+    if (error) throw error;
+    const { data, error: readError } = await window.supabaseClient
+      .from("anuncios").select("*").order("creado_en", { ascending: false });
+    if (readError) throw readError;
+    announcements = data || [];
+    renderAnnouncements();
+    closeAnnouncementModal();
+  } catch (error) {
+    console.error("Error guardando anuncio:", error);
+    alert("No se pudo guardar el anuncio: " + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Publicar anuncio";
+  }
+}
+
+async function deleteAnnouncement(id) {
+  if (!canManageAnnouncements()) return;
+  const item = announcements.find(entry => entry.id === id);
+  if (!item || !confirm("¿Eliminar el anuncio \"" + item.titulo + "\"? Esta acción no se puede deshacer.")) return;
+  const { error } = await window.supabaseClient.from("anuncios").delete().eq("id", id);
+  if (error) {
+    alert("No se pudo eliminar el anuncio: " + error.message);
+    return;
+  }
+  announcements = announcements.filter(entry => entry.id !== id);
+  renderAnnouncements();
 }
 
 /* RENDER DASHBOARD & METRICS */
