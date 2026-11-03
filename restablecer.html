@@ -1,104 +1,111 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Restablecer contraseña</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restablecer contraseña - Iglesia Renacer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; font-family: Arial, sans-serif; background: #0b1b2b; color: #1e293b; }
+    .card { width: 100%; max-width: 420px; background: white; border-radius: 18px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+    h1 { margin: 0 0 8px; font-size: 23px; color: #102a43; }
+    p { color: #64748b; line-height: 1.5; }
+    label { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: bold; }
+    input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 9px; font-size: 15px; }
+    button { width: 100%; margin-top: 18px; padding: 13px; border: 0; border-radius: 9px; background: #f59e0b; color: #102a43; font-weight: bold; cursor: pointer; }
+    #mensaje { margin-top: 18px; font-size: 13px; }
+    .hidden { display: none; }
+    a { color: #b77905; font-weight: bold; }
+  </style>
 </head>
 <body>
+  <main class="card">
+    <h1>Restablecer contraseña</h1>
+    <p>Introduce y confirma tu nueva contraseña para Iglesia Renacer.</p>
 
-    <h2>Restablecer contraseña</h2>
+    <form id="formPassword" class="hidden">
+      <label for="password">Nueva contraseña</label>
+      <input type="password" id="password" minlength="8" autocomplete="new-password" required>
 
-    <p>Introduce tu nueva contraseña.</p>
+      <label for="confirmar">Confirmar contraseña</label>
+      <input type="password" id="confirmar" minlength="8" autocomplete="new-password" required>
 
-    <form id="formPassword" hidden>
-        <input
-            type="password"
-            id="password"
-            placeholder="Nueva contraseña"
-            minlength="8"
-            required
-        >
-
-        <input
-            type="password"
-            id="confirmar"
-            placeholder="Confirmar contraseña"
-            minlength="8"
-            required
-        >
-
-        <button type="submit">Guardar contraseña</button>
+      <button type="submit">Guardar contraseña</button>
     </form>
 
-    <p id="mensaje">Validando enlace...</p>
+    <p id="mensaje">Validando enlace de recuperación...</p>
+    <p id="volver" class="hidden"><a href="/">Volver al inicio de sesión</a></p>
+  </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-client.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-client.js"></script>
+  <script>
+    const cliente = window.supabaseClient;
+    const form = document.getElementById("formPassword");
+    const mensaje = document.getElementById("mensaje");
+    const volver = document.getElementById("volver");
+    let recoveryReady = false;
 
-    <script>
-        const cliente = window.supabaseClient;
+    function habilitarFormulario() {
+      recoveryReady = true;
+      form.classList.remove("hidden");
+      mensaje.textContent = "Enlace válido. Puedes establecer tu nueva contraseña.";
+    }
 
-        const form = document.getElementById("formPassword");
-        const mensaje = document.getElementById("mensaje");
+    cliente.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) habilitarFormulario();
+    });
 
-        let recoveryReady = false;
+    (async function validarSesion() {
+      const { data, error } = await cliente.auth.getSession();
+      if (error) {
+        mensaje.textContent = "No se pudo validar el enlace: " + error.message;
+        volver.classList.remove("hidden");
+        return;
+      }
+      if (data.session) {
+        habilitarFormulario();
+      } else {
+        mensaje.textContent = "El enlace no es válido o ha expirado. Solicita uno nuevo desde el inicio de sesión.";
+        volver.classList.remove("hidden");
+      }
+    })();
 
-        cliente.auth.onAuthStateChange((event, session) => {
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+      if (!recoveryReady) {
+        mensaje.textContent = "El enlace de recuperación no es válido o ha expirado.";
+        return;
+      }
 
-            if (event === "PASSWORD_RECOVERY" && session) {
-                recoveryReady = true;
-                form.hidden = false;
-                mensaje.textContent =
-                    "Enlace válido. Puedes crear tu nueva contraseña.";
-            }
-        });
+      const password = document.getElementById("password").value;
+      const confirm = document.getElementById("confirmar").value;
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
+      if (password.length < 8) {
+        mensaje.textContent = "La contraseña debe tener al menos 8 caracteres.";
+        return;
+      }
+      if (password !== confirm) {
+        mensaje.textContent = "Las contraseñas no coinciden.";
+        return;
+      }
 
-            if (!recoveryReady) {
-                mensaje.textContent =
-                    "El enlace de recuperación no es válido o ha expirado.";
-                return;
-            }
+      const button = form.querySelector("button");
+      button.disabled = true;
+      mensaje.textContent = "Guardando contraseña...";
 
-            const password =
-                document.getElementById("password").value;
+      const { error } = await cliente.auth.updateUser({ password: password });
+      if (error) {
+        mensaje.textContent = "No se pudo actualizar la contraseña: " + error.message;
+        button.disabled = false;
+        return;
+      }
 
-            const confirmar =
-                document.getElementById("confirmar").value;
-
-            if (password !== confirmar) {
-                mensaje.textContent =
-                    "Las contraseñas no coinciden.";
-                return;
-            }
-
-            mensaje.textContent = "Guardando contraseña...";
-
-            const { error } =
-                await supabaseClient.auth.resetPasswordForEmail(
-                    email,
-                    {
-                        redirectTo:
-                        "https://iglesiarenacer.vercel.app/restablecer.html"
-                    }
-                );
-
-            if (error) {
-                console.error(error.message);
-            } else {
-                alert("Revisa tu correo electrónico.");
-            }
-
-            mensaje.textContent =
-                "¡Contraseña actualizada correctamente!";
-
-            form.hidden = true;
-        });
-    </script>
-
+      recoveryReady = false;
+      form.classList.add("hidden");
+      mensaje.textContent = "¡Contraseña actualizada correctamente!";
+      volver.classList.remove("hidden");
+    });
+  </script>
 </body>
 </html>
