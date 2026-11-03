@@ -441,3 +441,7 @@ handleLogout = async function() {
   const portal = document.getElementById("member-portal-container");
   if (portal) portal.classList.add("hidden");
 };
+
+/* Mostrar la administración de avisos únicamente a administradores. */
+const renacerBaseApplyRolePermissions = applyRolePermissions;
+applyRolePermissions = function() { renacerBaseApplyRolePermissions(); const button = document.getElementById('btn-manage-announcements'); if (button) button.classList.toggle('hidden', !currentUser || currentUser.role !== 'admin'); };
