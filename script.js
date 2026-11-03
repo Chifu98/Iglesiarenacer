@@ -1152,7 +1152,7 @@ async function loadAuditLog() {
 
 /* ANNOUNCEMENTS MODULE */
 function canManageAnnouncements() {
-  return !!currentUser && (hasRole("admin") || hasRole("escritura"));
+  return !!currentUser && (hasRole("admin") || (hasRole("escritura") && !hasRole("servidor")));
 }
 
 function formatAnnouncementDate(value) {
