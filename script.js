@@ -996,21 +996,22 @@ async function rejectSignup(userId) {
   alert("Solicitud rechazada. La cuenta permanece bloqueada.");
 }
 
-async function changeUserRole(userId, newRole) {
+async function changeUserRoles(selectElement) {
   if (!currentUser || !hasRole("admin")) return;
-  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "servidor", "lider", "hermano"];
+  const userId = selectElement.dataset.userId;
+  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "lider", "servidor", "hermano"];
   const targetUser = users.find(user => user.id === userId);
-  if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) { renderUsersTable(); return; }
-  if (targetUser.role === newRole) return;
-  const nextRoles = newRole === "hermano" ? ["hermano"] : ["hermano", newRole];
-  if (!confirm("¿Asignar a " + targetUser.name + " los roles " + nextRoles.join(" + ") + "?")) { renderUsersTable(); return; }
+  const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
+  if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
+    alert("Selecciona al menos un rol válido. No puedes modificar tu propia asignación."); renderUsersTable(); return;
+  }
+  if (JSON.stringify([...nextRoles].sort()) === JSON.stringify([...(targetUser.roles || [])].sort())) return;
+  if (!confirm("¿Asignar a " + targetUser.name + " estos roles independientes: " + nextRoles.map(roleDisplayName).join(" + ") + "?")) { renderUsersTable(); return; }
   const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
   if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
-  await loadProfilesFromCloud();
-  renderUsersTable();
+  await loadProfilesFromCloud(); renderUsersTable();
   alert("Roles actualizados. El usuario deberá actualizar la página para aplicar los permisos.");
 }
-
 async function linkUserToMember(userId, memberId) {
   if (!currentUser || !hasRole("admin")) return;
   const targetUser = users.find(user => user.id === userId);
@@ -1068,23 +1069,21 @@ function renderUsersTable() {
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
     const roleChoices = [
-      { value: "hermano", label: "Miembro" },
-      { value: "lectura", label: "Miembro + Lectura" },
-      { value: "escritura", label: "Miembro + Escritura" },
-      { value: "pastor", label: "Miembro + Pastor" },
-      { value: "servidor", label: "Miembro + Servidor" },
-      { value: "lider", label: "Miembro + Líder" },
-      { value: "admin", label: "Miembro + Admin" }
+      { value: "admin", label: "Administrador" },
+      { value: "escritura", label: "Escritura" },
+      { value: "lectura", label: "Lectura" },
+      { value: "pastor", label: "Pastor" },
+      { value: "lider", label: "Líder" },
+      { value: "servidor", label: "Servidor" },
+      { value: "hermano", label: "Hermano" }
     ];
-    const currentExtraRole = (user.roles || ["hermano"]).find(role => role !== "hermano") || "hermano";
+    const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
-      '<option value="' + choice.value + '"' + (currentExtraRole === choice.value ? " selected" : "") + '>' + choice.label + '</option>'
+      '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<select multiple size="7" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" data-user-id="' + escapeHtml(user.id) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
-      'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
-      'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
-      (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+      'onchange="changeUserRoles(this)" class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>';
     const memberOptions = '<option value="">Sin vincular</option>' + members.map(member =>
       '<option value="' + escapeHtml(member.id) + '"' + (user.memberId === member.id ? " selected" : "") + '>' +
       escapeHtml(member.name) + '</option>'
@@ -1107,7 +1106,7 @@ function renderUsersTable() {
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Rol adicional</div></div></td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Roles independientes (Ctrl / Cmd para varios)</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
 
