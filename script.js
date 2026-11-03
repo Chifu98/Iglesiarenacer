@@ -463,7 +463,7 @@ function showLoginView() {
 
 
 /* NOTIFICACIONES WEB PUSH: solo anuncios congregacionales */
-const RENACER_VAPID_PUBLIC_KEY = "BIrlzGo8hTSfrhStsQK8G_vyE4yU8US8a6V9Y3JLecCrJ-M3-QkU0P8prr4YYHC5Z6Q_V2BadBJeeQhtJnEN-jo";
+const RENACER_VAPID_PUBLIC_KEY = "BN0YsXxJFvWv9JAPkOIsnhTQwveq4IP3kFKqRwd7-O9tPc1opLTIXqF9-3yC3LDnY3jP8RW7QJ-GZJtfVplexUY";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
