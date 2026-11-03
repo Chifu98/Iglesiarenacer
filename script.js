@@ -856,7 +856,7 @@ async function rejectSignup(userId) {
 
 async function changeUserRole(userId, newRole) {
   if (!currentUser || currentUser.role !== "admin") return;
-  const allowedRoles = ["admin", "escritura", "lectura"];
+  const allowedRoles = ["admin", "escritura", "lectura", "hermano"];
   const targetUser = users.find(user => user.id === userId);
   if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) {
     renderUsersTable();
@@ -890,7 +890,7 @@ function renderUsersTable() {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
-    const roleOptions = ["admin", "escritura", "lectura"].map(role =>
+    const roleOptions = ["admin", "escritura", "lectura", "hermano"].map(role =>
       '<option value="' + role + '"' + (user.role === role ? " selected" : "") + '>' + role + '</option>'
     ).join("");
     const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
