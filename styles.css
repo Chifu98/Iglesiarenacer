@@ -1,0 +1,25 @@
+/* Configuración de tema extendida para Tailwind CSS */
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+      colors: {
+        church: {
+          50: '#f0f4f8',
+          100: '#d9e2ec',
+          500: '#334e68',
+          800: '#102a43',
+          900: '#0b1b2b',
+        }
+      }
+    }
+  }
+};
+
+/* Estilos globales */
+body {
+  font-family: 'Inter', sans-serif;
+}

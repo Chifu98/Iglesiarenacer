@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Restablecer contraseña</title>
+</head>
+<body>
+
+    <h2>Restablecer contraseña</h2>
+
+    <p>Introduce tu nueva contraseña.</p>
+
+    <form id="formPassword" hidden>
+        <input
+            type="password"
+            id="password"
+            placeholder="Nueva contraseña"
+            minlength="8"
+            required
+        >
+
+        <input
+            type="password"
+            id="confirmar"
+            placeholder="Confirmar contraseña"
+            minlength="8"
+            required
+        >
+
+        <button type="submit">Guardar contraseña</button>
+    </form>
+
+    <p id="mensaje">Validando enlace...</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-client.js"></script>
+
+    <script>
+        const cliente = window.supabaseClient;
+
+        const form = document.getElementById("formPassword");
+        const mensaje = document.getElementById("mensaje");
+
+        let recoveryReady = false;
+
+        cliente.auth.onAuthStateChange((event, session) => {
+
+            if (event === "PASSWORD_RECOVERY" && session) {
+                recoveryReady = true;
+                form.hidden = false;
+                mensaje.textContent =
+                    "Enlace válido. Puedes crear tu nueva contraseña.";
+            }
+        });
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            if (!recoveryReady) {
+                mensaje.textContent =
+                    "El enlace de recuperación no es válido o ha expirado.";
+                return;
+            }
+
+            const password =
+                document.getElementById("password").value;
+
+            const confirmar =
+                document.getElementById("confirmar").value;
+
+            if (password !== confirmar) {
+                mensaje.textContent =
+                    "Las contraseñas no coinciden.";
+                return;
+            }
+
+            mensaje.textContent = "Guardando contraseña...";
+
+            const { error } =
+                await supabaseClient.auth.resetPasswordForEmail(
+                    email,
+                    {
+                        redirectTo:
+                        "https://TU-DOMINIO.vercel.app/restablecer.html"
+                    }
+                );
+
+            if (error) {
+                mensaje.textContent = "Error: " + error.message;
+                return;
+            }
+
+            mensaje.textContent =
+                "¡Contraseña actualizada correctamente!";
+
+            form.hidden = true;
+        });
+    </script>
+
+</body>
+</html>

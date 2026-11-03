@@ -1,0 +1,74 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Prueba Supabase</title>
+</head>
+<body>
+    <h2>Prueba de conexión Supabase</h2>
+
+    <input id="email" type="email"
+           placeholder="Correo electrónico">
+
+    <input id="password" type="password"
+           placeholder="Contraseña">
+
+    <button id="btnLogin">Probar conexión</button>
+
+    <p id="resultado"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-client.js"></script>
+
+    <script>
+        const cliente = window.supabaseClient;
+
+        document.getElementById("btnLogin")
+        .addEventListener("click", async () => {
+
+            const resultado =
+                document.getElementById("resultado");
+
+            const email =
+                document.getElementById("email").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+            resultado.textContent = "Conectando...";
+
+            const { error: loginError } =
+                await cliente.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+            if (loginError) {
+                resultado.textContent =
+                    "Error de inicio de sesión: " + loginError.message;
+                return;
+            }
+
+            const { data, error } = await cliente
+                .from("miembros")
+                .select("id, nombres, apellidos")
+                .limit(5);
+
+            if (error) {
+                resultado.textContent =
+                    "Error consultando la base de datos: " +
+                    error.message;
+                return;
+            }
+
+            resultado.textContent =
+                "¡Conexión exitosa! Miembros consultados: " +
+                data.length;
+
+            console.table(data);
+        });
+    </script>
+</body>
+</html>
