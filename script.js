@@ -1145,7 +1145,7 @@ function renderPersonalWelcomeCard() {
     ? members.find(member => String(member.id) === String(currentUser.memberId))
     : null;
   const displayName = linkedMember ? linkedMember.name : (currentUser.name || "Hermano");
-  const initials = displayName.split(/\\s+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("").toUpperCase() || "R";
+  const initials = displayName.split(/\s+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("").toUpperCase() || "R";
 
   nameNode.textContent = displayName;
   subtitleNode.textContent = linkedMember
