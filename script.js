@@ -662,7 +662,8 @@ function applyRolePermissions() {
   const leaderNotesSection = document.getElementById("view-leader-notes-section");
   if (notesField) notesField.classList.toggle("hidden", !canPastoralNotes);
   if (notesSection) notesSection.classList.toggle("hidden", !canPastoralNotes);
-  if (leaderNotesField) leaderNotesField.classList.toggle("hidden", !canLeaderNotes);
+  // Las notas de líderes se administran en el editor privado por autor, no en la ficha del miembro.
+  if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
   // Solo admin y escritura pueden crear o modificar miembros.
@@ -2178,7 +2179,6 @@ async function handleFormSubmit(e) {
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
-    leaderNotes: document.getElementById("input-leader-notes").value.trim(),
     avatar: avatarToSave
   };
 
@@ -2266,7 +2266,6 @@ function editMember(id) {
   document.getElementById('input-baptized').value = member.baptized || 'Sí';
   document.getElementById('input-birthday').value = member.birthday || '';
   document.getElementById('input-notes').value = member.notes || '';
-  document.getElementById('input-leader-notes').value = member.leaderNotes || '';
 
   openModal(true);
 }
