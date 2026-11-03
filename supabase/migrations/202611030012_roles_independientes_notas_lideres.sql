@@ -5,6 +5,11 @@
 BEGIN;
 
 -- 1. Normalizar perfiles existentes sin añadir roles implícitos.
+-- La restricción antigua limitaba el campo legacy rol a cuatro valores;
+-- debe retirarse porque ahora refleja el primer rol explícito (incluye pastor/lider/servidor).
+ALTER TABLE public.perfiles_app
+  DROP CONSTRAINT IF EXISTS perfiles_app_rol_portal_check;
+
 ALTER TABLE public.perfiles_app
   ADD COLUMN IF NOT EXISTS roles text[];
 
