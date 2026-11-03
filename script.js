@@ -12,14 +12,12 @@ function escapeHtml(str) {
 let users = [];
 let currentUser = null;
 function hasRole(role) {
-  if (!currentUser || !Array.isArray(currentUser.roles)) return false;
-  if (role === "escritura") return currentUser.roles.some(item => ["escritura", "pastor", "servidor", "lider"].includes(item));
-  return currentUser.roles.includes(role);
+  return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Miembro", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Hermano", admin: "Administrador", escritura: "Escritura", lectura: "Lectura", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
-function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
+function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("escritura")); }
 let members = [];
 let prayerRequests = [];
 let announcements = [];
@@ -142,18 +140,7 @@ async function saveMembers() {
       if (notesError) throw notesError;
     }
   }
-  // Notas de líderes: Admin, Pastor y Líder.
-  if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
-    const leaderRows = members.map(member => ({
-      miembro_id: String(member.id), nota: member.leaderNotes || "",
-      updated_at: new Date().toISOString(), updated_by: currentUser.id
-    }));
-    if (leaderRows.length) {
-      const { error: leaderError } = await window.supabaseClient.from("notas_lideres")
-        .upsert(leaderRows, { onConflict: "miembro_id" });
-      if (leaderError) throw leaderError;
-    }
-  }
+  // Las notas de líderes se guardan por separado por miembro y líder; el guardado masivo no sobrescribe notas ajenas.
 }
 
 async function saveRequests() {
@@ -192,7 +179,7 @@ async function loadProfilesFromCloud() {
     id: profile.id,
     name: profile.nombre,
     username: profile.usuario || profile.id,
-    roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
+    roles: (Array.isArray(profile.roles) ? profile.roles : (profile.rol ? [profile.rol] : [])),
     role: profile.rol,
     active: profile.activo,
     requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
@@ -250,7 +237,7 @@ async function loadData() {
       name: profile.nombre,
       username: profile.usuario || session.user.email,
       email: session.user.email,
-      roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
+      roles: (Array.isArray(profile.roles) ? profile.roles : (profile.rol ? [profile.rol] : [])),
     role: profile.rol,
       memberId: profile.miembro_id || ""
     };
@@ -1296,7 +1283,7 @@ async function loadAuditLog() {
 
 /* ANNOUNCEMENTS MODULE */
 function canManageAnnouncements() {
-  return !!currentUser && (hasRole("admin") || (hasRole("escritura") && !hasRole("servidor")));
+  return !!currentUser && (hasRole("admin") || hasRole("escritura"));
 }
 
 function formatAnnouncementDate(value) {
@@ -1982,7 +1969,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -2012,7 +1999,7 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
 
   const memberSelect = document.getElementById("request-member-select");
   const memberId = isBrotherOnly() ? currentUser.memberId : memberSelect.value;
@@ -2081,7 +2068,7 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || hasRole("lectura")) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
 
   const id = document.getElementById("member-id").value;
   const currentMemberId = id || Date.now().toString();
