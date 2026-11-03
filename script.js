@@ -993,7 +993,7 @@ async function rejectPublicMemberRequest(requestId) {
   if (!currentUser || currentUser.role !== "admin") return;
   if (!confirm("¿Rechazar esta solicitud? No se incorporará a la lista oficial de miembros.")) return;
   try {
-    const { error } = await window.supabaseClient
+    const { data, error } = await window.supabaseClient
       .from("solicitudes_registro_miembros")
       .update({
         estado_solicitud: "rechazado",
@@ -1001,8 +1001,11 @@ async function rejectPublicMemberRequest(requestId) {
         reviewed_by: currentUser.id
       })
       .eq("id", requestId)
-      .eq("estado_solicitud", "pendiente");
+      .eq("estado_solicitud", "pendiente")
+      .select("id")
+      .maybeSingle();
     if (error) throw error;
+    if (!data) throw new Error("La solicitud ya fue revisada o no existe.");
     await loadPendingMemberRequests();
     alert("Solicitud rechazada. No se agregó a la base de miembros.");
   } catch (error) {
