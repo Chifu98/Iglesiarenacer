@@ -265,7 +265,9 @@ async function submitPublicMemberRegistration(event) {
   const email = document.getElementById("public-member-email").value.trim().toLowerCase();
   const address = document.getElementById("public-member-address").value.trim();
   const maritalStatus = document.getElementById("public-member-marital").value;
-  const spouseName = document.getElementById("public-member-spouse").value.trim();
+  const spouseName = (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)")
+    ? document.getElementById("public-member-spouse").value.trim()
+    : "";
   const ministry = document.getElementById("public-member-ministry").value;
   const baptized = document.getElementById("public-member-baptized").value;
   const birthday = document.getElementById("public-member-birthday").value;
