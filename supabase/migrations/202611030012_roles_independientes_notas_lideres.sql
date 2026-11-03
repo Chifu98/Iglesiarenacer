@@ -19,16 +19,30 @@ ALTER TABLE public.perfiles_app
   ALTER COLUMN roles SET DEFAULT ARRAY['hermano']::text[],
   ALTER COLUMN roles SET NOT NULL;
 
+CREATE OR REPLACE FUNCTION public.app_roles_valid(p_roles text[])
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $
+  SELECT p_roles IS NOT NULL
+    AND cardinality(p_roles) BETWEEN 1 AND 7
+    AND p_roles <@ ARRAY['admin','escritura','lectura','pastor','lider','servidor','hermano']::text[]
+    AND cardinality(p_roles) = (
+      SELECT COUNT(DISTINCT role_name)::integer
+      FROM unnest(p_roles) AS role_name
+    );
+$;
+
+REVOKE ALL ON FUNCTION public.app_roles_valid(text[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.app_roles_valid(text[]) TO authenticated, service_role;
+
 ALTER TABLE public.perfiles_app
   DROP CONSTRAINT IF EXISTS perfiles_app_roles_check;
 
 ALTER TABLE public.perfiles_app
   ADD CONSTRAINT perfiles_app_roles_check
-  CHECK (
-    cardinality(roles) BETWEEN 1 AND 7
-    AND roles <@ ARRAY['admin','escritura','lectura','pastor','lider','servidor','hermano']::text[]
-    AND cardinality(roles) = cardinality(ARRAY(SELECT DISTINCT unnest(roles)))
-  );
+  CHECK (public.app_roles_valid(roles));
 
 -- 2. Mantener rol como campo de compatibilidad, nunca como fuente de permisos.
 CREATE OR REPLACE FUNCTION public.sincronizar_roles_perfil_renacer()
