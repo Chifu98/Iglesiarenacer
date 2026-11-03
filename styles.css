@@ -23,3 +23,57 @@ tailwind.config = {
 body {
   font-family: 'Inter', sans-serif;
 }
+
+/* Iglesia Renacer — mejoras de experiencia móvil */
+:root { color-scheme: light; }
+html { -webkit-text-size-adjust: 100%; }
+body { min-width: 320px; overscroll-behavior-y: contain; }
+button, input, select, textarea { touch-action: manipulation; }
+button, [role="button"] { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { max-width: 100%; }
+img { max-width: 100%; }
+
+@media (max-width: 640px) {
+  #app-container header > div {
+    min-height: 4.5rem;
+    height: auto;
+    padding-top: .65rem;
+    padding-bottom: .65rem;
+    gap: .65rem;
+    align-items: center;
+  }
+  #app-container header h1 { font-size: 1rem; line-height: 1.25rem; }
+  #app-container header p { font-size: .625rem; line-height: .9rem; max-width: 11rem; }
+  #app-container header > div > div:first-child { min-width: 0; gap: .5rem; }
+  #app-container header > div > div:last-child { gap: .35rem; flex-wrap: wrap; justify-content: flex-end; }
+  #app-container header button { min-width: 2.55rem; min-height: 2.55rem; padding: .55rem; }
+  #app-container main { padding-left: .75rem; padding-right: .75rem; padding-top: 1rem; padding-bottom: 1.5rem; gap: 1rem; }
+  #app-container main > section { border-radius: .9rem; }
+  #app-container main > section.p-6 { padding: 1rem; }
+  #app-container input, #app-container select, #app-container textarea,
+  #login-view input, #login-view select, #login-view textarea {
+    font-size: 16px;
+    min-height: 2.75rem;
+  }
+  #members-table-body td { white-space: nowrap; }
+  #members-table-body td:first-child { white-space: normal; min-width: 13rem; }
+  #members-table-body td:last-child { position: sticky; right: 0; background: #fff; }
+  .dark #members-table-body td:last-child { background: #1e293b; }
+  #announcements-list article { min-width: 0; }
+  #announcements-list article button { min-height: 2.5rem; padding: .6rem .8rem; }
+  #requests-container article { min-width: 0; }
+  [id$="-modal"] { padding: .5rem !important; align-items: flex-end !important; }
+  [id$="-modal"] > div { width: 100%; max-height: 92dvh; border-radius: 1.1rem 1.1rem .7rem .7rem; }
+  [id$="-modal"] .overflow-y-auto { overscroll-behavior: contain; }
+  #login-view { align-items: flex-start; overflow-y: auto; padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  #login-view > div { margin: auto 0; padding: 1.25rem; }
+}
+
+@supports (padding: max(0px)) {
+  #app-container header { padding-top: env(safe-area-inset-top); }
+  #app-container main { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
