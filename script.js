@@ -366,13 +366,10 @@ function applyRolePermissions() {
   if (notesField) notesField.classList.toggle("hidden", !isAdmin);
   if (notesSection) notesSection.classList.toggle("hidden", !isAdmin);
 
-  if (isLectura) {
-    btnAddMember.classList.add("hidden");
-    btnAddRequest.classList.add("hidden");
-  } else {
-    btnAddMember.classList.remove("hidden");
-    btnAddRequest.classList.remove("hidden");
-  }
+  // Lectura puede consultar todos los módulos y registrar peticiones,
+  // pero no puede crear/editar miembros ni administrar usuarios.
+  if (btnAddMember) btnAddMember.classList.toggle("hidden", isLectura);
+  if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
   if (isAdmin) {
     btnManageUsers.classList.remove("hidden");
@@ -1007,7 +1004,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (currentUser.role === 'lectura') return;
+  if (!currentUser || !['admin', 'escritura', 'lectura'].includes(currentUser.role)) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -1027,10 +1024,14 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || currentUser.role === "lectura") return;
+  if (!currentUser || !['admin', 'escritura', 'lectura'].includes(currentUser.role)) return;
 
   const memberId = document.getElementById("request-member-select").value;
   const text = document.getElementById("request-description").value.trim();
+  if (!text) {
+    alert("Escribe el motivo de oración antes de guardar.");
+    return;
+  }
 
   const newReq = {
     id: "r_" + Date.now(),
@@ -1039,16 +1040,29 @@ async function handleRequestSubmit(e) {
     createdAt: new Date().toISOString()
   };
 
-  prayerRequests.unshift(newReq);
-
   try {
-    await saveRequests();
+    // INSERT directo: evita que el rol lectura use upsert y pueda actualizar registros existentes.
+    const { data, error } = await window.supabaseClient
+      .from("peticiones_oracion")
+      .insert({
+        id: newReq.id,
+        member_id: newReq.memberId || null,
+        description: newReq.text,
+        created_at: newReq.createdAt,
+        created_by: currentUser.id
+      })
+      .select("id,member_id,description,created_at")
+      .single();
+
+    if (error) throw error;
+
+    prayerRequests.unshift(mapDbRequestToApp(data));
     renderDashboard();
     renderRequests();
     closeRequestModal();
+    document.getElementById("request-form").reset();
   } catch (error) {
     console.error(error);
-    prayerRequests = prayerRequests.filter(request => request.id !== newReq.id);
     alert("No se pudo guardar la petición: " + error.message);
   }
 }
