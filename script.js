@@ -149,7 +149,7 @@ async function loadProfilesFromCloud() {
 
   const { data, error } = await window.supabaseClient
     .from("perfiles_app")
-    .select("id,nombre,usuario,rol,activo")
+    .select("id,nombre,usuario,rol,activo,estado_solicitud")
     .order("nombre", { ascending: true });
 
   if (error) throw error;
@@ -159,7 +159,8 @@ async function loadProfilesFromCloud() {
     name: profile.nombre,
     username: profile.usuario || profile.id,
     role: profile.rol,
-    active: profile.activo
+    active: profile.activo,
+    requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente")
   }));
 }
 
@@ -723,21 +724,71 @@ function deleteUser() {
 async function approveSignup(userId) {
   if (!currentUser || currentUser.role !== "admin") return;
   const requestedUser = users.find(user => user.id === userId);
-  if (!requestedUser || requestedUser.role !== "lectura" || requestedUser.active) return;
-  if (!confirm("¿Aprobar la cuenta de " + requestedUser.name + "? Se habilitará con permisos de lectura.")) return;
+  if (!requestedUser || requestedUser.active || requestedUser.requestStatus !== "pendiente") return;
+  if (!confirm("¿Aprobar la cuenta de " + requestedUser.name + "? Se habilitará con el rol " + requestedUser.role + ".")) return;
 
   const { error } = await window.supabaseClient
     .from("perfiles_app")
-    .update({ activo: true })
+    .update({ activo: true, estado_solicitud: "aprobado" })
     .eq("id", userId)
-    .eq("rol", "lectura");
+    .eq("activo", false)
+    .eq("estado_solicitud", "pendiente");
   if (error) {
     alert("No se pudo aprobar la cuenta: " + error.message);
     return;
   }
   await loadProfilesFromCloud();
   renderUsersTable();
-  alert("Cuenta aprobada. El usuario ya puede iniciar sesión con permisos de lectura.");
+  alert("Cuenta aprobada. El usuario ya puede iniciar sesión con el rol " + requestedUser.role + ".");
+}
+
+async function rejectSignup(userId) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const requestedUser = users.find(user => user.id === userId);
+  if (!requestedUser || requestedUser.active || requestedUser.requestStatus !== "pendiente") return;
+  if (!confirm("¿Rechazar la solicitud de " + requestedUser.name + "? La cuenta quedará bloqueada y no podrá iniciar sesión. El registro de autenticación se conservará en Supabase.")) return;
+
+  const { error } = await window.supabaseClient
+    .from("perfiles_app")
+    .update({ activo: false, estado_solicitud: "rechazado" })
+    .eq("id", userId)
+    .eq("activo", false)
+    .eq("estado_solicitud", "pendiente");
+  if (error) {
+    alert("No se pudo rechazar la solicitud: " + error.message);
+    return;
+  }
+  await loadProfilesFromCloud();
+  renderUsersTable();
+  alert("Solicitud rechazada. La cuenta permanece bloqueada.");
+}
+
+async function changeUserRole(userId, newRole) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const allowedRoles = ["admin", "escritura", "lectura"];
+  const targetUser = users.find(user => user.id === userId);
+  if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) {
+    renderUsersTable();
+    return;
+  }
+  if (targetUser.role === newRole) return;
+  if (!confirm("¿Cambiar el rol de " + targetUser.name + " de " + targetUser.role + " a " + newRole + "?")) {
+    renderUsersTable();
+    return;
+  }
+
+  const { error } = await window.supabaseClient
+    .from("perfiles_app")
+    .update({ rol: newRole })
+    .eq("id", userId);
+  if (error) {
+    alert("No se pudo cambiar el rol: " + error.message);
+    renderUsersTable();
+    return;
+  }
+  await loadProfilesFromCloud();
+  renderUsersTable();
+  alert("Rol actualizado correctamente. Si el usuario tenía una sesión abierta, deberá actualizar la página para aplicar los nuevos permisos.");
 }
 
 function renderUsersTable() {
@@ -748,28 +799,37 @@ function renderUsersTable() {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
-    let roleBadge = "bg-slate-100 text-slate-700 border-slate-300";
-    if (user.role === "admin") roleBadge = "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300";
-    if (user.role === "escritura") roleBadge = "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-blue-300";
+    const roleOptions = ["admin", "escritura", "lectura"].map(role =>
+      '<option value="' + role + '"' + (user.role === role ? " selected" : "") + '>' + role + '</option>'
+    ).join("");
+    const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
+      (user.id === currentUser.id ? "disabled " : "") +
+      'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
+      'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
+      (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+
+    let statusAction = "";
+    if (user.active || user.requestStatus === "aprobado") {
+      statusAction = '<span class="text-emerald-600 dark:text-emerald-400">Aprobado</span>';
+    } else if (user.requestStatus === "rechazado") {
+      statusAction = '<span class="text-rose-600 dark:text-rose-400">Rechazado</span>';
+    } else {
+      statusAction = '<div class="flex flex-wrap items-center justify-end gap-1.5"><span class="text-amber-600 dark:text-amber-400">Pendiente</span>' +
+        '<button type="button" onclick="approveSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold">Aprobar</button>' +
+        '<button type="button" onclick="rejectSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-semibold">Rechazar</button></div>';
+    }
 
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase ' + roleBadge + '">' + escapeHtml(user.role) + '</span></td>' +
-      '<td class="py-2.5 px-3 text-right text-slate-500">' +
-      (user.active
-        ? '<span class="text-emerald-600 dark:text-emerald-400">Aprobado</span>'
-        : (user.role === "lectura"
-          ? '<div class="flex items-center justify-end gap-2"><span class="text-amber-600 dark:text-amber-400">Pendiente</span><button type="button" onclick="approveSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold">Aprobar</button></div>'
-          : '<span>Inactivo</span>')) + '</td>';
+      '<td class="py-2.5 px-3">' + roleControl + '</td>' +
+      '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
 
     tbody.appendChild(tr);
   });
 
   lucide.createIcons();
 }
-
-
 
 /* AUDITORÍA (SOLO ADMINISTRADORES) */
 async function openAuditModal() {
