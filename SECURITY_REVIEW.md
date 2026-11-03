@@ -10,7 +10,7 @@
 
 ## Importante sobre visibilidad del directorio
 
-La matriz de roles es independiente. Tener Pastor, Líder o Servidor no concede acceso al directorio. Si un Pastor o Líder necesita consultar el directorio, el administrador debe asignarle también el rol Lectura explícitamente. Escritura concede edición del directorio solo cuando ese rol está asignado.
+La matriz de roles es independiente. Tener Pastor, Líder o Servidor no concede acceso al directorio. Si un Pastor o Líder necesita consultar el directorio para trabajar con notas, el administrador debe asignarle también el rol Lectura explícitamente. El botón de nota de líder solo aparece para miembros visibles según RLS; no se concede acceso general por ser Líder. Escritura concede edición del directorio solo cuando ese rol está asignado.
 
 ## Pasos manuales antes de publicar
 
