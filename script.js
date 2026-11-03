@@ -149,18 +149,25 @@ async function loadProfilesFromCloud() {
     return;
   }
 
-  const { data, error } = await window.supabaseClient
+  let { data, error } = await window.supabaseClient
     .from("perfiles_app")
     .select("id,nombre,usuario,rol,roles,activo,estado_solicitud,miembro_id")
     .order("nombre", { ascending: true });
 
+  // Compatibilidad temporal mientras el administrador ejecuta la migración SQL.
+  if (error && error.code === "42703") {
+    ({ data, error } = await window.supabaseClient
+      .from("perfiles_app")
+      .select("id,nombre,usuario,rol,activo,estado_solicitud,miembro_id")
+      .order("nombre", { ascending: true }));
+  }
   if (error) throw error;
 
   users = (data || []).map(profile => ({
     id: profile.id,
     name: profile.nombre,
     username: profile.usuario || profile.id,
-    roles: profile.roles || ["hermano"],
+    roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
     role: profile.rol,
     active: profile.activo,
     requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
@@ -186,12 +193,20 @@ async function loadData() {
       return;
     }
 
-    const { data: profile, error: profileError } = await window.supabaseClient
+    let { data: profile, error: profileError } = await window.supabaseClient
       .from("perfiles_app")
       .select("id,nombre,usuario,rol,roles,activo,miembro_id")
       .eq("id", session.user.id)
       .maybeSingle();
 
+    // Compatibilidad temporal mientras el administrador ejecuta la migración SQL.
+    if (profileError && profileError.code === "42703") {
+      ({ data: profile, error: profileError } = await window.supabaseClient
+        .from("perfiles_app")
+        .select("id,nombre,usuario,rol,activo,miembro_id")
+        .eq("id", session.user.id)
+        .maybeSingle());
+    }
     if (profileError) throw profileError;
 
     if (!profile || !profile.activo) {
