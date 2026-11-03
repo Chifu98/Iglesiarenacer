@@ -942,15 +942,13 @@ function renderUsersTable() {
     } else if (user.requestStatus === "rechazado") {
       statusAction = '<span class="text-rose-600 dark:text-rose-400">Rechazado</span>';
     } else {
-      statusAction = '<div class="flex flex-wrap items-center justify-end gap-1.5"><span class="text-amber-600 dark:text-amber-400">Pendiente</span>' +
-        '<button type="button" onclick="approveSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold">Aprobar</button>' +
-        '<button type="button" onclick="rejectSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-semibold">Rechazar</button></div>';
+      statusAction = '<span class="text-amber-600 dark:text-amber-400">Pendiente de aprobación de incorporación</span>';
     }
 
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Rol de acceso</div></div></td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Rol adicional</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
 
