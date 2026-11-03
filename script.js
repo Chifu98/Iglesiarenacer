@@ -12,6 +12,7 @@ function escapeHtml(str) {
 let users = [];
 let currentUser = null;
 function hasRole(role) { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role)); }
+function roleDisplayName(role) { return role === "hermano" ? "Miembro" : role; }
 function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
 let members = [];
 let prayerRequests = [];
@@ -436,7 +437,7 @@ function showAppView() {
 
   document.getElementById("current-user-name").textContent = currentUser.name;
   const badge = document.getElementById("current-user-role-badge");
-  badge.textContent = currentUser.roles.map(role => role.toUpperCase()).join(" + ");
+  badge.textContent = currentUser.roles.map(role => roleDisplayName(role).toUpperCase()).join(" + ");
 
   applyRolePermissions();
   renderDashboard();
@@ -930,10 +931,10 @@ function renderUsersTable() {
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
     const roleChoices = [
-      { value: "hermano", label: "Hermano" },
-      { value: "lectura", label: "Hermano + Lectura" },
-      { value: "escritura", label: "Hermano + Escritura" },
-      { value: "admin", label: "Hermano + Admin" }
+      { value: "hermano", label: "Miembro" },
+      { value: "lectura", label: "Miembro + Lectura" },
+      { value: "escritura", label: "Miembro + Escritura" },
+      { value: "admin", label: "Miembro + Admin" }
     ];
     const currentExtraRole = (user.roles || ["hermano"]).find(role => role !== "hermano") || "hermano";
     const roleOptions = roleChoices.map(choice =>
