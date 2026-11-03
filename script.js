@@ -1002,9 +1002,10 @@ async function rejectSignup(userId) {
   alert("Solicitud rechazada. La cuenta permanece bloqueada.");
 }
 
-async function changeUserRoles(selectElement) {
+async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
-  const userId = selectElement.dataset.userId;
+  const selectElement = document.getElementById("user-roles-" + userId);
+  if (!selectElement) return;
   const allowedRoles = ["admin", "escritura", "lectura", "pastor", "lider", "servidor", "hermano"];
   const targetUser = users.find(user => user.id === userId);
   const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
@@ -1087,9 +1088,10 @@ function renderUsersTable() {
     const roleOptions = roleChoices.map(choice =>
       '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<select multiple size="7" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" data-user-id="' + escapeHtml(user.id) + '" ' +
+    const roleControl = '<div class="space-y-1"><select multiple size="7" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
-      'onchange="changeUserRoles(this)" class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>';
+      'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
+      (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
     const memberOptions = '<option value="">Sin vincular</option>' + members.map(member =>
       '<option value="' + escapeHtml(member.id) + '"' + (user.memberId === member.id ? " selected" : "") + '>' +
       escapeHtml(member.name) + '</option>'
