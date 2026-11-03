@@ -461,6 +461,115 @@ function showLoginView() {
   showAccessOption("menu");
 }
 
+
+/* NOTIFICACIONES WEB PUSH: solo anuncios congregacionales */
+const RENACER_VAPID_PUBLIC_KEY = "BIrlzGo8hTSfrhStsQK8G_vyE4yU8US8a6V9Y3JLecCrJ-M3-QkU0P8prr4YYHC5Z6Q_V2BadBJeeQhtJnEN-jo";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(char => char.charCodeAt(0)));
+}
+
+function updateAnnouncementPushButton(enabled) {
+  const button = document.getElementById("btn-announcement-notifications");
+  if (!button) return;
+  button.dataset.enabled = enabled ? "true" : "false";
+  button.title = enabled ? "Desactivar avisos de anuncios" : "Activar avisos de anuncios";
+  button.setAttribute("aria-label", button.title);
+  button.innerHTML = (enabled
+    ? '<i data-lucide="bell-ring" class="w-5 h-5"></i><span class="hidden sm:inline">Avisos activos</span>'
+    : '<i data-lucide="bell" class="w-5 h-5"></i><span class="hidden sm:inline">Activar avisos</span>');
+  if (window.lucide) lucide.createIcons();
+}
+
+async function refreshAnnouncementPushButton() {
+  const button = document.getElementById("btn-announcement-notifications");
+  if (!button) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    button.classList.add("hidden");
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    updateAnnouncementPushButton(!!subscription);
+  } catch (error) {
+    console.warn("No se pudo consultar el estado de avisos:", error);
+    updateAnnouncementPushButton(false);
+  }
+}
+
+async function toggleAnnouncementNotifications() {
+  if (!currentUser) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    alert("Este navegador no admite notificaciones push. En iPhone, instala Renacer en la pantalla de inicio y utiliza iOS 16.4 o posterior.");
+    return;
+  }
+
+  const button = document.getElementById("btn-announcement-notifications");
+  if (button) button.disabled = true;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      const endpoint = subscription.endpoint;
+      await subscription.unsubscribe();
+      const { error } = await window.supabaseClient
+        .from("suscripciones_push").delete().eq("endpoint", endpoint);
+      if (error) throw error;
+      updateAnnouncementPushButton(false);
+      alert("Avisos de anuncios desactivados en este dispositivo.");
+      return;
+    }
+
+    const permission = Notification.permission === "default"
+      ? await Notification.requestPermission()
+      : Notification.permission;
+    if (permission !== "granted") {
+      alert("No se concedió permiso para notificaciones. Puedes habilitarlo desde la configuración del navegador.");
+      return;
+    }
+
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(RENACER_VAPID_PUBLIC_KEY)
+    });
+    const json = subscription.toJSON();
+    const { error } = await window.supabaseClient.from("suscripciones_push").upsert({
+      usuario_id: currentUser.id,
+      endpoint: subscription.endpoint,
+      p256dh: json.keys?.p256dh,
+      auth: json.keys?.auth,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "endpoint" });
+    if (error) {
+      await subscription.unsubscribe();
+      throw error;
+    }
+    updateAnnouncementPushButton(true);
+    alert("¡Listo! Este dispositivo recibirá notificaciones cuando se publiquen anuncios.");
+  } catch (error) {
+    console.error("Error configurando avisos de anuncios:", error);
+    alert("No se pudieron configurar los avisos: " + (error.message || "Error desconocido"));
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function sendAnnouncementPush(title, content) {
+  try {
+    const { error } = await window.supabaseClient.functions.invoke("send-announcement-push", {
+      body: { title, content }
+    });
+    if (error) console.warn("El anuncio se publicó, pero no se pudieron enviar los avisos push:", error);
+  } catch (error) {
+    console.warn("El anuncio se publicó; el servicio de avisos no está disponible:", error);
+  }
+}
+
 function showAppView() {
   document.getElementById("login-view").classList.add("hidden");
   document.getElementById("app-container").classList.remove("hidden");
@@ -476,6 +585,7 @@ function showAppView() {
   renderRequests();
   renderAnnouncements();
   renderBirthdayModule();
+  refreshAnnouncementPushButton();
 }
 
 function startRealtimeSync() {
@@ -1310,6 +1420,7 @@ async function handleAnnouncementSubmit(event) {
     announcements = data || [];
     renderAnnouncements();
     closeAnnouncementModal();
+    if (!id) await sendAnnouncementPush(titulo, contenido);
   } catch (error) {
     console.error("Error guardando anuncio:", error);
     alert("No se pudo guardar el anuncio: " + error.message);
