@@ -230,7 +230,7 @@ async function handlePasswordReset() {
   }
 
   const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: "https://iglesiarenacer.vercel.app/restablecer.html"
+    redirectTo: new URL("restablecer.html", window.location.href).toString()
   });
 
   if (error) {
