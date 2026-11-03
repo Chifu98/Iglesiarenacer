@@ -14,5 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Check JavaScript syntax
+        run: node --check script.js && node --check scripts/check-security-contract.mjs
       - name: Check explicit role and private-note contract
         run: node scripts/check-security-contract.mjs
