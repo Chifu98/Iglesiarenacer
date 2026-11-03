@@ -56,7 +56,6 @@ USING (
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.anuncios TO authenticated;
-GRANT SELECT ON public.anuncios TO anon;
 
 CREATE INDEX IF NOT EXISTS anuncios_creado_en_idx
 ON public.anuncios (creado_en DESC);
