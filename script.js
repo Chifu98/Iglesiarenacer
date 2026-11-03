@@ -223,6 +223,72 @@ async function loadData() {
   }
 }
 
+function showAccessChoices() {
+  document.getElementById("access-choice").classList.remove("hidden");
+  document.getElementById("server-access-panel").classList.add("hidden");
+  document.getElementById("member-registration-panel").classList.add("hidden");
+}
+function showServerAccess() {
+  document.getElementById("access-choice").classList.add("hidden");
+  document.getElementById("server-access-panel").classList.remove("hidden");
+  document.getElementById("member-registration-panel").classList.add("hidden");
+}
+function showMemberRegistration() {
+  document.getElementById("access-choice").classList.add("hidden");
+  document.getElementById("server-access-panel").classList.add("hidden");
+  document.getElementById("member-registration-panel").classList.remove("hidden");
+  document.getElementById("public-member-name").focus();
+}
+function togglePublicSpouseField() {
+  const status = document.getElementById("public-member-marital").value;
+  document.getElementById("public-spouse-field").classList.toggle("hidden", !["Casado (a)", "Novio (a)"].includes(status));
+}
+function showPublicMemberMessage(message, success = false) {
+  const box = document.getElementById("public-member-message");
+  box.textContent = message;
+  box.className = "p-3 rounded-xl text-xs " + (success
+    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+    : "bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300");
+}
+async function handleMemberRegistration(event) {
+  event.preventDefault();
+  const button = document.getElementById("public-member-submit");
+  const marital = document.getElementById("public-member-marital").value;
+  const spouse = document.getElementById("public-member-spouse").value.trim();
+  const payload = {
+    nombre: document.getElementById("public-member-name").value.trim(),
+    telefono: document.getElementById("public-member-phone").value.trim(),
+    correo: document.getElementById("public-member-email").value.trim().toLowerCase() || null,
+    direccion: document.getElementById("public-member-address").value.trim() || null,
+    estado_civil: marital,
+    nombre_pareja: ["Casado (a)", "Novio (a)"].includes(marital) ? (spouse || null) : null,
+    ministerio: document.getElementById("public-member-ministry").value || "General",
+    bautizado: document.getElementById("public-member-baptized").value,
+    fecha_nacimiento: document.getElementById("public-member-birthday").value
+  };
+  if (payload.nombre.length < 2 || payload.telefono.length < 6 || !payload.fecha_nacimiento) {
+    showPublicMemberMessage("Revisa el nombre, teléfono y fecha de nacimiento.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  try {
+    const { error } = await window.supabaseClient
+      .from("solicitudes_membresia")
+      .insert(payload);
+    if (error) throw error;
+    document.getElementById("member-registration-form").reset();
+    document.getElementById("public-spouse-field").classList.add("hidden");
+    showPublicMemberMessage("¡Registro enviado! Un administrador revisará tus datos antes de incorporarlos a la base oficial de miembros.", true);
+  } catch (error) {
+    console.error("Error enviando registro público:", error);
+    showPublicMemberMessage("No se pudo enviar el registro. Intenta nuevamente o contacta a un servidor.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enviar registro para aprobación";
+  }
+}
+
 function showSignupForm() {
   document.getElementById("signup-form").classList.remove("hidden");
   document.getElementById("signup-message").classList.add("hidden");
@@ -446,6 +512,7 @@ async function openUsersModal() {
   try {
     await loadProfilesFromCloud();
     renderUsersTable();
+    await loadMembershipRequests();
     document.getElementById("users-modal").classList.remove("hidden");
     lucide.createIcons();
   } catch (error) {
@@ -789,6 +856,73 @@ async function changeUserRole(userId, newRole) {
   await loadProfilesFromCloud();
   renderUsersTable();
   alert("Rol actualizado correctamente. Si el usuario tenía una sesión abierta, deberá actualizar la página para aplicar los nuevos permisos.");
+}
+
+async function loadMembershipRequests() {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const status = document.getElementById("membership-request-status");
+  const tbody = document.getElementById("membership-requests-body");
+  if (!status || !tbody) return;
+  status.textContent = "Consultando solicitudes...";
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("solicitudes_membresia")
+      .select("id,nombre,telefono,correo,direccion,estado_civil,nombre_pareja,ministerio,bautizado,fecha_nacimiento,created_at")
+      .eq("estado_solicitud", "pendiente")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    tbody.innerHTML = "";
+    if (!data || !data.length) {
+      status.textContent = "No hay solicitudes de registro pendientes.";
+      return;
+    }
+    status.textContent = data.length + " solicitud(es) pendiente(s).";
+    data.forEach(item => {
+      const tr = document.createElement("tr");
+      const details = [
+        item.estado_civil,
+        item.ministerio || "General",
+        "Bautizado: " + (item.bautizado || "No"),
+        "Nacimiento: " + item.fecha_nacimiento,
+        item.direccion || ""
+      ].filter(Boolean).join(" · ");
+      tr.innerHTML =
+        '<td class="p-2 align-top"><div class="font-semibold text-slate-800 dark:text-white">' + escapeHtml(item.nombre) + '</div><div>' + escapeHtml(item.telefono) + '</div><div>' + escapeHtml(item.correo || "Sin correo") + '</div></td>' +
+        '<td class="p-2 align-top text-slate-600 dark:text-slate-300">' + escapeHtml(details) + (item.nombre_pareja ? '<div>Pareja: ' + escapeHtml(item.nombre_pareja) + '</div>' : '') + '</td>' +
+        '<td class="p-2 align-top text-right whitespace-nowrap"><button type="button" onclick="approveMembershipRequest(\'' + item.id + '\')" class="px-2 py-1 rounded bg-emerald-600 text-white font-semibold mr-1">Aprobar</button><button type="button" onclick="rejectMembershipRequest(\'' + item.id + '\')" class="px-2 py-1 rounded bg-rose-600 text-white font-semibold">Rechazar</button></td>';
+      tbody.appendChild(tr);
+    });
+  } catch (error) {
+    console.error(error);
+    status.textContent = "No se pudieron cargar las solicitudes. Verifica que hayas ejecutado la migración SQL.";
+  }
+  lucide.createIcons();
+}
+async function approveMembershipRequest(id) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  if (!confirm("¿Aprobar esta solicitud e incorporar al hermano a la base oficial?")) return;
+  const { data, error } = await window.supabaseClient.rpc("aprobar_solicitud_membresia", { p_solicitud_id: id });
+  if (error) {
+    alert("No se pudo aprobar la solicitud: " + error.message);
+    return;
+  }
+  await loadMembershipRequests();
+  await refreshCloudData();
+  renderDashboard();
+  renderTable();
+  renderBirthdayModule();
+  alert("Solicitud aprobada. El hermano ya forma parte de la base oficial.");
+}
+async function rejectMembershipRequest(id) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  if (!confirm("¿Rechazar esta solicitud? No se incorporará a la base de miembros.")) return;
+  const { error } = await window.supabaseClient.rpc("rechazar_solicitud_membresia", { p_solicitud_id: id });
+  if (error) {
+    alert("No se pudo rechazar la solicitud: " + error.message);
+    return;
+  }
+  await loadMembershipRequests();
+  alert("Solicitud rechazada.");
 }
 
 function renderUsersTable() {
