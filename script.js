@@ -540,8 +540,8 @@ function scheduleCloudRefresh() {
 }
 
 function applyRolePermissions() {
-  const isLectura = currentUser.role === "lectura";
   const isAdmin = currentUser.role === "admin";
+  const canManageMembers = ["admin", "escritura"].includes(currentUser.role);
 
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
@@ -552,9 +552,8 @@ function applyRolePermissions() {
   if (notesField) notesField.classList.toggle("hidden", !isAdmin);
   if (notesSection) notesSection.classList.toggle("hidden", !isAdmin);
 
-  // Lectura puede consultar todos los módulos y registrar peticiones,
-  // pero no puede crear/editar miembros ni administrar usuarios.
-  if (btnAddMember) btnAddMember.classList.toggle("hidden", isLectura);
+  // Solo admin y escritura pueden crear o modificar miembros.
+  if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
   if (isAdmin) {
@@ -1581,7 +1580,7 @@ function populateSpouseSelect(currentMemberId = '') {
 }
 
 function openModal(isEdit = false) {
-  if (currentUser.role === 'lectura') return;
+  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -1785,7 +1784,7 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  if (currentUser.role === 'lectura') return;
+  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
@@ -1837,7 +1836,7 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  if (!currentUser || currentUser.role === "lectura") return;
+  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
 
   const member = members.find(item => item.id === id);
   if (!member) return;
