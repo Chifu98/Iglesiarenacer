@@ -15,9 +15,9 @@ function hasRole(role) {
   return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Hermano", admin: "Administrador", escritura: "Escritura", lectura: "Lectura", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Hermano", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
-function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("escritura")); }
+function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("pastor")); }
 let members = [];
 let prayerRequests = [];
 let announcements = [];
@@ -649,7 +649,7 @@ function scheduleCloudRefresh() {
 
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
-  const canManageMembers = (hasRole("admin") || hasRole("escritura"));
+  const canManageMembers = (hasRole("admin") || hasRole("pastor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
 
@@ -666,7 +666,7 @@ function applyRolePermissions() {
   if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
-  // Solo admin y escritura pueden crear o modificar miembros.
+  // Solo Admin y Pastor pueden crear o modificar miembros.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
@@ -1006,7 +1006,7 @@ async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
   const selectElement = document.getElementById("user-roles-" + userId);
   if (!selectElement) return;
-  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "lider", "servidor", "hermano"];
+  const allowedRoles = ["admin", "pastor", "lider", "servidor", "hermano"];
   const targetUser = users.find(user => user.id === userId);
   const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
   if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
@@ -1077,8 +1077,6 @@ function renderUsersTable() {
 
     const roleChoices = [
       { value: "admin", label: "Administrador" },
-      { value: "escritura", label: "Escritura" },
-      { value: "lectura", label: "Lectura" },
       { value: "pastor", label: "Pastor" },
       { value: "lider", label: "Líder" },
       { value: "servidor", label: "Servidor" },
@@ -1088,7 +1086,7 @@ function renderUsersTable() {
     const roleOptions = roleChoices.map(choice =>
       '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<div class="space-y-1"><select multiple size="7" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<div class="space-y-1"><select multiple size="5" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
       'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
       (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
@@ -1290,7 +1288,7 @@ async function loadAuditLog() {
 
 /* ANNOUNCEMENTS MODULE */
 function canManageAnnouncements() {
-  return !!currentUser && (hasRole("admin") || hasRole("escritura"));
+  return !!currentUser && (hasRole("admin") || hasRole("pastor"));
 }
 
 function formatAnnouncementDate(value) {
@@ -1646,7 +1644,7 @@ function renderRequests() {
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
   const filtered = getFilteredRequests();
-  const canEdit = currentUser && (hasRole("admin") || hasRole("escritura"));
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor"));
 
   container.innerHTML = '';
 
@@ -1864,7 +1862,7 @@ function renderTable() {
   const ministryFilter = document.getElementById('filter-ministry').value;
   const statusFilter = document.getElementById('filter-status').value;
 
-  const canEdit = currentUser && (hasRole("admin") || hasRole("escritura"));
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddLeaderNote = currentUser && hasRole("lider");
 
@@ -2002,7 +2000,7 @@ function populateSpouseSelect(currentMemberId = '') {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2030,7 +2028,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("hermano"))) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -2060,7 +2058,7 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("hermano"))) return;
 
   const memberSelect = document.getElementById("request-member-select");
   const memberId = isBrotherOnly() ? currentUser.memberId : memberSelect.value;
@@ -2082,7 +2080,7 @@ async function handleRequestSubmit(e) {
   };
 
   try {
-    // INSERT directo: evita que el rol lectura use upsert y pueda actualizar registros existentes.
+    // INSERT directo: permite registrar peticiones propias sin conceder edición de registros existentes.
     const { data, error } = await window.supabaseClient
       .from("peticiones_oracion")
       .insert({
@@ -2109,7 +2107,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -2129,7 +2127,7 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
 
   const id = document.getElementById("member-id").value;
   const currentMemberId = id || Date.now().toString();
@@ -2221,7 +2219,7 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
@@ -2273,7 +2271,7 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
 
   const member = members.find(item => item.id === id);
   if (!member) return;
