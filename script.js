@@ -283,19 +283,24 @@ async function submitPublicMemberRegistration(event) {
   button.textContent = "Creando cuenta y solicitud...";
   let requestId = null;
   try {
-    const { data: request, error: requestError } = await window.supabaseClient
-      .from("solicitudes_registro_miembros")
-      .insert({
-        name, phone, email, address: address || null,
-        marital_status: maritalStatus,
-        spouse_type: spouseName ? "text" : "none",
-        spouse_name: spouseName || null, spouse_id: null,
-        ministry, baptized, birthday, status: "Activo"
-      })
-      .select("id")
-      .single();
+    const { data: request, error: requestError } = await window.supabaseClient.rpc(
+      "crear_solicitud_registro_miembro",
+      {
+        p_name: name,
+        p_phone: phone,
+        p_email: email,
+        p_address: address || null,
+        p_marital_status: maritalStatus,
+        p_spouse_type: spouseName ? "text" : "none",
+        p_spouse_name: spouseName || null,
+        p_ministry: ministry,
+        p_baptized: baptized,
+        p_birthday: birthday
+      }
+    );
     if (requestError) throw requestError;
-    requestId = request.id;
+    requestId = request;
+    if (!requestId) throw new Error("No se pudo obtener el identificador de la solicitud.");
 
     const { data, error } = await window.supabaseClient.auth.signUp({
       email,
@@ -306,7 +311,14 @@ async function submitPublicMemberRegistration(event) {
       }
     });
     if (error) throw error;
-    if (!data.user) throw new Error("Supabase no devolvió la cuenta creada. Contacta al administrador antes de volver a intentarlo.");
+    if (!data.user) throw new Error("Supabase no devolvió la cuenta creada. Contacta al administrador.");
+
+    // Supabase puede ocultar la existencia de correos duplicados cuando la confirmación
+    // está activada. En ese caso no se debe presentar la solicitud como completada.
+    if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error("Este correo ya tiene una cuenta o no está disponible. Si ya te registraste, inicia sesión o contacta al administrador.");
+    }
+
     if (data.session) await window.supabaseClient.auth.signOut();
 
     form.reset();
@@ -320,7 +332,7 @@ async function submitPublicMemberRegistration(event) {
     showPublicMemberMessage(
       "No se pudo completar el registro. " +
       (requestId
-        ? "La solicitud quedó registrada, pero la cuenta no se confirmó. Contacta al administrador para revisar y evitar solicitudes duplicadas. "
+        ? "Si la solicitud quedó guardada, el administrador podrá revisarla. No vuelvas a enviarla hasta confirmar su estado. "
         : "") +
       (error.message || "Inténtalo nuevamente.")
     );
