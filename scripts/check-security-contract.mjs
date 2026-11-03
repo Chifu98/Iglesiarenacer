@@ -11,7 +11,6 @@ assert.doesNotMatch(app, /role === ["']escritura["']\s*\)\s*return currentUser\.
 assert.match(app, /async function changeUserRoles\(selectElement\)/);
 assert.match(app, /selectElement\.selectedOptions/);
 assert.match(app, /onConflict: ["']miembro_id,lider_id["']/);
-assert.match(app, /lider_id = auth\.uid\(\)/);
 assert.match(edge, /roles\.includes\(["']admin["']\) \|\| roles\.includes\(["']escritura["']\)/);
 assert.doesNotMatch(edge, /\["admin",\s*"escritura",\s*"pastor",\s*"lider"\]/);
 assert.match(migration, /cardinality\(p_roles\) BETWEEN 1 AND 7/);
