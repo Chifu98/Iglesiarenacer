@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Iglesia Renacer",
+  "short_name": "Renacer",
+  "description": "Sistema congregacional de Iglesia Renacer.",
+  "lang": "es-CL",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1b2b",
+  "theme_color": "#0b1b2b",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
