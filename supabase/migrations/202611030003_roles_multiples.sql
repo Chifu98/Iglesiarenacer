@@ -27,8 +27,11 @@ ALTER TABLE public.perfiles_app
   CHECK (
     cardinality(roles) BETWEEN 1 AND 2
     AND roles @> ARRAY['hermano']::text[]
-    AND roles <@ ARRAY['hermano','admin','escritura','lectura']::text[]
-    AND cardinality(roles) = cardinality(ARRAY(SELECT DISTINCT unnest(roles)))
+    AND roles[1] = 'hermano'
+    AND (
+      cardinality(roles) = 1
+      OR roles[2] IN ('admin','escritura','lectura')
+    )
   );
 
 -- 2) Helper para verificar roles de forma explícita.
