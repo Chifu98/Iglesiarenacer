@@ -1,40 +1,41 @@
-# Iglesia Renacer — despliegue seguro de roles independientes
+# Iglesia Renacer — despliegue seguro de roles
 
 ## Estado verificado (2026-11-03)
-- Migración 012 aplicada correctamente en Supabase `oanmwvpvqcmdmdsmflie`.
-- Migración 013 aplicada: optimiza las políticas RLS de notas y elimina el índice duplicado cuando la PK ya cubre `(miembro_id, lider_id)`.
-- Validación de datos: cero perfiles con roles inválidos, cero notas duplicadas y cero notas sin líder; las cuatro políticas de notas están activas y `anon` no tiene SELECT.
-- Prueba RLS con rol `authenticated`: un perfil Hermano solo ve su propio registro de miembro (1 fila); no ve notas de líderes.
-- Edge Function `send-announcement-push` desplegada en versión 4 con `verify_jwt=true`; autoriza solo Admin o Escritura.
-- Migración 014 aplicada: revoca la ejecución directa por clientes de una función que solo debe ejecutarse como trigger.
-- GitHub Actions `Security contract`: pendiente de completar para el último commit de esta rama.
-- Vercel Preview del commit `f5056f7`: `READY`. URL verificada: https://iglesiarenacer-git-fix-roles-independient-d470ed-iglesiarenacer.vercel.app
-- PR #12 fusionado en `main` (merge commit `11635d0`).
-- Vercel todavía no ha desplegado el merge a producción: el plan Hobby devolvió `api-deployments-young-hobby-team-24h` (bloqueo de 24 horas). El último deployment de producción verificado sigue en el commit anterior `51b29e5`.
-- No se pudo crear un backup descargable desde las herramientas disponibles; se debe conservar un backup externo del proyecto.
-- No hay dos cuentas de Líder de prueba, por lo que el aislamiento entre dos autores aún requiere una prueba funcional con cuentas reales.
 
-## Orden de publicación
+- Migraciones 012, 013, 014, 015 y 016 aplicadas en Supabase `oanmwvpvqcmdmdsmflie`.
+- Migración 015: catálogo reducido a cinco roles explícitos: Admin, Pastor, Líder, Servidor y Hermano. Escritura se convierte a Pastor; Lectura se convierte a Hermano.
+- Migración 015: Pastor asume los permisos de gestión del directorio, anuncios y peticiones de oración, y conserva acceso a notas pastorales y supervisión de notas de líderes.
+- Migración 016: nombres de políticas de anuncios actualizados para reflejar Admin/Pastor.
+- Perfiles actuales verificados: un Admin y un Pastor. No hay perfiles asignados a Lectura ni Escritura.
+- Validación SQL: Admin/Pastor aceptados; Escritura/Lectura rechazados; roles duplicados rechazados.
+- Prueba RLS con el perfil Pastor: `app_tiene_rol_exacto('pastor') = true`, puede gestionar anuncios y ve los 2 registros de miembros y las 2 peticiones de oración existentes.
+- RLS de Hermano se mantiene limitado a su propio registro; no ve notas de líderes.
+- Las cuatro políticas de `notas_lideres` siguen activas y `anon` no tiene SELECT.
+- Edge Function `send-announcement-push` desplegada en versión 5 con `verify_jwt=true`; autoriza Admin o Pastor.
+- GitHub: cambios preparados en la rama `change/pastor-replaces-escritura-lectura`; pendiente PR y CI.
+- Vercel producción continúa sujeta al límite Hobby `api-deployments-young-hobby-team-24h` registrado previamente. No se debe eludir el límite ni cambiar el plan sin autorización.
+- No se generó un backup externo desde las herramientas disponibles en esta sesión.
+- Sigue pendiente probar aislamiento entre dos cuentas Líder distintas.
 
-1. Crear un backup de Supabase desde el Dashboard y comprobar que esté disponible.
-2. Conectar la integración Supabase a ChatGPT o abrir el proyecto en Supabase Dashboard.
-3. Confirmar que el proyecto sea el correcto: `oanmwvpvqcmdmdsmflie`.
-4. Revisar la migración `supabase/migrations/202611030012_roles_independientes_notas_lideres.sql`.
-5. Aplicar la migración primero en un entorno de pruebas. Si solo existe producción, no ejecutarla hasta tener backup comprobado y revisar el estado actual de `notas_lideres` y los triggers.
-6. Ejecutar `supabase/verification/202611030012_postflight.sql`. Investigar cualquier resultado inesperado.
-7. Desplegar `supabase/functions/send-announcement-push/index.ts` con el mecanismo de despliegue de Supabase.
-8. Probar cuentas separadas: Admin, Escritura, Lectura, Pastor, Líder, Servidor y Hermano. Verificar también combinaciones explícitas.
-9. Probar aislamiento entre dos líderes: Líder A no puede leer, actualizar ni borrar la nota de Líder B.
-10. Probar que Pastor/Líder/Servidor sin Escritura no puedan modificar miembros ni anuncios; sin Lectura tampoco deben ver el directorio.
-11. Cuando todas las pruebas pasen, aprobar y fusionar el PR #12. Después esperar el límite de Vercel o resolverlo con el administrador del equipo.
-12. Confirmar el despliegue de producción y repetir pruebas de humo.
+## Matriz de roles
+
+| Rol | Acceso |
+|---|---|
+| Admin | Administración completa, usuarios, roles y supervisión. |
+| Pastor | Mismos permisos de gestión que Escritura tenía: crear, consultar, editar y eliminar miembros, gestionar anuncios y peticiones de oración; además, notas pastorales y supervisión de notas de líderes. |
+| Líder | Sus propias notas de seguimiento; sin acceso general al directorio por el solo hecho de ser Líder. |
+| Servidor | Acceso limitado según políticas específicas; no recibe permisos administrativos ni de gestión del directorio. |
+| Hermano | Solo su propio registro y sus propias peticiones; no ve información privada de otros hermanos. |
+
+## Reglas de publicación y verificación
+
+1. Mantener backup externo de Supabase antes de cambios estructurales futuros.
+2. Ejecutar las pruebas funcionales con cuentas separadas: Admin, Pastor, Líder, Servidor y Hermano.
+3. Probar que Pastor puede crear, modificar y eliminar miembros, gestionar anuncios y peticiones, y conservar acceso a notas pastorales.
+4. Probar que Líder A no puede leer, actualizar ni borrar las notas de Líder B.
+5. Confirmar que Hermano solo ve su propio registro.
+6. Confirmar el deployment de producción y repetir pruebas de humo después de publicar.
 
 ## Límite de Vercel
-La cuenta Hobby alcanzó el límite `api-deployments-young-hobby-team-24h`. Vercel indicó esperar 24 horas. No se debe intentar eludir el límite cambiando de equipo o de cuenta. El preview ya compilado sirve para revisar la interfaz, no para certificar el backend.
 
-## Reglas funcionales
-- Los siete roles son independientes.
-- Ningún rol especializado hereda Escritura, Lectura ni Hermano.
-- El acceso al directorio requiere Admin, Escritura o Lectura explícitos.
-- Cada líder gestiona exclusivamente sus notas.
-- Admin y Pastor supervisan notas de líderes y notas pastorales.
+La cuenta Hobby alcanzó el límite `api-deployments-young-hobby-team-24h`. No intentar eludirlo cambiando de equipo o cuenta. Un preview permite revisar la interfaz, pero no certifica que producción esté actualizada.
