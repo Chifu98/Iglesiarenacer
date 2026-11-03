@@ -22,7 +22,7 @@ La matriz de roles es independiente. Pastor tiene acceso de lectura y gestión d
 - `anon` no tiene permiso de lectura en `notas_lideres`.
 - Validación de roles: Admin y Pastor aceptados; Escritura y Lectura rechazados; duplicados rechazados.
 - Prueba RLS con la cuenta Pastor: identifica correctamente el rol, puede gestionar anuncios y ve los 2 registros de miembros y las 2 peticiones de oración existentes.
-- Pendiente una prueba de aislamiento entre dos cuentas Líder distintas y pruebas funcionales de las siete combinaciones de roles.
+- Pendiente una prueba de aislamiento entre dos cuentas Líder distintas y pruebas funcionales de los cinco roles disponibles.
 - No se generó un backup externo desde las herramientas disponibles en esta sesión.
 
 ## Límites de esta revisión
