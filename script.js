@@ -897,7 +897,7 @@ function renderUsersTable() {
       ? '<span class="inline-block px-2 py-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[10px] font-semibold">hermano</span>'
       : '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
         (user.id === currentUser.id ? "disabled " : "") +
-        'onchange="changeUserRole(\\'' + escapeHtml(user.id) + '\\', this.value)" ' +
+        'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
         'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
         (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
 
