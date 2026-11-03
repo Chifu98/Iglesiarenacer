@@ -102,13 +102,13 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.solicitudes_registro_miembros TO au
 -- El formulario público solo necesita crear solicitudes; RLS valida los campos.
 GRANT INSERT ON TABLE public.solicitudes_registro_miembros TO anon;
 
--- 4) Refuerzo explícito de políticas de notas (no cambia sus roles autorizados).
--- Elimina posibles políticas permisivas antiguas que se combinarían con OR.
+-- 4) Refuerzo explícito de políticas de notas.
+-- Incluimos tablename en el SELECT para poder referirnos a p.tablename.
 DO $$
 DECLARE p record;
 BEGIN
   FOR p IN
-    SELECT policyname
+    SELECT policyname, tablename
     FROM pg_policies
     WHERE schemaname = 'public'
       AND tablename IN ('notas_lideres', 'notas_pastorales')
@@ -176,7 +176,7 @@ USING (
   public.app_tiene_rol('admin') OR public.app_tiene_rol('pastor')
 );
 
--- 5) Auditoría también para notas de líderes.
+-- 5) Endurecer función de cumpleaños y auditar notas de líderes.
 CREATE OR REPLACE FUNCTION public.listar_cumpleanos_congregacion()
 RETURNS TABLE(nombre text, cumpleanos text)
 LANGUAGE plpgsql
@@ -224,9 +224,8 @@ COMMIT;
 
 -- NOTAS:
 -- * No se fuerza RLS porque requiere revisar los propietarios/roles de servicio.
--- * No se cambia la visibilidad pública del bucket profile-photos: requiere decidir
---   si las fotos deben ser visibles sin iniciar sesión.
+-- * No se cambia la visibilidad pública del bucket profile-photos.
 -- * No se revocan permisos de storage.objects: el registro público necesita subir
 --   fotos al directorio pending según la política existente.
--- * La tabla public.miembros se protege con roles de la app; confirmar en pruebas
---   si sigue siendo usada por alguna pantalla o integración antigua.
+-- * La tabla public.miembros se protege con roles de la app; verificar si alguna
+--   integración antigua la utiliza después de aplicar la migración.
