@@ -12,7 +12,7 @@ function escapeHtml(str) {
 let users = [];
 let currentUser = null;
 function hasRole(role) { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role)); }
-function isBrotherOnly() { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.length === 1 && currentUser.roles[0] === 'hermano'); }
+function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
 let members = [];
 let prayerRequests = [];
 let currentAvatarBase64 = "";
@@ -161,7 +161,6 @@ async function loadProfilesFromCloud() {
     name: profile.nombre,
     username: profile.usuario || profile.id,
     roles: profile.roles || ["hermano"],
-    roles: profile.roles || ["hermano"],
     role: profile.rol,
     active: profile.activo,
     requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
@@ -199,7 +198,7 @@ async function loadData() {
       await window.supabaseClient.auth.signOut();
       currentUser = null;
       showLoginView();
-      showAccessOption("servers");
+      showAccessOption("login");
       const errorDiv = document.getElementById("login-error");
       errorDiv.textContent = "Tu cuenta está pendiente de aprobación o se encuentra inactiva. Contacta al administrador.";
       errorDiv.classList.remove("hidden");
@@ -225,7 +224,7 @@ async function loadData() {
     currentUser = null;
     stopRealtimeSync();
     showLoginView();
-    showAccessOption("servers");
+    showAccessOption("login");
     const errorDiv = document.getElementById("login-error");
     errorDiv.textContent = "No se pudo cargar tu perfil o los datos. Revisa tu conexión y los permisos de Supabase.";
     errorDiv.classList.remove("hidden");
@@ -234,15 +233,13 @@ async function loadData() {
 
 function showAccessOption(option) {
   const menu = document.getElementById("access-menu");
-  const servers = document.getElementById("server-access-panel");
+  const loginPanel = document.getElementById("login-panel");
   const membersPanel = document.getElementById("public-member-panel");
   const loginError = document.getElementById("login-error");
   if (menu) menu.classList.toggle("hidden", option !== "menu");
-  if (servers) servers.classList.toggle("hidden", option !== "servers");
+  if (loginPanel) loginPanel.classList.toggle("hidden", option !== "login");
   if (membersPanel) membersPanel.classList.toggle("hidden", option !== "members");
   if (loginError) loginError.classList.add("hidden");
-  const signup = document.getElementById("signup-form");
-  if (signup && option !== "servers") signup.classList.add("hidden");
   lucide.createIcons();
 }
 
@@ -349,65 +346,6 @@ async function submitPublicMemberRegistration(event) {
   }
 }
 
-function showSignupForm() {
-  document.getElementById("signup-form").classList.remove("hidden");
-  document.getElementById("signup-message").classList.add("hidden");
-  document.getElementById("login-error").classList.add("hidden");
-  document.getElementById("signup-name").focus();
-}
-
-function hideSignupForm() {
-  document.getElementById("signup-form").classList.add("hidden");
-  document.getElementById("signup-form").reset();
-}
-
-function showSignupMessage(message, success = false) {
-  const box = document.getElementById("signup-message");
-  box.textContent = message;
-  box.className = "p-3 rounded-xl text-xs " + (success
-    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-    : "bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300");
-}
-
-async function handleSignup(event) {
-  event.preventDefault();
-  const name = document.getElementById("signup-name").value.trim();
-  const email = document.getElementById("signup-email").value.trim().toLowerCase();
-  const password = document.getElementById("signup-password").value;
-  const button = document.getElementById("signup-submit");
-  if (!name || !email || password.length < 8) {
-    showSignupMessage("Completa los datos y utiliza una contraseña de al menos 8 caracteres.");
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "Enviando...";
-  try {
-    const { data, error } = await window.supabaseClient.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { nombre: name },
-        emailRedirectTo: window.location.origin
-      }
-    });
-    if (error) throw error;
-
-    // Nunca se permite acceso automático: la aprobación del administrador es obligatoria.
-    if (data.session) await window.supabaseClient.auth.signOut();
-    document.getElementById("signup-form").reset();
-    showSignupMessage(
-      "Solicitud enviada. Si Supabase requiere confirmar tu correo, revisa tu bandeja de entrada. Después de confirmar, un administrador deberá aprobar tu cuenta. No podrás ingresar antes de esa aprobación.",
-      true
-    );
-  } catch (error) {
-    console.error("Error solicitando cuenta:", error);
-    showSignupMessage("No se pudo enviar la solicitud: " + error.message);
-  } finally {
-    button.disabled = false;
-    button.textContent = "Enviar solicitud";
-  }
-}
 
 async function handleLogin(event) {
   event.preventDefault();
@@ -470,7 +408,6 @@ function showLoginView() {
   document.getElementById("login-view").classList.remove("hidden");
   document.getElementById("app-container").classList.add("hidden");
   showAccessOption("menu");
-  hideSignupForm();
 }
 
 function showAppView() {
