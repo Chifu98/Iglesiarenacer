@@ -303,6 +303,8 @@ async function submitPublicMemberRegistration(event) {
   const ministry = document.getElementById("public-member-ministry").value;
   const baptized = document.getElementById("public-member-baptized").value;
   const birthday = document.getElementById("public-member-birthday").value;
+  const profileFile = document.getElementById("public-member-avatar-file").files[0] || null;
+  if (profileFile && (!profileFile.type.startsWith("image/") || profileFile.size > 2 * 1024 * 1024)) { showPublicMemberMessage("La foto debe ser una imagen y pesar como máximo 2 MB."); return; }
 
   if (name.length < 3 || phone.length < 7 || !email || !birthday || password.length < 8) {
     showPublicMemberMessage("Revisa tus datos. El correo es obligatorio y la contraseña debe tener al menos 8 caracteres.");
@@ -331,12 +333,20 @@ async function submitPublicMemberRegistration(event) {
     if (requestError) throw requestError;
     requestId = request;
     if (!requestId) throw new Error("No se pudo obtener el identificador de la solicitud.");
+    let avatarUrl = null;
+    if (profileFile) {
+      const ext = (profileFile.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const photoPath = "pending/" + requestId + "/" + crypto.randomUUID() + "." + ext;
+      const { error: uploadError } = await window.supabaseClient.storage.from("profile-photos").upload(photoPath, profileFile, { contentType: profileFile.type, upsert: false });
+      if (uploadError) throw uploadError;
+      avatarUrl = window.supabaseClient.storage.from("profile-photos").getPublicUrl(photoPath).data.publicUrl;
+    }
 
     const { data, error } = await window.supabaseClient.auth.signUp({
       email,
       password,
       options: {
-        data: { nombre: name, tipo_cuenta: "hermano", solicitud_id: requestId },
+        data: { nombre: name, tipo_cuenta: "hermano", solicitud_id: requestId, avatar_url: avatarUrl },
         emailRedirectTo: window.location.origin
       }
     });
@@ -2173,9 +2183,40 @@ function viewDetails(id) {
   document.getElementById('view-address').textContent = member.address || 'Sin dirección';
   document.getElementById('view-date').textContent = member.birthday ? formatDate(member.birthday) : 'N/A';
   document.getElementById('view-notes').textContent = member.notes || 'Sin observaciones pastorales.';
+  const ownPhotoControls = document.getElementById("view-own-photo-controls");
+  if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
 
   document.getElementById('details-modal').classList.remove('hidden');
   lucide.createIcons();
+}
+
+
+async function changeOwnProfilePhoto(event) {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = "";
+  if (!file || !currentUser || !currentUser.memberId) return;
+  if (!file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) { alert("Selecciona una imagen de máximo 2 MB."); return; }
+  const button = document.getElementById("view-change-photo-button");
+  if (button) { button.disabled = true; button.textContent = "Guardando foto..."; }
+  try {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = "users/" + currentUser.id + "/" + crypto.randomUUID() + "." + ext;
+    const { error: uploadError } = await window.supabaseClient.storage.from("profile-photos").upload(path, file, { contentType: file.type, upsert: false });
+    if (uploadError) throw uploadError;
+    const url = window.supabaseClient.storage.from("profile-photos").getPublicUrl(path).data.publicUrl;
+    const { error } = await window.supabaseClient.rpc("actualizar_mi_foto", { p_avatar_url: url });
+    if (error) throw error;
+    const member = members.find(item => String(item.id) === String(currentUser.memberId));
+    if (member) member.avatar = url;
+    renderPersonalWelcomeCard();
+    if (member) viewDetails(member.id);
+    alert("Tu foto de perfil se actualizó correctamente.");
+  } catch (error) {
+    console.error("Error actualizando foto:", error);
+    alert("No se pudo actualizar la foto: " + error.message);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Cambiar mi foto"; }
+  }
 }
 
 function closeDetailsModal() {
