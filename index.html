@@ -830,8 +830,12 @@
         </div>
 
         <div id="notes-field">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Observaciones / Notas Pastorales</label>
-          <textarea id="input-notes" rows="2" placeholder="Peticiones de oración, talentos u observaciones..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Notas Pastorales (Admin y Pastor)</label>
+          <textarea id="input-notes" rows="3" placeholder="Observaciones pastorales privadas..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+        </div>
+        <div id="leader-notes-field">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Notas de Líderes (Admin, Pastor y Líder)</label>
+          <textarea id="input-leader-notes" rows="3" placeholder="Seguimiento, acuerdos y observaciones del liderazgo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
         </div>
 
         <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
@@ -947,8 +951,12 @@
           <p class="text-xs text-slate-500 mt-2">Solo puedes modificar tu fotografía de perfil. Máximo 2 MB.</p>
         </div>
         <div id="view-notes-section" class="border-t border-slate-100 dark:border-slate-700 pt-3">
-          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Observaciones Pastorales</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700" id="view-notes">--</p>
+          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Notas Pastorales</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700 whitespace-pre-wrap" id="view-notes">--</p>
+        </div>
+        <div id="view-leader-notes-section" class="border-t border-slate-100 dark:border-slate-700 pt-3">
+          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Notas de Líderes</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700 whitespace-pre-wrap" id="view-leader-notes">--</p>
         </div>
       </div>
     </div>
