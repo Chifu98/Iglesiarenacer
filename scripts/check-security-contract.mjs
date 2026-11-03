@@ -8,8 +8,9 @@ const migration = read("../supabase/migrations/202611030012_roles_independientes
 
 assert.match(app, /function hasRole\(role\)\s*\{\s*return !!\(currentUser && Array\.isArray\(currentUser\.roles\) && currentUser\.roles\.includes\(role\)\);/);
 assert.doesNotMatch(app, /role === ["']escritura["']\s*\)\s*return currentUser\.roles\.some/);
-assert.match(app, /async function changeUserRoles\(selectElement\)/);
+assert.match(app, /async function saveUserRoles\(userId\)/);
 assert.match(app, /selectElement\.selectedOptions/);
+assert.match(app, /onclick="saveUserRoles\(this\.dataset\.userId\)"/);
 assert.match(app, /onConflict: ["']miembro_id,lider_id["']/);
 assert.match(edge, /roles\.includes\(["']admin["']\) \|\| roles\.includes\(["']escritura["']\)/);
 assert.doesNotMatch(edge, /\["admin",\s*"escritura",\s*"pastor",\s*"lider"\]/);
