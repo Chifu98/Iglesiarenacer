@@ -34,7 +34,7 @@ RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
 SET search_path = pg_catalog
-AS $
+AS $$
   SELECT p_roles IS NOT NULL
     AND cardinality(p_roles) BETWEEN 1 AND 7
     AND p_roles <@ ARRAY['admin','escritura','lectura','pastor','lider','servidor','hermano']::text[]
@@ -42,7 +42,7 @@ AS $
       SELECT COUNT(DISTINCT role_name)::integer
       FROM unnest(p_roles) AS role_name
     );
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.app_roles_valid(text[]) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.app_roles_valid(text[]) TO authenticated, service_role;
