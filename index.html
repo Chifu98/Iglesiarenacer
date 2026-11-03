@@ -57,62 +57,78 @@
         <p class="text-xs text-amber-500 font-medium mt-1">Control Congregacional - Acceso</p>
       </div>
 
-      <div id="login-error" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs rounded-xl text-center font-medium">
-        Credenciales incorrectas o usuario inactivo.
-      </div>
-
-      <form onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Correo electrónico</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-              <i data-lucide="mail" class="w-4 h-4"></i>
-            </span>
-            <input type="email" id="login-username" required placeholder="correo@ejemplo.cl" autocomplete="email" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Contraseña</label>
-          <div class="relative">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-              <i data-lucide="key" class="w-4 h-4"></i>
-            </span>
-            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
-          </div>
-        </div>
-
-        <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl shadow-lg hover:shadow-amber-500/20 transition flex items-center justify-center gap-2 text-sm mt-6">
-          <i data-lucide="log-in" class="w-4 h-4"></i>
-          <span>Iniciar Sesión</span>
+      <section id="access-menu" class="space-y-3">
+        <p class="text-sm text-slate-600 dark:text-slate-300 text-center">Selecciona cómo deseas ingresar</p>
+        <button type="button" onclick="showAccessOption('servers')" class="w-full text-left p-4 rounded-xl border border-amber-400/50 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-slate-700 transition flex items-center gap-4">
+          <span class="p-3 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400"><i data-lucide="shield-check" class="w-7 h-7"></i></span>
+          <span class="flex-1"><span class="block font-bold text-slate-900 dark:text-white">Servidores</span><span class="block text-xs text-slate-500 dark:text-slate-400 mt-1">Acceso al sistema de control congregacional</span></span>
+          <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
         </button>
-        <button type="button" onclick="handlePasswordReset()" class="w-full text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium pt-2">¿Olvidaste tu contraseña?</button>
-      </form>
+        <button type="button" onclick="showAccessOption('members')" class="w-full text-left p-4 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-slate-700 transition flex items-center gap-4">
+          <span class="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"><i data-lucide="users" class="w-7 h-7"></i></span>
+          <span class="flex-1"><span class="block font-bold text-slate-900 dark:text-white">Soy hermano de la congregación</span><span class="block text-xs text-slate-500 dark:text-slate-400 mt-1">Enviar solicitud de incorporación al registro congregacional</span></span>
+          <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+        </button>
+      </section>
 
-      <div class="mt-5 text-center">
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">¿Aún no tienes acceso?</p>
-        <button type="button" onclick="showSignupForm()" class="w-full py-2.5 border border-amber-500/60 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition">Crear cuenta nueva</button>
-      </div>
+      <section id="server-access-panel" class="hidden">
+        <button type="button" onclick="showAccessOption('menu')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver a las opciones</button>
+        <div id="login-error" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs rounded-xl text-center font-medium">Credenciales incorrectas o usuario inactivo.</div>
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Correo electrónico</label>
+            <input type="email" id="login-username" required placeholder="correo@ejemplo.cl" autocomplete="email" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Contraseña</label>
+            <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none dark:text-white">
+          </div>
+          <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm"><i data-lucide="log-in" class="w-4 h-4"></i><span>Iniciar Sesión</span></button>
+          <button type="button" onclick="handlePasswordReset()" class="w-full text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium pt-1">¿Olvidaste tu contraseña?</button>
+        </form>
+        <div class="mt-5 text-center">
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">¿Eres servidor y aún no tienes acceso?</p>
+          <button type="button" onclick="showSignupForm()" class="w-full py-2.5 border border-amber-500/60 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-xl text-sm font-semibold transition">Solicitar cuenta de servidor</button>
+        </div>
+        <form id="signup-form" onsubmit="handleSignup(event)" class="hidden mt-5 pt-5 border-t border-slate-200 dark:border-slate-700 space-y-3">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-white">Solicitar acceso de servidor</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">La cuenta quedará pendiente y un administrador deberá aprobarla antes de ingresar.</p>
+          <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre completo</label><input id="signup-name" type="text" required maxlength="100" autocomplete="name" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Correo electrónico</label><input id="signup-email" type="email" required autocomplete="email" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Contraseña (mínimo 8 caracteres)</label><input id="signup-password" type="password" required minlength="8" autocomplete="new-password" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div id="signup-message" class="hidden p-3 rounded-xl text-xs" role="status"></div>
+          <button id="signup-submit" type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Enviar solicitud</button>
+          <button type="button" onclick="hideSignupForm()" class="w-full text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Volver al acceso de servidores</button>
+        </form>
+      </section>
 
-      <form id="signup-form" onsubmit="handleSignup(event)" class="hidden mt-5 pt-5 border-t border-slate-200 dark:border-slate-700 space-y-3">
-        <h3 class="text-sm font-bold text-slate-800 dark:text-white">Solicitar acceso</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400">Tu cuenta tendrá permisos de lectura y deberá ser aprobada por un administrador antes de ingresar.</p>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre completo</label>
-          <input id="signup-name" type="text" required maxlength="100" autocomplete="name" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Correo electrónico</label>
-          <input id="signup-email" type="email" required autocomplete="email" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Contraseña (mínimo 8 caracteres)</label>
-          <input id="signup-password" type="password" required minlength="8" autocomplete="new-password" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
-        </div>
-        <div id="signup-message" class="hidden p-3 rounded-xl text-xs" role="status"></div>
-        <button id="signup-submit" type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Enviar solicitud</button>
-        <button type="button" onclick="hideSignupForm()" class="w-full text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Volver al inicio de sesión</button>
-      </form>
+      <section id="public-member-panel" class="hidden">
+        <button type="button" onclick="showAccessOption('menu')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver a las opciones</button>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Registro de hermanos</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Completa tus datos para solicitar tu incorporación al registro congregacional. Un administrador revisará la información antes de aprobarla.</p>
+        <form id="public-member-form" onsubmit="submitPublicMemberRegistration(event)" class="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+          <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre y apellidos *</label><input id="public-member-name" type="text" required maxlength="150" autocomplete="name" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Teléfono / WhatsApp *</label><input id="public-member-phone" type="tel" required maxlength="30" placeholder="+56 9 1234 5678" autocomplete="tel" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Correo electrónico *</label><input id="public-member-email" type="email" required maxlength="254" autocomplete="email" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          </div>
+          <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Dirección / Residencia</label><input id="public-member-address" type="text" maxlength="250" placeholder="Calle, número, comuna" autocomplete="street-address" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Estado civil *</label><select id="public-member-marital" required onchange="togglePublicSpouseField()" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="Soltero (a)">Soltero (a)</option><option value="Novio (a)">Novio (a)</option><option value="Casado (a)">Casado (a)</option><option value="Viudo (a)">Viudo (a)</option></select></div>
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Ministerio</label><select id="public-member-ministry" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="General">General</option><option value="Alabanza">Alabanza</option><option value="Servidor">Servidores</option><option value="Niños">Niños</option><option value="Jóvenes">Jóvenes</option><option value="Oración">Oración</option><option value="Evangelismo">Evangelismo</option></select></div>
+          </div>
+          <div id="public-spouse-field" class="hidden"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre de cónyuge / pareja</label><input id="public-member-spouse" type="text" maxlength="150" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">¿Bautizado? *</label><select id="public-member-baptized" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="No" selected>No</option><option value="Sí">Sí</option></select></div>
+            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Fecha de nacimiento *</label><input id="public-member-birthday" type="date" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
+          </div>
+          <input id="public-member-website" type="text" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+          <label class="flex items-start gap-2 text-[11px] text-slate-500 dark:text-slate-400"><input id="public-member-consent" type="checkbox" required class="mt-0.5 accent-amber-500"><span>Autorizo a Iglesia Renacer a utilizar estos datos para el registro y la comunicación congregacional. Entiendo que mi solicitud será revisada por un administrador.</span></label>
+          <div id="public-member-message" class="hidden p-3 rounded-xl text-xs" role="status" aria-live="polite"></div>
+          <button id="public-member-submit" type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Enviar solicitud de registro</button>
+        </form>
+      </section>
+
 
       <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/60 text-center">
         <p class="font-mono font-semibold text-amber-500">BIENVENIDO A <span class="font-mono font-semibold text-amber-500">IGLESIA RENACER</span></p>
@@ -458,6 +474,7 @@
     </main>
   </div>
 
+
   <!-- MODAL: GESTIÓN DE USUARIOS Y BASE DE DATOS (ADMIN) -->
   <div id="users-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -535,6 +552,21 @@
             Ver historial de actividad
           </button>
         </div>
+
+        <!-- SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS -->
+        <section class="rounded-xl border border-blue-200 dark:border-blue-900/60 p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Solicitudes de registro de hermanos</h4><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Revisa los datos enviados desde el acceso público y aprueba o rechaza cada solicitud.</p></div>
+            <button type="button" onclick="loadPendingMemberRequests()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-semibold"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualizar</button>
+          </div>
+          <p id="member-requests-status" class="text-xs text-slate-500 dark:text-slate-400" role="status">Cargando solicitudes...</p>
+          <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table class="min-w-[850px] w-full text-left text-xs">
+              <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300"><tr><th class="p-2.5">Nombre</th><th class="p-2.5">Contacto</th><th class="p-2.5">Datos congregacionales</th><th class="p-2.5 text-right">Acciones</th></tr></thead>
+              <tbody id="member-requests-table-body" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+            </table>
+          </div>
+        </section>
 
         <!-- Tabla de Usuarios -->
         <div>
