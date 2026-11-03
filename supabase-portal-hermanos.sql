@@ -219,7 +219,7 @@ USING (public.app_rol_actual() = 'admin');
 
 -- Cumpleaños: se devuelve exclusivamente nombre y fecha, no otros datos personales.
 CREATE OR REPLACE FUNCTION public.listar_cumpleanos_congregacion()
-RETURNS TABLE(nombre TEXT, cumpleanos DATE)
+RETURNS TABLE(nombre TEXT, cumpleanos TEXT)
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
@@ -231,7 +231,7 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT m.name, m.birthday
+  SELECT m.name, to_char(m.birthday, 'DD/MM')
   FROM public.miembros_app AS m
   WHERE m.status = 'Activo'
     AND m.birthday IS NOT NULL
