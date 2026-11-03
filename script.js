@@ -729,7 +729,7 @@ function exportFullDatabase() {
         id: user.id,
         name: user.name,
         username: user.username,
-        role: user.role,
+        roles: user.roles,
         active: user.active
       })),
       members: members,
@@ -918,8 +918,15 @@ function renderUsersTable() {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
-    const roleOptions = ["admin", "escritura", "lectura", "hermano"].map(role =>
-      '<option value="' + role + '"' + (user.role === role ? " selected" : "") + '>' + role + '</option>'
+    const roleChoices = [
+      { value: "hermano", label: "Hermano" },
+      { value: "lectura", label: "Hermano + Lectura" },
+      { value: "escritura", label: "Hermano + Escritura" },
+      { value: "admin", label: "Hermano + Admin" }
+    ];
+    const currentExtraRole = (user.roles || ["hermano"]).find(role => role !== "hermano") || "hermano";
+    const roleOptions = roleChoices.map(choice =>
+      '<option value="' + choice.value + '"' + (currentExtraRole === choice.value ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
     const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
