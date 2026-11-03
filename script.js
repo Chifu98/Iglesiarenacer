@@ -194,6 +194,7 @@ async function loadData() {
       await window.supabaseClient.auth.signOut();
       currentUser = null;
       showLoginView();
+      showAccessOption("servers");
       const errorDiv = document.getElementById("login-error");
       errorDiv.textContent = "Tu cuenta está pendiente de aprobación o se encuentra inactiva. Contacta al administrador.";
       errorDiv.classList.remove("hidden");
@@ -217,6 +218,7 @@ async function loadData() {
     currentUser = null;
     stopRealtimeSync();
     showLoginView();
+    showAccessOption("servers");
     const errorDiv = document.getElementById("login-error");
     errorDiv.textContent = "No se pudo cargar tu perfil o los datos. Revisa tu conexión y los permisos de Supabase.";
     errorDiv.classList.remove("hidden");
@@ -423,6 +425,8 @@ async function handleLogout() {
 function showLoginView() {
   document.getElementById("login-view").classList.remove("hidden");
   document.getElementById("app-container").classList.add("hidden");
+  showAccessOption("menu");
+  hideSignupForm();
 }
 
 function showAppView() {
