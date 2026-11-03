@@ -105,15 +105,20 @@ async function refreshCloudData() {
     privateNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
   }
   if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
-    const notesResult = await client.from("notas_lideres").select("miembro_id,nota");
+    const notesResult = await client.from("notas_lideres").select("miembro_id,lider_id,nota");
     if (notesResult.error) throw notesResult.error;
-    leaderNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
+    (notesResult.data || []).forEach(row => {
+      const current = leaderNotes.get(row.miembro_id) || [];
+      const owner = row.lider_id ? row.lider_id.slice(0, 8) : "histórica";
+      if (row.nota) current.push("Líder " + owner + ": " + row.nota);
+      leaderNotes.set(row.miembro_id, current);
+    });
   }
 
   members = (membersResult.data || []).map(row => ({
     ...mapDbMemberToApp(row),
     notes: privateNotes.get(row.id) || "",
-    leaderNotes: leaderNotes.get(row.id) || ""
+    leaderNotes: (leaderNotes.get(row.id) || []).join("\n\n")
   }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
