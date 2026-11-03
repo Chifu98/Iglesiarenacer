@@ -40,6 +40,9 @@ CREATE POLICY solicitudes_miembros_public_insert
     AND status = 'Activo'
     AND char_length(btrim(name)) BETWEEN 3 AND 150
     AND char_length(btrim(phone)) BETWEEN 7 AND 30
+    AND (email IS NULL OR char_length(email) <= 254)
+    AND reviewed_at IS NULL
+    AND reviewed_by IS NULL
   );
 
 DROP POLICY IF EXISTS solicitudes_miembros_admin_select ON public.solicitudes_registro_miembros;
