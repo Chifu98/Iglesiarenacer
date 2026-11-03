@@ -13,6 +13,11 @@ ALTER TABLE public.perfiles_app
 ALTER TABLE public.perfiles_app
   ADD COLUMN IF NOT EXISTS roles text[];
 
+-- Retirar primero las restricciones antiguas: de lo contrario bloquean la normalización.
+ALTER TABLE public.perfiles_app
+  DROP CONSTRAINT IF EXISTS perfiles_app_roles_check,
+  DROP CONSTRAINT IF EXISTS perfiles_app_rol_portal_check;
+
 -- Desactivar temporalmente el trigger heredado, que forzaba hermano en cada perfil.
 DROP TRIGGER IF EXISTS perfiles_app_sincronizar_roles ON public.perfiles_app;
 
