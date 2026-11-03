@@ -107,7 +107,7 @@ DECLARE
   v_nuevo_miembro_id text;
   v_perfil_id uuid;
 BEGIN
-  IF auth.uid() IS NULL OR public.app_rol_actual() <> 'admin' THEN
+  IF auth.uid() IS NULL OR public.app_rol_actual() IS DISTINCT FROM 'admin' THEN
     RAISE EXCEPTION 'Solo un administrador puede aprobar solicitudes';
   END IF;
 
