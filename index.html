@@ -976,6 +976,16 @@
     </div>
   </div>
 
+  <div id="private-note-modal" class="fixed inset-0 z-[95] hidden bg-slate-950/70 p-4 overflow-y-auto">
+    <div class="max-w-xl mx-auto mt-12 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700">
+      <form onsubmit="savePrivateNote(event)" class="p-6 space-y-4">
+        <div><h3 id="private-note-title" class="text-lg font-bold text-slate-900 dark:text-white">Nota privada</h3><p id="private-note-member" class="text-sm text-slate-500 mt-1"></p></div>
+        <textarea id="private-note-text" rows="6" maxlength="10000" placeholder="Escribe una nota privada..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white"></textarea>
+        <div class="flex justify-end gap-3"><button type="button" onclick="closePrivateNoteModal()" class="px-4 py-2 border rounded-lg text-sm">Cancelar</button><button type="submit" class="px-4 py-2 bg-church-800 text-white rounded-lg text-sm font-semibold">Guardar nota</button></div>
+      </form>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <!-- La lógica principal se carga una sola vez desde script.js al final del documento. -->
   <!-- Librería oficial Supabase -->
