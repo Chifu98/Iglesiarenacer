@@ -57,6 +57,19 @@
         <p class="text-xs text-amber-500 font-medium mt-1">Control Congregacional - Acceso</p>
       </div>
 
+      <div id="access-choice" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button type="button" onclick="showServerAccess()" class="text-left p-4 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 transition">
+          <span class="flex items-center gap-2 font-bold text-slate-900 dark:text-white"><i data-lucide="shield-check" class="w-5 h-5 text-amber-500"></i> Servidores</span>
+          <span class="block text-xs text-slate-500 dark:text-slate-400 mt-2">Ingresar al sistema de gestión congregacional.</span>
+        </button>
+        <button type="button" onclick="showMemberRegistration()" class="text-left p-4 rounded-xl border border-slate-300 dark:border-slate-600 hover:border-amber-500 hover:bg-amber-500/10 transition">
+          <span class="flex items-center gap-2 font-bold text-slate-900 dark:text-white"><i data-lucide="users" class="w-5 h-5 text-amber-500"></i> Soy hermano de la iglesia</span>
+          <span class="block text-xs text-slate-500 dark:text-slate-400 mt-2">Completar mi registro como miembro.</span>
+        </button>
+      </div>
+
+      <div id="server-access-panel" class="hidden mt-5">
+        <button type="button" onclick="showAccessChoices()" class="text-xs text-amber-600 dark:text-amber-400 hover:underline mb-4">← Volver a las opciones</button>
       <div id="login-error" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs rounded-xl text-center font-medium">
         Credenciales incorrectas o usuario inactivo.
       </div>
@@ -114,6 +127,65 @@
         <button type="button" onclick="hideSignupForm()" class="w-full text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Volver al inicio de sesión</button>
       </form>
 
+
+      </div>
+
+      <div id="member-registration-panel" class="hidden mt-5 pt-5 border-t border-slate-200 dark:border-slate-700">
+        <button type="button" onclick="showAccessChoices()" class="text-xs text-amber-600 dark:text-amber-400 hover:underline mb-3">← Volver a las opciones</button>
+        <h3 class="text-sm font-bold text-slate-800 dark:text-white">Registro de hermano</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Completa tus datos. Tu registro será revisado por un administrador antes de incorporarse a la base oficial.</p>
+        <form id="member-registration-form" onsubmit="handleMemberRegistration(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre completo *</label>
+            <input id="public-member-name" required maxlength="120" autocomplete="name" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Teléfono / WhatsApp *</label>
+              <input id="public-member-phone" required maxlength="30" type="tel" autocomplete="tel" placeholder="+56 9..." class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Correo electrónico</label>
+              <input id="public-member-email" type="email" autocomplete="email" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Dirección / Residencia</label>
+            <input id="public-member-address" maxlength="250" autocomplete="street-address" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Estado civil *</label>
+              <select id="public-member-marital" required onchange="togglePublicSpouseField()" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+                <option>Soltero (a)</option><option>Novio (a)</option><option>Casado (a)</option><option>Viudo (a)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Ministerio</label>
+              <select id="public-member-ministry" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+                <option>General</option><option>Alabanza</option><option>Servidores</option><option>Niños</option><option>Jóvenes</option><option>Oración</option><option>Evangelismo</option>
+              </select>
+            </div>
+          </div>
+          <div id="public-spouse-field" class="hidden">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre de cónyuge / pareja</label>
+            <input id="public-member-spouse" maxlength="120" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">¿Estás bautizado? *</label>
+              <select id="public-member-baptized" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="No">No</option><option value="Sí">Sí</option></select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Fecha de nacimiento *</label>
+              <input id="public-member-birthday" type="date" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400">Al enviar, autorizas que estos datos sean utilizados por Iglesia Renacer para su registro y administración congregacional.</div>
+          <div id="public-member-message" class="hidden p-3 rounded-xl text-xs" role="status" aria-live="polite"></div>
+          <button id="public-member-submit" type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Enviar registro para aprobación</button>
+        </form>
+      </div>
       <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/60 text-center">
         <p class="font-mono font-semibold text-amber-500">BIENVENIDO A <span class="font-mono font-semibold text-amber-500">IGLESIA RENACER</span></p>
       </div>
@@ -512,6 +584,22 @@
             El respaldo contiene datos congregacionales y notas pastorales: guárdalo en un lugar privado. La restauración combina los registros del archivo: recupera registros faltantes y actualiza los que coinciden; no elimina registros actuales ni restaura cuentas de acceso.
           </p>
           <p id="supabase-backup-status" class="text-xs text-slate-500 dark:text-slate-400" role="status" aria-live="polite"></p>
+        </div>
+
+        <!-- REGISTROS PÚBLICOS DE NUEVOS HERMANOS -->
+        <div class="rounded-xl border border-blue-300/60 bg-blue-50/60 dark:bg-blue-900/10 p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-bold text-sm text-blue-800 dark:text-blue-300">Solicitudes de registro de hermanos</div>
+            <button type="button" onclick="loadMembershipRequests()" class="text-xs text-blue-700 dark:text-blue-300 hover:underline">Actualizar</button>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300">Los registros públicos no se incorporan a miembros hasta que un administrador los apruebe.</p>
+          <p id="membership-request-status" class="text-xs text-slate-500 dark:text-slate-400" role="status">Cargando solicitudes...</p>
+          <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table class="min-w-[620px] w-full text-left text-xs">
+              <thead class="bg-slate-100 dark:bg-slate-700/60"><tr><th class="p-2">Nombre / contacto</th><th class="p-2">Datos</th><th class="p-2 text-right">Acciones</th></tr></thead>
+              <tbody id="membership-requests-body" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Formulario Crear/Editar Usuario -->
