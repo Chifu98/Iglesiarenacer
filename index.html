@@ -103,7 +103,7 @@
       </section>
 
       <section id="public-member-panel" class="hidden">
-        <button type="button" onclick="showAccessOption('menu')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver a las opciones</button>
+        <button type="button" onclick="showAccessOption('members')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver a las opciones</button>
         <h3 class="text-base font-bold text-slate-900 dark:text-white">Registro de hermanos</h3>
         <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Completa tus datos para solicitar tu incorporación al registro congregacional. Un administrador revisará la información antes de aprobarla.</p>
         <form id="public-member-form" onsubmit="submitPublicMemberRegistration(event)" class="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
@@ -128,6 +128,39 @@
           <button id="public-member-submit" type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Enviar solicitud de registro</button>
         </form>
       </section>
+
+      <section id="member-entry-panel" class="hidden">
+        <button type="button" onclick="showAccessOption('menu')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline">← Volver a las opciones</button>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Portal de hermanos</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Accede a tu espacio personal o solicita crear tu perfil.</p>
+        <div class="space-y-3">
+          <button type="button" onclick="showAccessOption('register-member')" class="w-full text-left p-4 rounded-xl border border-blue-300 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-slate-700"><b class="block">Crear mi perfil</b><span class="text-xs text-slate-500">Formulario de ingreso para nuevos hermanos, sujeto a aprobación.</span></button>
+          <button type="button" onclick="showAccessOption('member-login')" class="w-full text-left p-4 rounded-xl border border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-slate-700"><b class="block">Ingresar al portal</b><span class="text-xs text-slate-500">Ver mi perfil, peticiones, cumpleaños y avisos.</span></button>
+        </div>
+      </section>
+      <section id="member-login-panel" class="hidden">
+        <button type="button" onclick="showAccessOption('members')" class="mb-4 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline">← Volver al portal de hermanos</button>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Ingresar al portal</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Utiliza el correo registrado en tu perfil congregacional.</p>
+        <form onsubmit="handleMemberLogin(event)" class="space-y-3">
+          <input id="member-login-email" type="email" required autocomplete="email" placeholder="Correo electrónico" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+          <input id="member-login-password" type="password" required autocomplete="current-password" placeholder="Contraseña" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+          <div id="member-login-message" class="hidden p-3 rounded-xl text-xs" role="status"></div>
+          <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-church-900 font-bold rounded-xl text-sm">Ingresar</button>
+          <button type="button" onclick="handleMemberPasswordReset()" class="w-full text-xs text-amber-600 dark:text-amber-400">¿Olvidaste tu contraseña?</button>
+        </form>
+        <div class="mt-5 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <h4 class="text-sm font-bold">Crear acceso al portal</h4>
+          <p class="text-xs text-slate-500 mt-1 mb-3">Debes tener un perfil congregacional aprobado y usar el mismo correo registrado en él. Un administrador aprobará tu cuenta.</p>
+          <form id="member-signup-form" onsubmit="handleMemberSignup(event)" class="space-y-3">
+            <input id="member-signup-email" type="email" required autocomplete="email" placeholder="Correo registrado en la iglesia" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+            <input id="member-signup-password" type="password" required minlength="8" autocomplete="new-password" placeholder="Crear contraseña (mínimo 8 caracteres)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white">
+            <div id="member-signup-message" class="hidden p-3 rounded-xl text-xs" role="status"></div>
+            <button type="submit" class="w-full py-2.5 border border-blue-500/60 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-semibold">Solicitar acceso al portal</button>
+          </form>
+        </div>
+      </section>
+
 
       <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/60 text-center">
         <p class="font-mono font-semibold text-amber-500">BIENVENIDO A <span class="font-mono font-semibold text-amber-500">IGLESIA RENACER</span></p>
@@ -167,6 +200,7 @@
           <button id="btn-manage-users" onclick="openUsersModal()" title="Gestión de Usuarios y Base de Datos" class="hidden p-2.5 rounded-xl bg-church-800 hover:bg-slate-700 text-amber-400 hover:text-white transition flex items-center justify-center border border-slate-700">
             <i data-lucide="shield-check" class="w-5 h-5"></i>
           </button>
+          <button id="btn-manage-announcements" onclick="openAnnouncementsModal()" title="Administrar avisos" class="hidden p-2.5 rounded-xl bg-church-800 hover:bg-slate-700 text-amber-400 hover:text-white transition flex items-center justify-center border border-slate-700"><i data-lucide="megaphone" class="w-5 h-5"></i></button>
 
           <!-- Dark Mode Toggle Button -->
           <button onclick="toggleDarkMode()" 
@@ -471,6 +505,57 @@
       </section>
 
     </main>
+  </div>
+
+
+  <div id="member-portal-container" class="hidden min-h-screen bg-slate-50 dark:bg-slate-900">
+    <header class="bg-church-900 text-white shadow-md"><div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+      <div><h1 class="font-bold">Iglesia Renacer</h1><p class="text-[11px] text-amber-300">Portal de hermanos</p></div>
+      <div class="flex items-center gap-2"><span id="member-portal-user-name" class="hidden sm:inline text-xs text-amber-200"></span><button onclick="loadMemberPortalData()" class="p-2 rounded-lg bg-church-800" title="Actualizar">↻</button><button onclick="handleLogout()" class="p-2 rounded-lg bg-rose-900/50" title="Cerrar sesión">Salir</button></div>
+    </div></header>
+    <main class="max-w-6xl mx-auto px-4 py-7 space-y-6">
+      <div><p class="text-xs uppercase tracking-wider text-amber-600 font-semibold">Bienvenido</p><h2 id="member-portal-welcome" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">Mi espacio congregacional</h2><p class="text-sm text-slate-500 mt-1">Consulta tu información y mantente conectado con la congregación.</p></div>
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <article class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 class="font-bold mb-4">Mi perfil</h3><dl class="grid grid-cols-2 gap-4 text-sm">
+            <div><dt class="text-xs text-slate-400">Nombre</dt><dd id="member-profile-name" class="font-semibold mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Teléfono</dt><dd id="member-profile-phone" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Correo</dt><dd id="member-profile-email" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Estado civil</dt><dd id="member-profile-marital" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Cónyuge / pareja</dt><dd id="member-profile-spouse" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Ministerio</dt><dd id="member-profile-ministry" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Bautizado</dt><dd id="member-profile-baptized" class="mt-1">—</dd></div>
+            <div><dt class="text-xs text-slate-400">Cumpleaños</dt><dd id="member-profile-birthday" class="mt-1">—</dd></div>
+            <div class="col-span-2"><dt class="text-xs text-slate-400">Dirección</dt><dd id="member-profile-address" class="mt-1">—</dd></div>
+          </dl><p class="text-[11px] text-slate-400 mt-4 border-t pt-3">Para corregir algún dato, comunícate con la administración de la iglesia.</p>
+        </article>
+        <article class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5"><h3 class="font-bold mb-2">Cumpleaños de la congregación</h3><p class="text-xs text-slate-500 mb-3">Fechas de cumpleaños de los hermanos activos.</p><div id="member-portal-birthdays" class="space-y-2">Cargando...</div></article>
+      </section>
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <article class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <h3 class="font-bold mb-4">Peticiones de oración</h3><form id="member-prayer-form" onsubmit="submitMemberPrayerRequest(event)" class="space-y-3">
+            <textarea id="member-prayer-description" rows="3" maxlength="2000" required placeholder="Comparte tu motivo de oración..." class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm"></textarea>
+            <div id="member-prayer-message" class="hidden p-3 rounded-xl text-xs" role="status"></div><button type="submit" class="px-4 py-2.5 rounded-xl bg-amber-500 text-church-900 font-bold text-sm">Enviar petición</button>
+          </form><div class="border-t mt-5 pt-4"><h4 class="text-xs font-bold uppercase text-slate-500 mb-3">Mis peticiones enviadas</h4><div id="member-portal-prayers" class="space-y-2">Cargando...</div></div>
+        </article>
+        <article class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5"><h3 class="font-bold mb-2">Avisos de la iglesia</h3><p class="text-xs text-slate-500 mb-3">Comunicados publicados por los administradores.</p><div id="member-portal-announcements" class="space-y-3">Cargando...</div></article>
+      </section>
+    </main>
+  </div>
+  <div id="announcements-modal" class="fixed inset-0 bg-slate-900/70 z-[60] flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div class="bg-church-900 px-5 py-4 flex justify-between text-white"><div><h3 class="font-bold text-lg">Administrar avisos</h3><p class="text-[11px] text-slate-300">Crea, edita, publica o retira comunicados.</p></div><button onclick="closeAnnouncementsModal()" class="p-2">✕</button></div>
+      <div class="p-5 overflow-y-auto space-y-5">
+        <form id="announcement-form" onsubmit="saveAnnouncement(event)" class="space-y-3 border rounded-xl p-4">
+          <input id="announcement-id" type="hidden"><h4 id="announcement-form-title" class="font-bold text-sm">Nuevo aviso</h4>
+          <input id="announcement-title" type="text" maxlength="120" required placeholder="Título del aviso" class="w-full px-3 py-2 rounded-lg border bg-slate-50 dark:bg-slate-900">
+          <textarea id="announcement-body" rows="4" maxlength="5000" required placeholder="Contenido del aviso..." class="w-full px-3 py-2 rounded-lg border bg-slate-50 dark:bg-slate-900"></textarea>
+          <label class="inline-flex items-center gap-2 text-xs"><input id="announcement-published" type="checkbox" checked> Publicar inmediatamente</label>
+          <div class="flex gap-2"><button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 text-church-900 font-bold text-xs">Guardar aviso</button><button type="button" onclick="resetAnnouncementForm()" class="px-4 py-2 rounded-lg border text-xs">Limpiar</button></div><p id="announcement-admin-message" class="hidden text-xs"></p>
+        </form>
+        <div><div class="flex justify-between mb-2"><h4 class="font-bold text-sm">Avisos existentes</h4><button onclick="loadAnnouncementsAdmin()" class="text-xs text-amber-600">Actualizar</button></div><p id="announcement-admin-status" class="text-xs text-slate-400 mb-2">Cargando...</p><div id="announcement-admin-list" class="space-y-2"></div></div>
+      </div>
+    </div>
   </div>
 
   <!-- MODAL: GESTIÓN DE USUARIOS Y BASE DE DATOS (ADMIN) -->
@@ -897,5 +982,6 @@
 
 <!-- Código de tu aplicación -->
 <script src="script.js"></script>
+<script src="portal-hermanos.js"></script>
 </body>
 </html>
