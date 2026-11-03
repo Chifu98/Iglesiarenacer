@@ -1937,8 +1937,8 @@ function renderTable() {
             <button onclick="viewDetails('${escapeHtml(m.id)}')" title="Ver Detalle" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-church-800 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
               <i data-lucide="eye" class="w-4 h-4"></i>
             </button>
-            \${canAddPastoralNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="pastoral" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Nota pastoral" class="p-1.5 text-violet-600 hover:bg-violet-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
-            \${canAddLeaderNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="leader" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Mi nota de líder" class="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
+            ${canAddPastoralNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="pastoral" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Nota pastoral" class="p-1.5 text-violet-600 hover:bg-violet-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
+            ${canAddLeaderNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="leader" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Mi nota de líder" class="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
             ${canEdit ? `
             <button onclick="editMember('${escapeHtml(m.id)}')" title="Editar Miembro" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
