@@ -71,6 +71,7 @@ function mapDbRequestToApp(row) {
   return {
     id: row.id,
     memberId: row.member_id || "",
+    memberName: row.member_name || "",
     text: row.description || "",
     createdAt: row.created_at
   };
@@ -649,7 +650,7 @@ function scheduleCloudRefresh() {
 
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
-  const canManageMembers = (hasRole("admin") || hasRole("pastor"));
+  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("servidor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
 
@@ -666,7 +667,7 @@ function applyRolePermissions() {
   if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
-  // Solo Admin y Pastor pueden crear o modificar miembros.
+  // Servidor puede crear miembros; solo Admin y Pastor pueden editarlos.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
@@ -1644,7 +1645,7 @@ function renderRequests() {
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
   const filtered = getFilteredRequests();
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor"));
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
 
   container.innerHTML = '';
 
@@ -1655,7 +1656,7 @@ function renderRequests() {
 
     filtered.forEach(req => {
       const member = members.find(m => m.id === req.memberId);
-      const memberName = member ? member.name : 'Hermano General';
+      const memberName = req.memberName || (member ? member.name : 'Hermano General');
       const memberMinistry = member ? (member.ministry || 'General') : 'Sin ministerio';
       
       const reqDate = new Date(req.createdAt);
@@ -2000,7 +2001,7 @@ function populateSpouseSelect(currentMemberId = '') {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2028,25 +2029,12 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("hermano"))) return;
-  const select = document.getElementById('request-member-select');
-  select.innerHTML = '';
-  members.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.name;
-    select.appendChild(opt);
-  });
-  document.getElementById('request-form').reset();
-  if (isBrotherOnly()) {
-    if (!currentUser.memberId) {
-      alert('Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.');
-      return;
-    }
-    select.value = currentUser.memberId;
-    select.disabled = true;
-  } else {
-    select.disabled = false;
+  if (!currentUser) return;
+  document.getElementById("request-form").reset();
+  document.getElementById("request-member-name").value = currentUser.name || "";
+  if (isBrotherOnly() && !currentUser.memberId) {
+    alert("Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.");
+    return;
   }
   document.getElementById('request-modal').classList.remove('hidden');
   lucide.createIcons();
@@ -2058,12 +2046,12 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("hermano"))) return;
+  if (!currentUser) return;
 
-  const memberSelect = document.getElementById("request-member-select");
-  const memberId = isBrotherOnly() ? currentUser.memberId : memberSelect.value;
-  if (!memberId) {
-    alert('No se encontró tu vínculo con el registro de miembro. Contacta al administrador.');
+  const memberId = isBrotherOnly() ? currentUser.memberId : null;
+  const memberName = document.getElementById("request-member-name").value.trim();
+  if (!memberName) {
+    alert("Escribe el nombre de quien solicita la oración.");
     return;
   }
   const text = document.getElementById("request-description").value.trim();
@@ -2075,6 +2063,7 @@ async function handleRequestSubmit(e) {
   const newReq = {
     id: "r_" + Date.now(),
     memberId: memberId,
+    memberName: memberName,
     text: text,
     createdAt: new Date().toISOString()
   };
@@ -2086,11 +2075,12 @@ async function handleRequestSubmit(e) {
       .insert({
         id: newReq.id,
         member_id: newReq.memberId || null,
+        member_name: newReq.memberName,
         description: newReq.text,
         created_at: newReq.createdAt,
         created_by: currentUser.id
       })
-      .select("id,member_id,description,created_at")
+.select("id,member_id,member_name,description,created_at")
       .single();
 
     if (error) throw error;
@@ -2107,7 +2097,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"))) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -2127,9 +2117,13 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
 
   const id = document.getElementById("member-id").value;
+  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
+    alert("El rol Servidor solo puede crear miembros, no editar registros existentes.");
+    return;
+  }
   const currentMemberId = id || Date.now().toString();
   const name = document.getElementById("input-name").value.trim();
   const maritalStatus = document.getElementById("input-marital-status").value;
@@ -2201,7 +2195,12 @@ async function handleFormSubmit(e) {
   }
 
   try {
-    await saveMembers();
+    if (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
+      const { error } = await window.supabaseClient.from("miembros_app").insert(mapAppMemberToDb(memberData));
+      if (error) throw error;
+    } else {
+      await saveMembers();
+    }
     renderDashboard();
     renderTable();
     renderBirthdayModule();
