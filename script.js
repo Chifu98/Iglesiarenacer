@@ -603,6 +603,82 @@ function renderUsersTable() {
   lucide.createIcons();
 }
 
+
+
+/* AUDITORÍA (SOLO ADMINISTRADORES) */
+async function openAuditModal() {
+  if (!currentUser || currentUser.role !== "admin") return;
+
+  const modal = document.getElementById("audit-modal");
+  modal.classList.remove("hidden");
+  await loadAuditLog();
+}
+
+function closeAuditModal() {
+  document.getElementById("audit-modal").classList.add("hidden");
+}
+
+async function loadAuditLog() {
+  if (!currentUser || currentUser.role !== "admin") return;
+
+  const tbody = document.getElementById("audit-table-body");
+  const status = document.getElementById("audit-status");
+  tbody.innerHTML = "";
+  status.textContent = "Cargando registros...";
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("registro_auditoria")
+      .select("id,created_at,actor_name,actor_role,action,entity_table,entity_id,changed_fields")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+
+    if (!data || !data.length) {
+      status.textContent = "Todavía no hay eventos registrados.";
+      return;
+    }
+
+    data.forEach(entry => {
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-slate-100 dark:border-slate-700";
+      const date = new Date(entry.created_at);
+      const dateLabel = Number.isNaN(date.getTime())
+        ? entry.created_at
+        : date.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" });
+      const actionLabels = { INSERT: "Creación", UPDATE: "Modificación", DELETE: "Eliminación" };
+      const entityLabels = {
+        miembros_app: "Miembros",
+        peticiones_oracion: "Peticiones",
+        perfiles_app: "Usuarios",
+        notas_pastorales: "Notas pastorales"
+      };
+      const fields = Array.isArray(entry.changed_fields) ? entry.changed_fields.join(", ") : "";
+      [
+        dateLabel,
+        entry.actor_name || "Sistema",
+        entry.actor_role || "sistema",
+        actionLabels[entry.action] || entry.action,
+        entityLabels[entry.entity_table] || entry.entity_table,
+        entry.entity_id || "—",
+        fields || "—"
+      ].forEach(value => {
+        const td = document.createElement("td");
+        td.className = "px-3 py-2 align-top text-slate-600 dark:text-slate-300";
+        td.textContent = String(value);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    status.textContent = "Mostrando los últimos " + data.length + " eventos.";
+  } catch (error) {
+    console.error("Error consultando auditoría:", error);
+    status.textContent = "No se pudo consultar la auditoría: " + error.message;
+  }
+}
+
 /* RENDER DASHBOARD & METRICS */
 /* RENDER DASHBOARD & METRICS */
 function renderDashboard() {
