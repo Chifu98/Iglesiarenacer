@@ -184,7 +184,7 @@ async function loadData() {
 
     const { data: profile, error: profileError } = await window.supabaseClient
       .from("perfiles_app")
-      .select("id,nombre,usuario,rol,activo")
+      .select("id,nombre,usuario,rol,activo,miembro_id")
       .eq("id", session.user.id)
       .maybeSingle();
 
@@ -206,7 +206,8 @@ async function loadData() {
       name: profile.nombre,
       username: profile.usuario || session.user.email,
       email: session.user.email,
-      role: profile.rol
+      role: profile.rol,
+      memberId: profile.miembro_id || ""
     };
 
     await refreshCloudData();
@@ -1608,7 +1609,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !['admin', 'escritura', 'lectura'].includes(currentUser.role)) return;
+  if (!currentUser || !['admin', 'escritura', 'lectura', 'hermano'].includes(currentUser.role)) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -1618,6 +1619,16 @@ function openRequestModal() {
     select.appendChild(opt);
   });
   document.getElementById('request-form').reset();
+  if (currentUser.role === 'hermano') {
+    if (!currentUser.memberId) {
+      alert('Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.');
+      return;
+    }
+    select.value = currentUser.memberId;
+    select.disabled = true;
+  } else {
+    select.disabled = false;
+  }
   document.getElementById('request-modal').classList.remove('hidden');
   lucide.createIcons();
 }
@@ -1628,9 +1639,14 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !['admin', 'escritura', 'lectura'].includes(currentUser.role)) return;
+  if (!currentUser || !['admin', 'escritura', 'lectura', 'hermano'].includes(currentUser.role)) return;
 
-  const memberId = document.getElementById("request-member-select").value;
+  const memberSelect = document.getElementById("request-member-select");
+  const memberId = currentUser.role === 'hermano' ? currentUser.memberId : memberSelect.value;
+  if (!memberId) {
+    alert('No se encontró tu vínculo con el registro de miembro. Contacta al administrador.');
+    return;
+  }
   const text = document.getElementById("request-description").value.trim();
   if (!text) {
     alert("Escribe el motivo de oración antes de guardar.");
@@ -1672,7 +1688,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || currentUser.role === "lectura") return;
+  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
