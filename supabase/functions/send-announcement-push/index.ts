@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
 
     if (profileError || !profile?.activo) return json({ error: "Forbidden" }, 403);
     const roles = Array.isArray(profile.roles) ? profile.roles : (profile.rol ? [profile.rol] : []);
-    // Roles independientes: solo admin o escritura pueden publicar anuncios.
-    const allowed = roles.includes("admin") || roles.includes("escritura");
+    // Pastor asume los permisos de gestión que antes correspondían a Escritura.
+    const allowed = roles.includes("admin") || roles.includes("pastor");
     if (!allowed) return json({ error: "Forbidden" }, 403);
 
     const body = await req.json();
