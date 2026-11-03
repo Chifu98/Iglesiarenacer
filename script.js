@@ -11,6 +11,8 @@ function escapeHtml(str) {
 
 let users = [];
 let currentUser = null;
+function hasRole(role) { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role)); }
+function isBrotherOnly() { return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.length === 1 && currentUser.roles[0] === 'hermano'); }
 let members = [];
 let prayerRequests = [];
 let currentAvatarBase64 = "";
@@ -87,7 +89,7 @@ async function refreshCloudData() {
   if (requestsResult.error) throw requestsResult.error;
 
   let privateNotes = new Map();
-  if (currentUser && currentUser.role === "admin") {
+  if (currentUser && hasRole("admin")) {
     const notesResult = await client
       .from("notas_pastorales")
       .select("miembro_id,nota");
@@ -112,7 +114,7 @@ async function saveMembers() {
   if (error) throw error;
 
   // Las notas pastorales se guardan en una tabla separada con RLS exclusiva de administradores.
-  if (currentUser && currentUser.role === "admin") {
+  if (currentUser && hasRole("admin")) {
     const privateRows = members.map(member => ({
       miembro_id: String(member.id),
       nota: member.notes || "",
@@ -142,14 +144,14 @@ async function saveRequests() {
 async function loadProfilesFromCloud() {
   if (!currentUser) return;
 
-  if (currentUser.role !== "admin") {
+  if (!hasRole("admin")) {
     users = [currentUser];
     return;
   }
 
   const { data, error } = await window.supabaseClient
     .from("perfiles_app")
-    .select("id,nombre,usuario,rol,activo,estado_solicitud,miembro_id")
+    .select("id,nombre,usuario,rol,roles,activo,estado_solicitud,miembro_id")
     .order("nombre", { ascending: true });
 
   if (error) throw error;
@@ -158,6 +160,8 @@ async function loadProfilesFromCloud() {
     id: profile.id,
     name: profile.nombre,
     username: profile.usuario || profile.id,
+    roles: profile.roles || ["hermano"],
+    roles: profile.roles || ["hermano"],
     role: profile.rol,
     active: profile.activo,
     requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
@@ -185,7 +189,7 @@ async function loadData() {
 
     const { data: profile, error: profileError } = await window.supabaseClient
       .from("perfiles_app")
-      .select("id,nombre,usuario,rol,activo,miembro_id")
+      .select("id,nombre,usuario,rol,roles,activo,miembro_id")
       .eq("id", session.user.id)
       .maybeSingle();
 
@@ -207,7 +211,8 @@ async function loadData() {
       name: profile.nombre,
       username: profile.usuario || session.user.email,
       email: session.user.email,
-      role: profile.rol,
+      roles: profile.roles || ["hermano"],
+    role: profile.rol,
       memberId: profile.miembro_id || ""
     };
 
@@ -474,7 +479,7 @@ function showAppView() {
 
   document.getElementById("current-user-name").textContent = currentUser.name;
   const badge = document.getElementById("current-user-role-badge");
-  badge.textContent = currentUser.role.toUpperCase();
+  badge.textContent = currentUser.roles.map(role => role.toUpperCase()).join(" + ");
 
   applyRolePermissions();
   renderDashboard();
@@ -502,7 +507,7 @@ function startRealtimeSync() {
     )
     .on("postgres_changes",
       { event: "*", schema: "public", table: "solicitudes_registro_miembros" },
-      () => { if (currentUser && currentUser.role === "admin" && !document.getElementById("users-modal").classList.contains("hidden")) loadPendingMemberRequests(); }
+      () => { if (currentUser && hasRole("admin") && !document.getElementById("users-modal").classList.contains("hidden")) loadPendingMemberRequests(); }
     )
     .subscribe(status => {
       if (status === "CHANNEL_ERROR") {
@@ -542,8 +547,8 @@ function scheduleCloudRefresh() {
 }
 
 function applyRolePermissions() {
-  const isAdmin = currentUser.role === "admin";
-  const canManageMembers = ["admin", "escritura"].includes(currentUser.role);
+  const isAdmin = hasRole("admin");
+  const canManageMembers = (hasRole("admin") || hasRole("escritura"));
 
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
@@ -567,7 +572,7 @@ function applyRolePermissions() {
 
 /* USER MANAGEMENT (ADMIN ROLE) */
 async function openUsersModal() {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
 
   try {
     await loadProfilesFromCloud();
@@ -620,7 +625,7 @@ function setSupabaseBackupStatus(message, isError = false) {
 }
 
 async function createSupabaseBackup() {
-  if (!currentUser || currentUser.role !== "admin") {
+  if (!currentUser || !hasRole("admin")) {
     alert("Solo un administrador puede crear copias de seguridad.");
     return;
   }
@@ -671,7 +676,7 @@ async function createSupabaseBackup() {
 }
 
 async function restoreSupabaseBackup(event) {
-  if (!currentUser || currentUser.role !== "admin") {
+  if (!currentUser || !hasRole("admin")) {
     alert("Solo un administrador puede restaurar copias de seguridad.");
     event.target.value = "";
     return;
@@ -761,7 +766,7 @@ async function restoreSupabaseBackup(event) {
 }
 
 function exportFullDatabase() {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
 
   const fullData = {
     app: "Iglesia Renacer - Control Congregacional",
@@ -786,7 +791,7 @@ function exportFullDatabase() {
 }
 
 function importFullDatabase(event) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
 
   const file = event.target.files[0];
   if (!file) return;
@@ -849,7 +854,7 @@ function deleteUser() {
 }
 
 async function approveSignup(userId) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   const requestedUser = users.find(user => user.id === userId);
   if (!requestedUser || requestedUser.active || requestedUser.requestStatus !== "pendiente") return;
   if (!confirm("¿Aprobar la cuenta de " + requestedUser.name + "? Se habilitará con el rol " + requestedUser.role + ".")) return;
@@ -870,7 +875,7 @@ async function approveSignup(userId) {
 }
 
 async function rejectSignup(userId) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   const requestedUser = users.find(user => user.id === userId);
   if (!requestedUser || requestedUser.active || requestedUser.requestStatus !== "pendiente") return;
   if (!confirm("¿Rechazar la solicitud de " + requestedUser.name + "? La cuenta quedará bloqueada y no podrá iniciar sesión. El registro de autenticación se conservará en Supabase.")) return;
@@ -891,36 +896,22 @@ async function rejectSignup(userId) {
 }
 
 async function changeUserRole(userId, newRole) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   const allowedRoles = ["admin", "escritura", "lectura", "hermano"];
   const targetUser = users.find(user => user.id === userId);
-  if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) {
-    renderUsersTable();
-    return;
-  }
+  if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) { renderUsersTable(); return; }
   if (targetUser.role === newRole) return;
-  if (!confirm("¿Cambiar el rol de " + targetUser.name + " de " + targetUser.role + " a " + newRole + "?")) {
-    renderUsersTable();
-    return;
-  }
-
-  const { error } = await window.supabaseClient
-    .from("perfiles_app")
-    .update({ rol: newRole })
-    .eq("id", userId);
-  if (error) {
-    alert("No se pudo cambiar el rol: " + error.message);
-    renderUsersTable();
-    return;
-  }
+  const nextRoles = newRole === "hermano" ? ["hermano"] : ["hermano", newRole];
+  if (!confirm("¿Asignar a " + targetUser.name + " los roles " + nextRoles.join(" + ") + "?")) { renderUsersTable(); return; }
+  const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
+  if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
   await loadProfilesFromCloud();
   renderUsersTable();
-  alert("Rol actualizado correctamente. Si el usuario tenía una sesión abierta, deberá actualizar la página para aplicar los nuevos permisos.");
+  alert("Roles actualizados. El usuario deberá actualizar la página para aplicar los permisos.");
 }
 
-
 async function linkUserToMember(userId, memberId) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   const targetUser = users.find(user => user.id === userId);
   if (!targetUser || userId === currentUser.id) {
     renderUsersTable();
@@ -1019,7 +1010,7 @@ function renderUsersTable() {
 
 /* SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS (SOLO ADMIN PARA REVISAR) */
 async function loadPendingMemberRequests() {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   const status = document.getElementById("member-requests-status");
   const tbody = document.getElementById("member-requests-table-body");
   if (!status || !tbody) return;
@@ -1063,7 +1054,7 @@ async function loadPendingMemberRequests() {
 }
 
 async function approvePublicMemberRequest(requestId) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   if (!confirm("¿Aprobar esta solicitud? Se incorporarán los datos del hermano al registro oficial de miembros.")) return;
   try {
     const { error } = await window.supabaseClient.rpc("aprobar_solicitud_registro_miembro", {
@@ -1083,7 +1074,7 @@ async function approvePublicMemberRequest(requestId) {
 }
 
 async function rejectPublicMemberRequest(requestId) {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
   if (!confirm("¿Rechazar esta solicitud? No se incorporará a la lista oficial de miembros.")) return;
   try {
     const { data, error } = await window.supabaseClient
@@ -1109,7 +1100,7 @@ async function rejectPublicMemberRequest(requestId) {
 
 /* AUDITORÍA (SOLO ADMINISTRADORES) */
 async function openAuditModal() {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
 
   const modal = document.getElementById("audit-modal");
   modal.classList.remove("hidden");
@@ -1121,7 +1112,7 @@ function closeAuditModal() {
 }
 
 async function loadAuditLog() {
-  if (!currentUser || currentUser.role !== "admin") return;
+  if (!currentUser || !hasRole("admin")) return;
 
   const tbody = document.getElementById("audit-table-body");
   const status = document.getElementById("audit-status");
@@ -1337,7 +1328,7 @@ function renderRequests() {
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
   const filtered = getFilteredRequests();
-  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'escritura');
+  const canEdit = currentUser && (hasRole("admin") || hasRole("escritura"));
 
   container.innerHTML = '';
 
@@ -1505,7 +1496,7 @@ function renderTable() {
   const ministryFilter = document.getElementById('filter-ministry').value;
   const statusFilter = document.getElementById('filter-status').value;
 
-  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'escritura');
+  const canEdit = currentUser && (hasRole("admin") || hasRole("escritura"));
 
   tbody.innerHTML = '';
 
@@ -1639,7 +1630,7 @@ function populateSpouseSelect(currentMemberId = '') {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -1667,7 +1658,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !['admin', 'escritura', 'lectura', 'hermano'].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -1677,7 +1668,7 @@ function openRequestModal() {
     select.appendChild(opt);
   });
   document.getElementById('request-form').reset();
-  if (currentUser.role === 'hermano') {
+  if (isBrotherOnly()) {
     if (!currentUser.memberId) {
       alert('Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.');
       return;
@@ -1697,10 +1688,10 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !['admin', 'escritura', 'lectura', 'hermano'].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
 
   const memberSelect = document.getElementById("request-member-select");
-  const memberId = currentUser.role === 'hermano' ? currentUser.memberId : memberSelect.value;
+  const memberId = isBrotherOnly() ? currentUser.memberId : memberSelect.value;
   if (!memberId) {
     alert('No se encontró tu vínculo con el registro de miembro. Contacta al administrador.');
     return;
@@ -1746,7 +1737,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -1766,7 +1757,7 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || currentUser.role === "lectura") return;
+  if (!currentUser || hasRole("lectura")) return;
 
   const id = document.getElementById("member-id").value;
   const currentMemberId = id || Date.now().toString();
@@ -1858,7 +1849,7 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
@@ -1910,7 +1901,7 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  if (!currentUser || !["admin", "escritura"].includes(currentUser.role)) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
 
   const member = members.find(item => item.id === id);
   if (!member) return;
