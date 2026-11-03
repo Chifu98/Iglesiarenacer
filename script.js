@@ -512,6 +512,7 @@ async function openUsersModal() {
   try {
     await loadProfilesFromCloud();
     renderUsersTable();
+    await loadMembershipRequests();
     document.getElementById("users-modal").classList.remove("hidden");
     lucide.createIcons();
   } catch (error) {
