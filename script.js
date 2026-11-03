@@ -407,6 +407,7 @@ async function handleLogout() {
 }
 
 function showLoginView() {
+  showAccessChoices();
   document.getElementById("login-view").classList.remove("hidden");
   document.getElementById("app-container").classList.add("hidden");
 }
