@@ -194,7 +194,7 @@ async function loadData() {
       currentUser = null;
       showLoginView();
       const errorDiv = document.getElementById("login-error");
-      errorDiv.textContent = "Tu cuenta no tiene un perfil activo. Contacta al administrador.";
+      errorDiv.textContent = "Tu cuenta está pendiente de aprobación o se encuentra inactiva. Contacta al administrador.";
       errorDiv.classList.remove("hidden");
       return;
     }
@@ -219,6 +219,66 @@ async function loadData() {
     const errorDiv = document.getElementById("login-error");
     errorDiv.textContent = "No se pudo cargar tu perfil o los datos. Revisa tu conexión y los permisos de Supabase.";
     errorDiv.classList.remove("hidden");
+  }
+}
+
+function showSignupForm() {
+  document.getElementById("signup-form").classList.remove("hidden");
+  document.getElementById("signup-message").classList.add("hidden");
+  document.getElementById("login-error").classList.add("hidden");
+  document.getElementById("signup-name").focus();
+}
+
+function hideSignupForm() {
+  document.getElementById("signup-form").classList.add("hidden");
+  document.getElementById("signup-form").reset();
+}
+
+function showSignupMessage(message, success = false) {
+  const box = document.getElementById("signup-message");
+  box.textContent = message;
+  box.className = "p-3 rounded-xl text-xs " + (success
+    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+    : "bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300");
+}
+
+async function handleSignup(event) {
+  event.preventDefault();
+  const name = document.getElementById("signup-name").value.trim();
+  const email = document.getElementById("signup-email").value.trim().toLowerCase();
+  const password = document.getElementById("signup-password").value;
+  const button = document.getElementById("signup-submit");
+  if (!name || !email || password.length < 8) {
+    showSignupMessage("Completa los datos y utiliza una contraseña de al menos 8 caracteres.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Enviando...";
+  try {
+    const { data, error } = await window.supabaseClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre: name },
+        emailRedirectTo: window.location.origin
+      }
+    });
+    if (error) throw error;
+
+    // Nunca se permite acceso automático: la aprobación del administrador es obligatoria.
+    if (data.session) await window.supabaseClient.auth.signOut();
+    document.getElementById("signup-form").reset();
+    showSignupMessage(
+      "Solicitud enviada. Si Supabase requiere confirmar tu correo, revisa tu bandeja de entrada. Después de confirmar, un administrador deberá aprobar tu cuenta. No podrás ingresar antes de esa aprobación.",
+      true
+    );
+  } catch (error) {
+    console.error("Error solicitando cuenta:", error);
+    showSignupMessage("No se pudo enviar la solicitud: " + error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enviar solicitud";
   }
 }
 
@@ -494,6 +554,26 @@ function deleteUser() {
   alert("Para desactivar una cuenta, desactiva el usuario en Supabase Auth y cambia activo a FALSE en perfiles_app.");
 }
 
+async function approveSignup(userId) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const requestedUser = users.find(user => user.id === userId);
+  if (!requestedUser || requestedUser.role !== "lectura" || requestedUser.active) return;
+  if (!confirm("¿Aprobar la cuenta de " + requestedUser.name + "? Se habilitará con permisos de lectura.")) return;
+
+  const { error } = await window.supabaseClient
+    .from("perfiles_app")
+    .update({ activo: true })
+    .eq("id", userId)
+    .eq("rol", "lectura");
+  if (error) {
+    alert("No se pudo aprobar la cuenta: " + error.message);
+    return;
+  }
+  await loadProfilesFromCloud();
+  renderUsersTable();
+  alert("Cuenta aprobada. El usuario ya puede iniciar sesión con permisos de lectura.");
+}
+
 function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
   tbody.innerHTML = "";
@@ -510,7 +590,12 @@ function renderUsersTable() {
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
       '<td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded-md border text-[10px] font-semibold uppercase ' + roleBadge + '">' + escapeHtml(user.role) + '</span></td>' +
-      '<td class="py-2.5 px-3 text-right text-slate-500">' + (user.active ? "Activo" : "Inactivo") + '</td>';
+      '<td class="py-2.5 px-3 text-right text-slate-500">' +
+      (user.active
+        ? '<span class="text-emerald-600 dark:text-emerald-400">Aprobado</span>'
+        : (user.role === "lectura"
+          ? '<div class="flex items-center justify-end gap-2"><span class="text-amber-600 dark:text-amber-400">Pendiente</span><button type="button" onclick="approveSignup(\'' + escapeHtml(user.id) + '\')" class="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold">Aprobar</button></div>'
+          : '<span>Inactivo</span>')) + '</td>';
 
     tbody.appendChild(tr);
   });
