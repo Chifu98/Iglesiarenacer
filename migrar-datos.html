@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Migrar datos antiguos - Iglesia Renacer</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 28px 16px; background: #f1f5f9; color: #172033; font-family: Inter, Arial, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #dbe3ee; border-radius: 18px; padding: 24px; box-shadow: 0 12px 34px rgba(15,23,42,.08); }
+    h1 { margin: 0 0 8px; font-size: 25px; color: #102a43; }
+    p { line-height: 1.55; color: #475569; }
+    .muted { font-size: 13px; }
+    .notice { padding: 13px 15px; border-radius: 11px; background: #fffbeb; border: 1px solid #fcd34d; color: #854d0e; font-size: 13px; margin: 18px 0; }
+    .status { padding: 12px 14px; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font-size: 13px; margin: 14px 0; }
+    .status.error { background: #fef2f2; color: #b91c1c; }
+    .status.success { background: #ecfdf5; color: #047857; }
+    label.file { display: block; margin: 18px 0 10px; font-weight: 700; font-size: 14px; }
+    input[type=file] { display: block; width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
+    button, a.action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; border: 0; border-radius: 10px; background: #102a43; color: white; font-weight: 700; font-size: 13px; text-decoration: none; cursor: pointer; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    a.back { display: inline-block; margin: 0 0 16px; color: #334e68; font-size: 13px; font-weight: 700; text-decoration: none; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 10px; margin: 16px 0; }
+    .metric { border: 1px solid #dbe3ee; border-radius: 12px; padding: 13px; background: #f8fafc; }
+    .metric strong { display: block; font-size: 23px; color: #102a43; }
+    .metric span { font-size: 12px; color: #64748b; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .hidden { display: none !important; }
+    #resultado { white-space: pre-line; font-size: 13px; line-height: 1.55; }
+    @media (max-width: 480px) { body { padding: 14px 10px; } .card { padding: 18px; } h1 { font-size: 22px; } }
+  </style>
+</head>
+<body>
+<main>
+  <a class="back" href="/">← Volver al sistema congregacional</a>
+  <section class="card">
+    <h1>Migración de registros antiguos</h1>
+    <p class="muted">Esta herramienta importa una copia JSON de la versión local antigua de Iglesia Renacer hacia la base de datos Supabase.</p>
+
+    <div id="auth-status" class="status">Verificando sesión y permisos de administrador…</div>
+
+    <div id="migration-ui" class="hidden">
+      <div class="notice">
+        <strong>Antes de continuar:</strong> selecciona el archivo JSON de respaldo que exportaste desde la versión antigua. Se migrarán miembros, peticiones y notas pastorales. Las cuentas y contraseñas antiguas se ignoran expresamente.
+      </div>
+
+      <label class="file" for="backup-file">Copia de seguridad JSON</label>
+      <input id="backup-file" type="file" accept=".json,application/json">
+
+      <div class="actions">
+        <button id="preview-button" type="button" disabled>Validar y revisar archivo</button>
+      </div>
+
+      <div id="preview" class="hidden">
+        <div class="summary">
+          <div class="metric"><strong id="count-members">0</strong><span>Miembros válidos</span></div>
+          <div class="metric"><strong id="count-requests">0</strong><span>Peticiones válidas</span></div>
+          <div class="metric"><strong id="count-notes">0</strong><span>Notas pastorales</span></div>
+          <div class="metric"><strong id="count-invalid">0</strong><span>Registros omitidos</span></div>
+        </div>
+        <p class="muted">La importación agrega únicamente IDs que todavía no existen. No elimina registros de Supabase y no reemplaza datos actuales.</p>
+        <div class="actions">
+          <button id="import-button" type="button">Importar registros a Supabase</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultado" class="muted"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const client = window.supabaseClient;
+  const authStatus = document.getElementById("auth-status");
+  const migrationUi = document.getElementById("migration-ui");
+  const fileInput = document.getElementById("backup-file");
+  const previewButton = document.getElementById("preview-button");
+  const importButton = document.getElementById("import-button");
+  const previewBox = document.getElementById("preview");
+  const resultBox = document.getElementById("resultado");
+
+  let currentAdmin = null;
+  let legacyData = null;
+  let normalized = null;
+
+  function setStatus(message, type) {
+    authStatus.textContent = message;
+    authStatus.className = "status" + (type ? " " + type : "");
+  }
+
+  function setResult(message, type) {
+    resultBox.textContent = message || "";
+    resultBox.className = type ? "status " + type : "muted";
+  }
+
+  function asText(value) {
+    return value === null || value === undefined ? "" : String(value).trim();
+  }
+
+  function normalizeDate(value) {
+    const raw = asText(value);
+    if (!raw) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) return match[3] + "-" + match[2] + "-" + match[1];
+    return null;
+  }
+
+  function normalizeTimestamp(value) {
+    const date = value ? new Date(value) : new Date();
+    return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+  }
+
+  function buildNormalizedData(data) {
+    const invalid = { members: 0, requests: 0 };
+    const memberMap = new Map();
+    const requestMap = new Map();
+
+    data.members.forEach((member, index) => {
+      if (!member || typeof member !== "object" || !asText(member.name)) {
+        invalid.members++;
+        return;
+      }
+      const id = asText(member.id) || "legacy-member-" + (index + 1);
+      memberMap.set(id, {
+        id,
+        name: asText(member.name),
+        phone: asText(member.phone) || null,
+        email: asText(member.email) || null,
+        address: asText(member.address) || null,
+        marital_status: asText(member.maritalStatus) || "Soltero (a)",
+        spouse_type: asText(member.spouseType) || "none",
+        spouse_name: asText(member.spouseName) || null,
+        spouse_id: asText(member.spouseId) || null,
+        ministry: asText(member.ministry) || "General",
+        status: asText(member.status) || "Activo",
+        baptized: asText(member.baptized) || "No",
+        birthday: normalizeDate(member.birthday),
+        avatar: asText(member.avatar) || null,
+        notes: asText(member.notes)
+      });
+    });
+
+    data.prayerRequests.forEach((request, index) => {
+      if (!request || typeof request !== "object" || !asText(request.text) || !asText(request.memberId)) {
+        invalid.requests++;
+        return;
+      }
+      const id = asText(request.id) || "legacy-request-" + (index + 1);
+      requestMap.set(id, {
+        id,
+        member_id: asText(request.memberId),
+        description: asText(request.text),
+        created_at: normalizeTimestamp(request.createdAt)
+      });
+    });
+
+    return {
+      members: Array.from(memberMap.values()),
+      requests: Array.from(requestMap.values()),
+      invalid,
+      privateNotes: Array.from(memberMap.values()).filter(member => member.notes).map(member => ({
+        miembro_id: member.id,
+        nota: member.notes
+      }))
+    };
+  }
+
+  async function getExistingIds(table, column, ids) {
+    const found = new Set();
+    for (let i = 0; i < ids.length; i += 200) {
+      const batch = ids.slice(i, i + 200);
+      if (!batch.length) continue;
+      const { data, error } = await client.from(table).select(column).in(column, batch);
+      if (error) throw error;
+      (data || []).forEach(row => found.add(String(row[column])));
+    }
+    return found;
+  }
+
+  async function insertInBatches(table, rows, conflictColumn) {
+    let inserted = 0;
+    for (let i = 0; i < rows.length; i += 100) {
+      const batch = rows.slice(i, i + 100);
+      const { data, error } = await client
+        .from(table)
+        .upsert(batch, { onConflict: conflictColumn, ignoreDuplicates: true })
+        .select(conflictColumn);
+      if (error) throw error;
+      inserted += (data || []).length;
+    }
+    return inserted;
+  }
+
+  async function initialize() {
+    try {
+      if (!client) throw new Error("No se pudo inicializar Supabase.");
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (!data.session) {
+        setStatus("No hay una sesión iniciada. Inicia sesión como administrador en la aplicación y vuelve a abrir esta herramienta.", "error");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await client
+        .from("perfiles_app")
+        .select("id,nombre,rol,activo")
+        .eq("id", data.session.user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+      if (!profile || !profile.activo || profile.rol !== "admin") {
+        setStatus("Acceso denegado. Esta herramienta está disponible únicamente para una cuenta administradora activa.", "error");
+        return;
+      }
+
+      currentAdmin = { id: profile.id, name: profile.nombre };
+      setStatus("Sesión verificada: " + (profile.nombre || "Administrador") + ". Puedes seleccionar la copia JSON.", "success");
+      migrationUi.classList.remove("hidden");
+    } catch (error) {
+      console.error(error);
+      setStatus("No se pudo verificar el acceso: " + (error.message || "error desconocido"), "error");
+    }
+  }
+
+  fileInput.addEventListener("change", () => {
+    previewButton.disabled = !fileInput.files || !fileInput.files.length;
+    previewBox.classList.add("hidden");
+    legacyData = null;
+    normalized = null;
+    setResult("");
+  });
+
+  previewButton.addEventListener("click", async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    previewButton.disabled = true;
+    setResult("Leyendo y validando archivo…");
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (!parsed || !parsed.data || !Array.isArray(parsed.data.members) || !Array.isArray(parsed.data.prayerRequests)) {
+        throw new Error("El archivo no tiene el formato esperado. Debe contener data.members y data.prayerRequests.");
+      }
+      legacyData = parsed.data;
+      normalized = buildNormalizedData(legacyData);
+
+      document.getElementById("count-members").textContent = normalized.members.length;
+      document.getElementById("count-requests").textContent = normalized.requests.length;
+      document.getElementById("count-notes").textContent = normalized.privateNotes.length;
+      document.getElementById("count-invalid").textContent = normalized.invalid.members + normalized.invalid.requests;
+      previewBox.classList.remove("hidden");
+      importButton.disabled = false;
+
+      const legacyUsers = Array.isArray(legacyData.users) ? legacyData.users.length : 0;
+      setResult(
+        "Archivo válido. Se encontraron " + normalized.members.length + " miembros, " +
+        normalized.requests.length + " peticiones y " + normalized.privateNotes.length +
+        " notas pastorales. " + legacyUsers +
+        " usuarios antiguos no se importarán por seguridad.",
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      previewBox.classList.add("hidden");
+      setResult("No se pudo validar el respaldo: " + error.message, "error");
+    } finally {
+      previewButton.disabled = false;
+    }
+  });
+
+  importButton.addEventListener("click", async () => {
+    if (!currentAdmin || !normalized) return;
+    const confirmed = window.confirm(
+      "Se agregarán los registros que aún no existen en Supabase. Los IDs duplicados se omitirán. No se borrará ni reemplazará ningún registro actual. ¿Deseas continuar?"
+    );
+    if (!confirmed) return;
+
+    importButton.disabled = true;
+    previewButton.disabled = true;
+    setResult("Importando miembros, notas y peticiones. No cierres esta página…");
+    try {
+      const memberIds = normalized.members.map(row => row.id);
+      const existingMemberIds = await getExistingIds("miembros_app", "id", memberIds);
+      const memberRows = normalized.members
+        .filter(row => !existingMemberIds.has(row.id))
+        .map(row => ({
+          id: row.id,
+          name: row.name,
+          phone: row.phone,
+          email: row.email,
+          address: row.address,
+          marital_status: row.marital_status,
+          spouse_type: row.spouse_type,
+          spouse_name: row.spouse_name,
+          spouse_id: row.spouse_id,
+          ministry: row.ministry,
+          status: row.status,
+          baptized: row.baptized,
+          birthday: row.birthday,
+          avatar: row.avatar,
+          created_by: currentAdmin.id,
+          updated_at: new Date().toISOString()
+        }));
+
+      const insertedMembers = await insertInBatches("miembros_app", memberRows, "id");
+      const availableMemberIds = await getExistingIds("miembros_app", "id", memberIds);
+
+      const noteMemberIds = normalized.privateNotes.map(row => row.miembro_id)
+        .filter(id => availableMemberIds.has(id));
+      const existingNoteIds = await getExistingIds("notas_pastorales", "miembro_id", noteMemberIds);
+      const noteRows = normalized.privateNotes
+        .filter(row => availableMemberIds.has(row.miembro_id) && !existingNoteIds.has(row.miembro_id))
+        .map(row => ({
+          miembro_id: row.miembro_id,
+          nota: row.nota,
+          updated_at: new Date().toISOString(),
+          updated_by: currentAdmin.id
+        }));
+      const insertedNotes = await insertInBatches("notas_pastorales", noteRows, "miembro_id");
+
+      const requestMemberIds = Array.from(new Set(normalized.requests.map(row => row.member_id)));
+      const requestMembersInCloud = await getExistingIds("miembros_app", "id", requestMemberIds);
+      const candidateRequests = normalized.requests.filter(row => requestMembersInCloud.has(row.member_id));
+      const existingRequestIds = await getExistingIds("peticiones_oracion", "id", candidateRequests.map(row => row.id));
+      const requestRows = candidateRequests
+        .filter(row => !existingRequestIds.has(row.id))
+        .map(row => ({
+          id: row.id,
+          member_id: row.member_id,
+          description: row.description,
+          created_at: row.created_at,
+          created_by: currentAdmin.id
+        }));
+      const insertedRequests = await insertInBatches("peticiones_oracion", requestRows, "id");
+
+      const skippedMembers = normalized.members.length - insertedMembers;
+      const skippedRequests = normalized.requests.length - insertedRequests;
+      const orphanRequests = normalized.requests.length - candidateRequests.length;
+
+      setResult(
+        "Migración finalizada.\n" +
+        "Miembros agregados: " + insertedMembers + " (ya existentes u omitidos: " + skippedMembers + ").\n" +
+        "Notas pastorales agregadas: " + insertedNotes + ".\n" +
+        "Peticiones agregadas: " + insertedRequests + " (ya existentes u omitidas: " + skippedRequests + ").\n" +
+        "Peticiones sin un miembro asociado disponible: " + orphanRequests + ".\n" +
+        "La lista de usuarios y contraseñas antiguas no fue importada.\n\n" +
+        "Puedes volver a ejecutar el mismo archivo: los IDs existentes se omitirán y no se reemplazarán.",
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      setResult(
+        "La importación se detuvo por un error: " + (error.message || "error desconocido") +
+        ". Los lotes anteriores pueden haberse guardado; puedes revisar el sistema y volver a ejecutar el archivo, porque los IDs existentes se omiten.",
+        "error"
+      );
+    } finally {
+      importButton.disabled = false;
+      previewButton.disabled = false;
+    }
+  });
+
+  initialize();
+})();
+</script>
+</body>
+</html>
