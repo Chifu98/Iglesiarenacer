@@ -48,11 +48,19 @@
         <strong>Antes de continuar:</strong> selecciona el archivo JSON de respaldo que exportaste desde la versión antigua. Se migrarán miembros, peticiones y notas pastorales. Las cuentas y contraseñas antiguas se ignoran expresamente.
       </div>
 
-      <label class="file" for="backup-file">Copia de seguridad JSON</label>
+      <div class="notice">
+        <strong>Opción A — este navegador:</strong> lee los registros antiguos que todavía estén guardados localmente en este mismo navegador y dominio.
+        <div class="actions">
+          <button id="local-import-button" type="button">Leer datos locales de este navegador</button>
+        </div>
+        <p class="muted">Los datos locales de otros computadores o celulares no se comparten. Repite este proceso en cada dispositivo que tenga registros antiguos, o usa un respaldo JSON.</p>
+      </div>
+
+      <label class="file" for="backup-file">Opción B — cargar respaldo JSON</label>
       <input id="backup-file" type="file" accept=".json,application/json">
 
       <div class="actions">
-        <button id="preview-button" type="button" disabled>Validar y revisar archivo</button>
+        <button id="preview-button" type="button" disabled>Validar y revisar archivo JSON</button>
       </div>
 
       <div id="preview" class="hidden">
@@ -80,6 +88,7 @@
   const authStatus = document.getElementById("auth-status");
   const migrationUi = document.getElementById("migration-ui");
   const fileInput = document.getElementById("backup-file");
+  const localImportButton = document.getElementById("local-import-button");
   const previewButton = document.getElementById("preview-button");
   const importButton = document.getElementById("import-button");
   const previewBox = document.getElementById("preview");
@@ -221,7 +230,7 @@
       }
 
       currentAdmin = { id: profile.id, name: profile.nombre };
-      setStatus("Sesión verificada: " + (profile.nombre || "Administrador") + ". Puedes seleccionar la copia JSON.", "success");
+      setStatus("Sesión verificada: " + (profile.nombre || "Administrador") + ". Puedes cargar los datos locales o un respaldo JSON.", "success");
       migrationUi.classList.remove("hidden");
     } catch (error) {
       console.error(error);
@@ -229,11 +238,37 @@
     }
   }
 
+  function displayPreview(data, sourceLabel) {
+    if (!data || !Array.isArray(data.members) || !Array.isArray(data.prayerRequests)) {
+      throw new Error("El origen no contiene las listas de miembros y peticiones esperadas.");
+    }
+
+    legacyData = data;
+    normalized = buildNormalizedData(legacyData);
+
+    document.getElementById("count-members").textContent = normalized.members.length;
+    document.getElementById("count-requests").textContent = normalized.requests.length;
+    document.getElementById("count-notes").textContent = normalized.privateNotes.length;
+    document.getElementById("count-invalid").textContent = normalized.invalid.members + normalized.invalid.requests;
+    previewBox.classList.remove("hidden");
+    importButton.disabled = false;
+
+    const legacyUsers = Array.isArray(legacyData.users) ? legacyData.users.length : 0;
+    setResult(
+      sourceLabel + ": se detectaron " + normalized.members.length + " miembros, " +
+      normalized.requests.length + " peticiones y " + normalized.privateNotes.length +
+      " notas pastorales. " + legacyUsers +
+      " usuarios antiguos no se importarán por seguridad.",
+      "success"
+    );
+  }
+
   fileInput.addEventListener("change", () => {
     previewButton.disabled = !fileInput.files || !fileInput.files.length;
     previewBox.classList.add("hidden");
     legacyData = null;
     normalized = null;
+    importButton.disabled = true;
     setResult("");
   });
 
@@ -244,33 +279,49 @@
     setResult("Leyendo y validando archivo…");
     try {
       const parsed = JSON.parse(await file.text());
-      if (!parsed || !parsed.data || !Array.isArray(parsed.data.members) || !Array.isArray(parsed.data.prayerRequests)) {
-        throw new Error("El archivo no tiene el formato esperado. Debe contener data.members y data.prayerRequests.");
+      if (!parsed || !parsed.data) {
+        throw new Error("El archivo no tiene el formato esperado. Debe contener el objeto data del respaldo antiguo.");
       }
-      legacyData = parsed.data;
-      normalized = buildNormalizedData(legacyData);
-
-      document.getElementById("count-members").textContent = normalized.members.length;
-      document.getElementById("count-requests").textContent = normalized.requests.length;
-      document.getElementById("count-notes").textContent = normalized.privateNotes.length;
-      document.getElementById("count-invalid").textContent = normalized.invalid.members + normalized.invalid.requests;
-      previewBox.classList.remove("hidden");
-      importButton.disabled = false;
-
-      const legacyUsers = Array.isArray(legacyData.users) ? legacyData.users.length : 0;
-      setResult(
-        "Archivo válido. Se encontraron " + normalized.members.length + " miembros, " +
-        normalized.requests.length + " peticiones y " + normalized.privateNotes.length +
-        " notas pastorales. " + legacyUsers +
-        " usuarios antiguos no se importarán por seguridad.",
-        "success"
-      );
+      displayPreview(parsed.data, "Respaldo JSON válido");
     } catch (error) {
       console.error(error);
       previewBox.classList.add("hidden");
       setResult("No se pudo validar el respaldo: " + error.message, "error");
     } finally {
       previewButton.disabled = false;
+    }
+  });
+
+  localImportButton.addEventListener("click", () => {
+    localImportButton.disabled = true;
+    previewBox.classList.add("hidden");
+    legacyData = null;
+    normalized = null;
+    importButton.disabled = true;
+    setResult("Buscando registros antiguos guardados en este navegador…");
+    try {
+      const membersRaw = localStorage.getItem("iglesia_renacer_members");
+      const requestsRaw = localStorage.getItem("iglesia_renacer_requests");
+
+      if (!membersRaw && !requestsRaw) {
+        throw new Error("No se encontraron registros antiguos en este navegador. Puede que los datos estén en otro dispositivo o que ya se hayan borrado.");
+      }
+
+      const localMembers = membersRaw ? JSON.parse(membersRaw) : [];
+      const localRequests = requestsRaw ? JSON.parse(requestsRaw) : [];
+      if (!Array.isArray(localMembers) || !Array.isArray(localRequests)) {
+        throw new Error("Los datos locales no tienen un formato de lista válido.");
+      }
+
+      displayPreview(
+        { members: localMembers, prayerRequests: localRequests, users: [] },
+        "Datos locales de este navegador"
+      );
+    } catch (error) {
+      console.error(error);
+      setResult("No se pudieron leer los datos locales: " + error.message, "error");
+    } finally {
+      localImportButton.disabled = false;
     }
   });
 
