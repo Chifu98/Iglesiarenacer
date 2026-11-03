@@ -666,7 +666,7 @@ function applyRolePermissions() {
   if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
-  // Solo admin y escritura pueden crear o modificar miembros.
+  // Solo Admin y Pastor pueden crear o modificar miembros.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
