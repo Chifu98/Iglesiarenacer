@@ -6,9 +6,11 @@
 - Validación de datos: cero perfiles con roles inválidos, cero notas duplicadas y cero notas sin líder; las cuatro políticas de notas están activas y `anon` no tiene SELECT.
 - Prueba RLS con rol `authenticated`: un perfil Hermano solo ve su propio registro de miembro (1 fila); no ve notas de líderes.
 - Edge Function `send-announcement-push` desplegada en versión 4 con `verify_jwt=true`; autoriza solo Admin o Escritura.
+- Migración 014 aplicada: revoca la ejecución directa por clientes de una función que solo debe ejecutarse como trigger.
 - GitHub Actions `Security contract`: pendiente de completar para el último commit de esta rama.
 - Vercel Preview del commit `f5056f7`: `READY`. URL verificada: https://iglesiarenacer-git-fix-roles-independient-d470ed-iglesiarenacer.vercel.app
-- Producción: todavía no se ha fusionado el PR ni se ha desplegado `main`.
+- PR #12 fusionado en `main` (merge commit `11635d0`).
+- Vercel todavía no ha desplegado el merge a producción: el plan Hobby devolvió `api-deployments-young-hobby-team-24h` (bloqueo de 24 horas). El último deployment de producción verificado sigue en el commit anterior `51b29e5`.
 - No se pudo crear un backup descargable desde las herramientas disponibles; se debe conservar un backup externo del proyecto.
 - No hay dos cuentas de Líder de prueba, por lo que el aislamiento entre dos autores aún requiere una prueba funcional con cuentas reales.
 
