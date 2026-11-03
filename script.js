@@ -194,6 +194,7 @@ async function loadData() {
       await window.supabaseClient.auth.signOut();
       currentUser = null;
       showLoginView();
+      showAccessOption("servers");
       const errorDiv = document.getElementById("login-error");
       errorDiv.textContent = "Tu cuenta está pendiente de aprobación o se encuentra inactiva. Contacta al administrador.";
       errorDiv.classList.remove("hidden");
@@ -217,9 +218,92 @@ async function loadData() {
     currentUser = null;
     stopRealtimeSync();
     showLoginView();
+    showAccessOption("servers");
     const errorDiv = document.getElementById("login-error");
     errorDiv.textContent = "No se pudo cargar tu perfil o los datos. Revisa tu conexión y los permisos de Supabase.";
     errorDiv.classList.remove("hidden");
+  }
+}
+
+function showAccessOption(option) {
+  const menu = document.getElementById("access-menu");
+  const servers = document.getElementById("server-access-panel");
+  const membersPanel = document.getElementById("public-member-panel");
+  const loginError = document.getElementById("login-error");
+  if (menu) menu.classList.toggle("hidden", option !== "menu");
+  if (servers) servers.classList.toggle("hidden", option !== "servers");
+  if (membersPanel) membersPanel.classList.toggle("hidden", option !== "members");
+  if (loginError) loginError.classList.add("hidden");
+  const signup = document.getElementById("signup-form");
+  if (signup && option !== "servers") signup.classList.add("hidden");
+  lucide.createIcons();
+}
+
+function togglePublicSpouseField() {
+  const marital = document.getElementById("public-member-marital");
+  const spouse = document.getElementById("public-spouse-field");
+  if (!marital || !spouse) return;
+  const show = marital.value === "Casado (a)" || marital.value === "Novio (a)";
+  spouse.classList.toggle("hidden", !show);
+}
+
+function showPublicMemberMessage(message, success = false) {
+  const box = document.getElementById("public-member-message");
+  box.textContent = message;
+  box.className = "p-3 rounded-xl text-xs " + (success
+    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+    : "bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300");
+}
+
+async function submitPublicMemberRegistration(event) {
+  event.preventDefault();
+  const form = document.getElementById("public-member-form");
+  const button = document.getElementById("public-member-submit");
+  if (document.getElementById("public-member-website").value.trim()) return;
+  const name = document.getElementById("public-member-name").value.trim();
+  const phone = document.getElementById("public-member-phone").value.trim();
+  const email = document.getElementById("public-member-email").value.trim().toLowerCase();
+  const address = document.getElementById("public-member-address").value.trim();
+  const maritalStatus = document.getElementById("public-member-marital").value;
+  const spouseName = (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)")
+    ? document.getElementById("public-member-spouse").value.trim()
+    : "";
+  const ministry = document.getElementById("public-member-ministry").value;
+  const baptized = document.getElementById("public-member-baptized").value;
+  const birthday = document.getElementById("public-member-birthday").value;
+  if (name.length < 3 || phone.length < 7 || !birthday) {
+    showPublicMemberMessage("Revisa el nombre, teléfono y fecha de nacimiento antes de enviar.");
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Enviando solicitud...";
+  try {
+    const { error } = await window.supabaseClient
+      .from("solicitudes_registro_miembros")
+      .insert({
+        name,
+        phone,
+        email: email || null,
+        address: address || null,
+        marital_status: maritalStatus,
+        spouse_type: spouseName ? "text" : "none",
+        spouse_name: spouseName || null,
+        spouse_id: null,
+        ministry,
+        baptized,
+        birthday,
+        status: "Activo"
+      });
+    if (error) throw error;
+    form.reset();
+    togglePublicSpouseField();
+    showPublicMemberMessage("¡Solicitud recibida! Tus datos quedaron pendientes de revisión. Un administrador deberá aprobarlos antes de incorporarlos al registro oficial de miembros.", true);
+  } catch (error) {
+    console.error("Error enviando registro público:", error);
+    showPublicMemberMessage("No se pudo enviar tu solicitud. " + (error.message || "Inténtalo nuevamente."));
+  } finally {
+    button.disabled = false;
+    button.textContent = "Enviar solicitud de registro";
   }
 }
 
@@ -343,6 +427,8 @@ async function handleLogout() {
 function showLoginView() {
   document.getElementById("login-view").classList.remove("hidden");
   document.getElementById("app-container").classList.add("hidden");
+  showAccessOption("menu");
+  hideSignupForm();
 }
 
 function showAppView() {
@@ -376,6 +462,10 @@ function startRealtimeSync() {
     .on("postgres_changes",
       { event: "*", schema: "public", table: "notas_pastorales" },
       scheduleCloudRefresh
+    )
+    .on("postgres_changes",
+      { event: "*", schema: "public", table: "solicitudes_registro_miembros" },
+      () => { if (currentUser && currentUser.role === "admin" && !document.getElementById("users-modal").classList.contains("hidden")) loadPendingMemberRequests(); }
     )
     .subscribe(status => {
       if (status === "CHANNEL_ERROR") {
@@ -448,6 +538,7 @@ async function openUsersModal() {
     renderUsersTable();
     document.getElementById("users-modal").classList.remove("hidden");
     lucide.createIcons();
+    await loadPendingMemberRequests();
   } catch (error) {
     console.error(error);
     alert("No se pudieron consultar los usuarios: " + error.message);
@@ -802,11 +893,13 @@ function renderUsersTable() {
     const roleOptions = ["admin", "escritura", "lectura"].map(role =>
       '<option value="' + role + '"' + (user.role === role ? " selected" : "") + '>' + role + '</option>'
     ).join("");
-    const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
-      (user.id === currentUser.id ? "disabled " : "") +
-      'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
-      'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
-      (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+    const roleControl = user.role === "hermano"
+      ? '<span class="inline-block px-2 py-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 text-[10px] font-semibold">hermano</span>'
+      : '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
+        (user.id === currentUser.id ? "disabled " : "") +
+        'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
+        'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
+        (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
 
     let statusAction = "";
     if (user.active || user.requestStatus === "aprobado") {
@@ -829,6 +922,93 @@ function renderUsersTable() {
   });
 
   lucide.createIcons();
+}
+
+/* SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS (SOLO ADMIN PARA REVISAR) */
+async function loadPendingMemberRequests() {
+  if (!currentUser || currentUser.role !== "admin") return;
+  const status = document.getElementById("member-requests-status");
+  const tbody = document.getElementById("member-requests-table-body");
+  if (!status || !tbody) return;
+  status.textContent = "Consultando solicitudes pendientes...";
+  tbody.innerHTML = "";
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("solicitudes_registro_miembros")
+      .select("id,name,phone,email,address,marital_status,spouse_name,ministry,baptized,birthday,created_at")
+      .eq("estado_solicitud", "pendiente")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      status.textContent = "No hay solicitudes pendientes.";
+      return;
+    }
+    data.forEach(request => {
+      const tr = document.createElement("tr");
+      tr.className = "align-top";
+      const dateLabel = request.created_at ? new Date(request.created_at).toLocaleString("es-CL") : "—";
+      const contact = [request.phone, request.email, request.address].filter(Boolean).join(" · ");
+      const congregational = [
+        request.marital_status || "—",
+        request.spouse_name ? "Pareja: " + request.spouse_name : "",
+        "Ministerio: " + (request.ministry || "General"),
+        "Bautizado: " + (request.baptized || "No"),
+        request.birthday ? "Nacimiento: " + request.birthday : ""
+      ].filter(Boolean).join(" · ");
+      tr.innerHTML =
+        '<td class="p-2.5"><div class="font-semibold text-slate-800 dark:text-white">' + escapeHtml(request.name) + '</div><div class="text-[10px] text-slate-400 mt-1">' + escapeHtml(dateLabel) + '</div></td>' +
+        '<td class="p-2.5 text-slate-600 dark:text-slate-300">' + escapeHtml(contact || "—") + '</td>' +
+        '<td class="p-2.5 text-slate-600 dark:text-slate-300 whitespace-normal">' + escapeHtml(congregational) + '</td>' +
+        '<td class="p-2.5"><div class="flex justify-end gap-1.5"><button type="button" onclick="approvePublicMemberRequest(\'' + escapeHtml(request.id) + '\')" class="px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Aprobar</button><button type="button" onclick="rejectPublicMemberRequest(\'' + escapeHtml(request.id) + '\')" class="px-2.5 py-1.5 rounded-md bg-rose-600 hover:bg-rose-700 text-white font-semibold">Rechazar</button></div></td>';
+      tbody.appendChild(tr);
+    });
+    status.textContent = "Solicitudes pendientes: " + data.length + ". Al aprobar, el registro se incorporará a la base de miembros.";
+  } catch (error) {
+    console.error("Error consultando solicitudes de miembros:", error);
+    status.textContent = "No se pudieron cargar las solicitudes. Verifica que hayas ejecutado la migración SQL: " + error.message;
+  }
+}
+
+async function approvePublicMemberRequest(requestId) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  if (!confirm("¿Aprobar esta solicitud? Se incorporarán los datos del hermano al registro oficial de miembros.")) return;
+  try {
+    const { error } = await window.supabaseClient.rpc("aprobar_solicitud_registro_miembro", {
+      p_solicitud_id: requestId
+    });
+    if (error) throw error;
+    await refreshCloudData();
+    renderDashboard();
+    renderTable();
+    renderBirthdayModule();
+    await loadPendingMemberRequests();
+    alert("Solicitud aprobada. El hermano ya forma parte del registro oficial.");
+  } catch (error) {
+    console.error("Error aprobando solicitud de miembro:", error);
+    alert("No se pudo aprobar la solicitud: " + error.message);
+  }
+}
+
+async function rejectPublicMemberRequest(requestId) {
+  if (!currentUser || currentUser.role !== "admin") return;
+  if (!confirm("¿Rechazar esta solicitud? No se incorporará a la lista oficial de miembros.")) return;
+  try {
+    const { error } = await window.supabaseClient
+      .from("solicitudes_registro_miembros")
+      .update({
+        estado_solicitud: "rechazado",
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: currentUser.id
+      })
+      .eq("id", requestId)
+      .eq("estado_solicitud", "pendiente");
+    if (error) throw error;
+    await loadPendingMemberRequests();
+    alert("Solicitud rechazada. No se agregó a la base de miembros.");
+  } catch (error) {
+    console.error("Error rechazando solicitud de miembro:", error);
+    alert("No se pudo rechazar la solicitud: " + error.message);
+  }
 }
 
 /* AUDITORÍA (SOLO ADMINISTRADORES) */
