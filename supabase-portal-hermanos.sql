@@ -131,33 +131,59 @@ $$;
 REVOKE ALL ON FUNCTION public.app_miembro_id_actual() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.app_miembro_id_actual() TO authenticated;
 
--- Miembros: los roles internos conservan su alcance y el hermano solo ve su ficha.
-DROP POLICY IF EXISTS miembros_select_roles ON public.miembros_app;
+-- Reemplazar las políticas de miembros y peticiones para evitar permisos heredados.
+DO $$
+DECLARE p RECORD;
+BEGIN
+  FOR p IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename IN ('miembros_app', 'peticiones_oracion')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', p.policyname, p.schemaname, p.tablename);
+  END LOOP;
+END $$;
+
+ALTER TABLE public.miembros_app ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.peticiones_oracion ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.miembros_app TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.peticiones_oracion TO authenticated;
+
+-- Los perfiles internos mantienen el alcance actual; hermanos solo ven su ficha.
 CREATE POLICY miembros_select_roles
 ON public.miembros_app
 FOR SELECT TO authenticated
 USING (
   public.app_rol_actual() IN ('admin', 'escritura', 'lectura')
-  OR (
-    public.app_rol_actual() = 'hermano'
-    AND id = public.app_miembro_id_actual()
-  )
+  OR (public.app_rol_actual() = 'hermano' AND id = public.app_miembro_id_actual())
 );
 
+CREATE POLICY miembros_insert_admin_escritura
+ON public.miembros_app
+FOR INSERT TO authenticated
+WITH CHECK (public.app_rol_actual() IN ('admin', 'escritura'));
+
+CREATE POLICY miembros_update_admin_escritura
+ON public.miembros_app
+FOR UPDATE TO authenticated
+USING (public.app_rol_actual() IN ('admin', 'escritura'))
+WITH CHECK (public.app_rol_actual() IN ('admin', 'escritura'));
+
+CREATE POLICY miembros_delete_admin_escritura
+ON public.miembros_app
+FOR DELETE TO authenticated
+USING (public.app_rol_actual() IN ('admin', 'escritura'));
+
 -- Peticiones: los hermanos solo pueden consultar y crear las propias.
-DROP POLICY IF EXISTS peticiones_select_roles ON public.peticiones_oracion;
 CREATE POLICY peticiones_select_roles
 ON public.peticiones_oracion
 FOR SELECT TO authenticated
 USING (
   public.app_rol_actual() IN ('admin', 'escritura', 'lectura')
-  OR (
-    public.app_rol_actual() = 'hermano'
-    AND member_id = public.app_miembro_id_actual()
-  )
+  OR (public.app_rol_actual() = 'hermano' AND member_id = public.app_miembro_id_actual())
 );
 
-DROP POLICY IF EXISTS peticiones_insert_roles ON public.peticiones_oracion;
 CREATE POLICY peticiones_insert_roles
 ON public.peticiones_oracion
 FOR INSERT TO authenticated
@@ -169,6 +195,17 @@ WITH CHECK (
     AND created_by = auth.uid()
   )
 );
+
+CREATE POLICY peticiones_update_admin_escritura
+ON public.peticiones_oracion
+FOR UPDATE TO authenticated
+USING (public.app_rol_actual() IN ('admin', 'escritura'))
+WITH CHECK (public.app_rol_actual() IN ('admin', 'escritura'));
+
+CREATE POLICY peticiones_delete_admin_escritura
+ON public.peticiones_oracion
+FOR DELETE TO authenticated
+USING (public.app_rol_actual() IN ('admin', 'escritura'));
 
 -- Tabla de avisos.
 CREATE TABLE IF NOT EXISTS public.avisos_congregacion (
