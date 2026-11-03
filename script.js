@@ -43,7 +43,8 @@ function mapDbMemberToApp(row) {
     status: row.status || "Activo",
     baptized: row.baptized || "No",
     birthday: row.birthday || "",
-    notes: "", // Las notas pastorales se cargan por separado y solo para administradores.
+    notes: "", // Notas pastorales privadas, cargadas según RLS.
+    leaderNotes: "",
     avatar: row.avatar || ""
   };
 }
@@ -99,17 +100,22 @@ async function refreshCloudData() {
   if (announcementsResult.error) throw announcementsResult.error;
 
   let privateNotes = new Map();
-  if (currentUser && hasRole("admin")) {
-    const notesResult = await client
-      .from("notas_pastorales")
-      .select("miembro_id,nota");
+  let leaderNotes = new Map();
+  if (currentUser && (hasRole("admin") || hasRole("pastor"))) {
+    const notesResult = await client.from("notas_pastorales").select("miembro_id,nota");
     if (notesResult.error) throw notesResult.error;
     privateNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
+  }
+  if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
+    const notesResult = await client.from("notas_lideres").select("miembro_id,nota");
+    if (notesResult.error) throw notesResult.error;
+    leaderNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
   }
 
   members = (membersResult.data || []).map(row => ({
     ...mapDbMemberToApp(row),
-    notes: privateNotes.get(row.id) || ""
+    notes: privateNotes.get(row.id) || "",
+    leaderNotes: leaderNotes.get(row.id) || ""
   }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
@@ -124,20 +130,28 @@ async function saveMembers() {
 
   if (error) throw error;
 
-  // Las notas pastorales se guardan en una tabla separada con RLS exclusiva de administradores.
-  if (currentUser && hasRole("admin")) {
+  // Las notas pastorales solo pueden ser gestionadas por Admin y Pastor.
+  if (currentUser && (hasRole("admin") || hasRole("pastor"))) {
     const privateRows = members.map(member => ({
-      miembro_id: String(member.id),
-      nota: member.notes || "",
-      updated_at: new Date().toISOString(),
-      updated_by: currentUser.id
+      miembro_id: String(member.id), nota: member.notes || "",
+      updated_at: new Date().toISOString(), updated_by: currentUser.id
     }));
-
     if (privateRows.length) {
-      const { error: notesError } = await window.supabaseClient
-        .from("notas_pastorales")
+      const { error: notesError } = await window.supabaseClient.from("notas_pastorales")
         .upsert(privateRows, { onConflict: "miembro_id" });
       if (notesError) throw notesError;
+    }
+  }
+  // Notas de líderes: Admin, Pastor y Líder.
+  if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
+    const leaderRows = members.map(member => ({
+      miembro_id: String(member.id), nota: member.leaderNotes || "",
+      updated_at: new Date().toISOString(), updated_by: currentUser.id
+    }));
+    if (leaderRows.length) {
+      const { error: leaderError } = await window.supabaseClient.from("notas_lideres")
+        .upsert(leaderRows, { onConflict: "miembro_id" });
+      if (leaderError) throw leaderError;
     }
   }
 }
@@ -486,6 +500,10 @@ function startRealtimeSync() {
       scheduleCloudRefresh
     )
     .on("postgres_changes",
+      { event: "*", schema: "public", table: "notas_lideres" },
+      scheduleCloudRefresh
+    )
+    .on("postgres_changes",
       { event: "*", schema: "public", table: "solicitudes_registro_miembros" },
       () => { if (currentUser && hasRole("admin") && !document.getElementById("users-modal").classList.contains("hidden")) loadPendingMemberRequests(); }
     )
@@ -530,15 +548,20 @@ function scheduleCloudRefresh() {
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
   const canManageMembers = (hasRole("admin") || hasRole("escritura"));
+  const canPastoralNotes = isAdmin || hasRole("pastor");
+  const canLeaderNotes = canPastoralNotes || hasRole("lider");
 
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
   const btnManageUsers = document.getElementById("btn-manage-users");
   const notesField = document.getElementById("notes-field");
   const notesSection = document.getElementById("view-notes-section");
-
-  if (notesField) notesField.classList.toggle("hidden", !isAdmin);
-  if (notesSection) notesSection.classList.toggle("hidden", !isAdmin);
+  const leaderNotesField = document.getElementById("leader-notes-field");
+  const leaderNotesSection = document.getElementById("view-leader-notes-section");
+  if (notesField) notesField.classList.toggle("hidden", !canPastoralNotes);
+  if (notesSection) notesSection.classList.toggle("hidden", !canPastoralNotes);
+  if (leaderNotesField) leaderNotesField.classList.toggle("hidden", !canLeaderNotes);
+  if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
   // Solo admin y escritura pueden crear o modificar miembros.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
@@ -1999,6 +2022,7 @@ async function handleFormSubmit(e) {
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
+    leaderNotes: document.getElementById("input-leader-notes").value.trim(),
     avatar: avatarToSave
   };
 
@@ -2086,6 +2110,7 @@ function editMember(id) {
   document.getElementById('input-baptized').value = member.baptized || 'Sí';
   document.getElementById('input-birthday').value = member.birthday || '';
   document.getElementById('input-notes').value = member.notes || '';
+  document.getElementById('input-leader-notes').value = member.leaderNotes || '';
 
   openModal(true);
 }
@@ -2183,6 +2208,8 @@ function viewDetails(id) {
   document.getElementById('view-address').textContent = member.address || 'Sin dirección';
   document.getElementById('view-date').textContent = member.birthday ? formatDate(member.birthday) : 'N/A';
   document.getElementById('view-notes').textContent = member.notes || 'Sin observaciones pastorales.';
+  const leaderNotesText = document.getElementById('view-leader-notes');
+  if (leaderNotesText) leaderNotesText.textContent = member.leaderNotes || 'Sin notas de líderes.';
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
   if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
 
