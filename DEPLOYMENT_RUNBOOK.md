@@ -1,12 +1,16 @@
 # Iglesia Renacer — despliegue seguro de roles independientes
 
-## Estado verificado
-- GitHub Actions `Security contract`: aprobado.
-- Pull Request #12: abierto como borrador; no fusionado.
-- Preview Vercel de la rama: hay una compilación `READY` para el código de interfaz, pero no corresponde al último SHA del PR.
-- Producción: sigue apuntando a `main`; no se ha modificado.
-- Supabase: la migración 012 no se ha ejecutado desde esta sesión.
-- Edge Function: el código está actualizado en la rama, pero no está desplegado en Supabase.
+## Estado verificado (2026-11-03)
+- Migración 012 aplicada correctamente en Supabase `oanmwvpvqcmdmdsmflie`.
+- Migración 013 aplicada: optimiza las políticas RLS de notas y elimina el índice duplicado cuando la PK ya cubre `(miembro_id, lider_id)`.
+- Validación de datos: cero perfiles con roles inválidos, cero notas duplicadas y cero notas sin líder; las cuatro políticas de notas están activas y `anon` no tiene SELECT.
+- Prueba RLS con rol `authenticated`: un perfil Hermano solo ve su propio registro de miembro (1 fila); no ve notas de líderes.
+- Edge Function `send-announcement-push` desplegada en versión 4 con `verify_jwt=true`; autoriza solo Admin o Escritura.
+- GitHub Actions `Security contract`: pendiente de completar para el último commit de esta rama.
+- Vercel Preview del commit `f5056f7`: `READY`. URL verificada: https://iglesiarenacer-git-fix-roles-independient-d470ed-iglesiarenacer.vercel.app
+- Producción: todavía no se ha fusionado el PR ni se ha desplegado `main`.
+- No se pudo crear un backup descargable desde las herramientas disponibles; se debe conservar un backup externo del proyecto.
+- No hay dos cuentas de Líder de prueba, por lo que el aislamiento entre dos autores aún requiere una prueba funcional con cuentas reales.
 
 ## Orden de publicación
 
