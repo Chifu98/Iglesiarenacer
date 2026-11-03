@@ -443,7 +443,8 @@ function showAppView() {
 
   document.getElementById("current-user-name").textContent = currentUser.name;
   const badge = document.getElementById("current-user-role-badge");
-  badge.textContent = currentUser.roles.map(role => roleDisplayName(role).toUpperCase()).join(" + ");
+  const dashboardRoles = currentUser.roles.length > 1 ? currentUser.roles.filter(role => role !== "hermano") : currentUser.roles;
+  badge.textContent = dashboardRoles.map(role => roleDisplayName(role).toUpperCase()).join(" + ");
 
   applyRolePermissions();
   renderDashboard();
