@@ -225,7 +225,7 @@ async function loadData() {
       name: profile.nombre,
       username: profile.usuario || session.user.email,
       email: session.user.email,
-      roles: profile.roles || ["hermano"],
+      roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
     role: profile.rol,
       memberId: profile.miembro_id || ""
     };
