@@ -12,14 +12,12 @@ function escapeHtml(str) {
 let users = [];
 let currentUser = null;
 function hasRole(role) {
-  if (!currentUser || !Array.isArray(currentUser.roles)) return false;
-  if (role === "escritura") return currentUser.roles.some(item => ["escritura", "pastor", "servidor", "lider"].includes(item));
-  return currentUser.roles.includes(role);
+  return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Miembro", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Hermano", admin: "Administrador", escritura: "Escritura", lectura: "Lectura", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
-function isBrotherOnly() { return !!(currentUser && !hasRole('admin') && !hasRole('escritura')); }
+function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("escritura")); }
 let members = [];
 let prayerRequests = [];
 let announcements = [];
@@ -107,15 +105,20 @@ async function refreshCloudData() {
     privateNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
   }
   if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
-    const notesResult = await client.from("notas_lideres").select("miembro_id,nota");
+    const notesResult = await client.from("notas_lideres").select("miembro_id,lider_id,nota");
     if (notesResult.error) throw notesResult.error;
-    leaderNotes = new Map((notesResult.data || []).map(row => [row.miembro_id, row.nota || ""]));
+    (notesResult.data || []).forEach(row => {
+      const current = leaderNotes.get(row.miembro_id) || [];
+      const owner = row.lider_id ? row.lider_id.slice(0, 8) : "histórica";
+      if (row.nota) current.push("Líder " + owner + ": " + row.nota);
+      leaderNotes.set(row.miembro_id, current);
+    });
   }
 
   members = (membersResult.data || []).map(row => ({
     ...mapDbMemberToApp(row),
     notes: privateNotes.get(row.id) || "",
-    leaderNotes: leaderNotes.get(row.id) || ""
+    leaderNotes: (leaderNotes.get(row.id) || []).join("\n\n")
   }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
@@ -142,18 +145,7 @@ async function saveMembers() {
       if (notesError) throw notesError;
     }
   }
-  // Notas de líderes: Admin, Pastor y Líder.
-  if (currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"))) {
-    const leaderRows = members.map(member => ({
-      miembro_id: String(member.id), nota: member.leaderNotes || "",
-      updated_at: new Date().toISOString(), updated_by: currentUser.id
-    }));
-    if (leaderRows.length) {
-      const { error: leaderError } = await window.supabaseClient.from("notas_lideres")
-        .upsert(leaderRows, { onConflict: "miembro_id" });
-      if (leaderError) throw leaderError;
-    }
-  }
+  // Las notas de líderes se guardan por separado por miembro y líder; el guardado masivo no sobrescribe notas ajenas.
 }
 
 async function saveRequests() {
@@ -192,7 +184,7 @@ async function loadProfilesFromCloud() {
     id: profile.id,
     name: profile.nombre,
     username: profile.usuario || profile.id,
-    roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
+    roles: (Array.isArray(profile.roles) ? profile.roles : (profile.rol ? [profile.rol] : [])),
     role: profile.rol,
     active: profile.activo,
     requestStatus: profile.estado_solicitud || (profile.activo ? "aprobado" : "pendiente"),
@@ -250,7 +242,7 @@ async function loadData() {
       name: profile.nombre,
       username: profile.usuario || session.user.email,
       email: session.user.email,
-      roles: profile.roles || (profile.rol === "hermano" ? ["hermano"] : ["hermano", profile.rol]),
+      roles: (Array.isArray(profile.roles) ? profile.roles : (profile.rol ? [profile.rol] : [])),
     role: profile.rol,
       memberId: profile.miembro_id || ""
     };
@@ -670,7 +662,8 @@ function applyRolePermissions() {
   const leaderNotesSection = document.getElementById("view-leader-notes-section");
   if (notesField) notesField.classList.toggle("hidden", !canPastoralNotes);
   if (notesSection) notesSection.classList.toggle("hidden", !canPastoralNotes);
-  if (leaderNotesField) leaderNotesField.classList.toggle("hidden", !canLeaderNotes);
+  // Las notas de líderes se administran en el editor privado por autor, no en la ficha del miembro.
+  if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
   // Solo admin y escritura pueden crear o modificar miembros.
@@ -1009,21 +1002,23 @@ async function rejectSignup(userId) {
   alert("Solicitud rechazada. La cuenta permanece bloqueada.");
 }
 
-async function changeUserRole(userId, newRole) {
+async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
-  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "servidor", "lider", "hermano"];
+  const selectElement = document.getElementById("user-roles-" + userId);
+  if (!selectElement) return;
+  const allowedRoles = ["admin", "escritura", "lectura", "pastor", "lider", "servidor", "hermano"];
   const targetUser = users.find(user => user.id === userId);
-  if (!targetUser || userId === currentUser.id || !allowedRoles.includes(newRole)) { renderUsersTable(); return; }
-  if (targetUser.role === newRole) return;
-  const nextRoles = newRole === "hermano" ? ["hermano"] : ["hermano", newRole];
-  if (!confirm("¿Asignar a " + targetUser.name + " los roles " + nextRoles.join(" + ") + "?")) { renderUsersTable(); return; }
+  const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
+  if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
+    alert("Selecciona al menos un rol válido. No puedes modificar tu propia asignación."); renderUsersTable(); return;
+  }
+  if (JSON.stringify([...nextRoles].sort()) === JSON.stringify([...(targetUser.roles || [])].sort())) return;
+  if (!confirm("¿Asignar a " + targetUser.name + " estos roles independientes: " + nextRoles.map(roleDisplayName).join(" + ") + "?")) { renderUsersTable(); return; }
   const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
   if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
-  await loadProfilesFromCloud();
-  renderUsersTable();
+  await loadProfilesFromCloud(); renderUsersTable();
   alert("Roles actualizados. El usuario deberá actualizar la página para aplicar los permisos.");
 }
-
 async function linkUserToMember(userId, memberId) {
   if (!currentUser || !hasRole("admin")) return;
   const targetUser = users.find(user => user.id === userId);
@@ -1081,23 +1076,22 @@ function renderUsersTable() {
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
     const roleChoices = [
-      { value: "hermano", label: "Miembro" },
-      { value: "lectura", label: "Miembro + Lectura" },
-      { value: "escritura", label: "Miembro + Escritura" },
-      { value: "pastor", label: "Miembro + Pastor" },
-      { value: "servidor", label: "Miembro + Servidor" },
-      { value: "lider", label: "Miembro + Líder" },
-      { value: "admin", label: "Miembro + Admin" }
+      { value: "admin", label: "Administrador" },
+      { value: "escritura", label: "Escritura" },
+      { value: "lectura", label: "Lectura" },
+      { value: "pastor", label: "Pastor" },
+      { value: "lider", label: "Líder" },
+      { value: "servidor", label: "Servidor" },
+      { value: "hermano", label: "Hermano" }
     ];
-    const currentExtraRole = (user.roles || ["hermano"]).find(role => role !== "hermano") || "hermano";
+    const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
-      '<option value="' + choice.value + '"' + (currentExtraRole === choice.value ? " selected" : "") + '>' + choice.label + '</option>'
+      '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<select aria-label="Cambiar rol de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<div class="space-y-1"><select multiple size="7" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
-      'onchange="changeUserRole(\'' + escapeHtml(user.id) + '\', this.value)" ' +
-      'class="max-w-[110px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px] ' +
-      (user.id === currentUser.id ? "opacity-60 cursor-not-allowed" : "") + '">' + roleOptions + '</select>';
+      'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
+      (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
     const memberOptions = '<option value="">Sin vincular</option>' + members.map(member =>
       '<option value="' + escapeHtml(member.id) + '"' + (user.memberId === member.id ? " selected" : "") + '>' +
       escapeHtml(member.name) + '</option>'
@@ -1120,7 +1114,7 @@ function renderUsersTable() {
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Rol adicional</div></div></td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Roles independientes (Ctrl / Cmd para varios)</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
 
@@ -1296,7 +1290,7 @@ async function loadAuditLog() {
 
 /* ANNOUNCEMENTS MODULE */
 function canManageAnnouncements() {
-  return !!currentUser && (hasRole("admin") || (hasRole("escritura") && !hasRole("servidor")));
+  return !!currentUser && (hasRole("admin") || hasRole("escritura"));
 }
 
 function formatAnnouncementDate(value) {
@@ -1810,6 +1804,56 @@ function generateImage(title, items, filename) {
   link.click();
 }
 
+let privateNoteContext = null;
+async function openPrivateNoteModal(memberId, type) {
+  const member = members.find(item => String(item.id) === String(memberId));
+  if (!member || !currentUser) return;
+  if (type === "pastoral" && !(hasRole("admin") || hasRole("pastor"))) return;
+  if (type === "leader" && !hasRole("lider")) return;
+  privateNoteContext = { memberId: String(memberId), type };
+  document.getElementById("private-note-title").textContent = type === "pastoral" ? "Nota pastoral privada" : "Nota personal de líder";
+  document.getElementById("private-note-member").textContent = member.name;
+  const field = document.getElementById("private-note-text");
+  if (type === "pastoral") field.value = member.notes || "";
+  else {
+    const { data, error } = await window.supabaseClient.from("notas_lideres").select("nota")
+      .eq("miembro_id", String(memberId)).eq("lider_id", currentUser.id).maybeSingle();
+    if (error) { alert("No se pudo cargar la nota: " + error.message); return; }
+    field.value = data ? data.nota || "" : "";
+  }
+  document.getElementById("private-note-modal").classList.remove("hidden");
+}
+function closePrivateNoteModal() {
+  document.getElementById("private-note-modal").classList.add("hidden");
+  privateNoteContext = null;
+}
+async function savePrivateNote(event) {
+  event.preventDefault();
+  if (!privateNoteContext || !currentUser) return;
+  const member = members.find(item => String(item.id) === privateNoteContext.memberId);
+  if (!member) return;
+  const note = document.getElementById("private-note-text").value.trim();
+  const now = new Date().toISOString();
+  let result;
+  if (privateNoteContext.type === "pastoral") {
+    if (!(hasRole("admin") || hasRole("pastor"))) return;
+    result = await window.supabaseClient.from("notas_pastorales").upsert({
+      miembro_id: privateNoteContext.memberId, nota: note, updated_at: now, updated_by: currentUser.id
+    }, { onConflict: "miembro_id" });
+    if (!result.error) member.notes = note;
+  } else {
+    if (!hasRole("lider")) return;
+    result = await window.supabaseClient.from("notas_lideres").upsert({
+      miembro_id: privateNoteContext.memberId, lider_id: currentUser.id, nota: note,
+      updated_at: now, updated_by: currentUser.id
+    }, { onConflict: "miembro_id,lider_id" });
+    if (!result.error) member.leaderNotes = note ? "Mi nota: " + note : "";
+  }
+  if (result.error) { alert("No se pudo guardar la nota: " + result.error.message); return; }
+  closePrivateNoteModal();
+  alert("Nota guardada correctamente.");
+}
+
 function renderTable() {
   const tbody = document.getElementById('members-table-body');
   const emptyState = document.getElementById('empty-state');
@@ -1821,6 +1865,8 @@ function renderTable() {
   const statusFilter = document.getElementById('filter-status').value;
 
   const canEdit = currentUser && (hasRole("admin") || hasRole("escritura"));
+  const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
+  const canAddLeaderNote = currentUser && hasRole("lider");
 
   tbody.innerHTML = '';
 
@@ -1894,6 +1940,8 @@ function renderTable() {
             <button onclick="viewDetails('${escapeHtml(m.id)}')" title="Ver Detalle" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-church-800 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
               <i data-lucide="eye" class="w-4 h-4"></i>
             </button>
+            ${canAddPastoralNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="pastoral" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Nota pastoral" class="p-1.5 text-violet-600 hover:bg-violet-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
+            ${canAddLeaderNote ? '<button data-member-id="' + escapeHtml(m.id) + '" data-note-type="leader" onclick="openPrivateNoteModal(this.dataset.memberId,this.dataset.noteType)" title="Mi nota de líder" class="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-lg"><i data-lucide="notebook-pen" class="w-4 h-4"></i></button>' : ''}
             ${canEdit ? `
             <button onclick="editMember('${escapeHtml(m.id)}')" title="Editar Miembro" class="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition">
               <i data-lucide="edit-3" class="w-4 h-4"></i>
@@ -1982,7 +2030,7 @@ function closeModal() {
 }
 
 function openRequestModal() {
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
   const select = document.getElementById('request-member-select');
   select.innerHTML = '';
   members.forEach(m => {
@@ -2012,7 +2060,7 @@ function closeRequestModal() {
 
 async function handleRequestSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("lectura") || hasRole("hermano"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura") || hasRole("hermano"))) return;
 
   const memberSelect = document.getElementById("request-member-select");
   const memberId = isBrotherOnly() ? currentUser.memberId : memberSelect.value;
@@ -2081,7 +2129,7 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || hasRole("lectura")) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("escritura"))) return;
 
   const id = document.getElementById("member-id").value;
   const currentMemberId = id || Date.now().toString();
@@ -2133,7 +2181,6 @@ async function handleFormSubmit(e) {
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
-    leaderNotes: document.getElementById("input-leader-notes").value.trim(),
     avatar: avatarToSave
   };
 
@@ -2221,7 +2268,6 @@ function editMember(id) {
   document.getElementById('input-baptized').value = member.baptized || 'Sí';
   document.getElementById('input-birthday').value = member.birthday || '';
   document.getElementById('input-notes').value = member.notes || '';
-  document.getElementById('input-leader-notes').value = member.leaderNotes || '';
 
   openModal(true);
 }
