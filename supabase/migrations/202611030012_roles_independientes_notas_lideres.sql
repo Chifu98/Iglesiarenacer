@@ -8,12 +8,22 @@ BEGIN;
 ALTER TABLE public.perfiles_app
   ADD COLUMN IF NOT EXISTS roles text[];
 
+-- Desactivar temporalmente el trigger heredado, que forzaba hermano en cada perfil.
+DROP TRIGGER IF EXISTS perfiles_app_sincronizar_roles ON public.perfiles_app;
+
 UPDATE public.perfiles_app
 SET roles = CASE
   WHEN rol IS NOT NULL THEN ARRAY[rol]::text[]
   ELSE ARRAY['hermano']::text[]
 END
 WHERE roles IS NULL OR cardinality(roles) = 0;
+
+-- Las migraciones anteriores agregaban hermano automáticamente a todo rol especializado.
+-- Quitamos esa herencia histórica; las combinaciones explícitas posteriores se conservan.
+UPDATE public.perfiles_app
+SET roles = array_remove(roles, 'hermano')
+WHERE cardinality(roles) > 1
+  AND roles @> ARRAY['hermano']::text[];
 
 ALTER TABLE public.perfiles_app
   ALTER COLUMN roles SET DEFAULT ARRAY['hermano']::text[],
