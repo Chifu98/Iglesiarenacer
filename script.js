@@ -2386,6 +2386,7 @@ async function deleteMember(id) {
 
 function viewDetails(id) {
   const member = members.find(m => m.id === id);
+  window.currentDetailsMemberId = member ? member.id : null;
   if (!member) return;
 
   const initials = member.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
