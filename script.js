@@ -1077,7 +1077,7 @@ function editUser() {
 }
 
 function deleteUser() {
-  alert("Para desactivar una cuenta, desactiva el usuario en Supabase Auth y cambia activo a FALSE en perfiles_app.");
+  alert("Por seguridad, no elimines físicamente cuentas que tengan notas de líderes o historial asociado. Desactiva la cuenta en Supabase Auth y cambia activo a FALSE en perfiles_app; así se conserva la trazabilidad congregacional.");
 }
 
 async function approveSignup(userId) {
