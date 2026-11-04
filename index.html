@@ -581,7 +581,7 @@
         <!-- Formulario Crear/Editar Usuario -->
         <div class="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-900/10 p-4 text-xs text-slate-700 dark:text-slate-300 space-y-2">
   <p class="font-bold text-amber-700 dark:text-amber-400">Solicitudes de acceso</p>
-  <p>Las personas pueden registrarse desde la pantalla de inicio. Todas las cuentas nuevas quedan pendientes hasta que un administrador las apruebe o rechace.</p>
+  <p>Las personas pueden enviar una solicitud desde la pantalla de inicio sin confirmar su correo. La cuenta queda bloqueada hasta que un administrador apruebe o rechace su ingreso.</p>
   <p>Puedes asignar a cada cuenta los roles admin, escritura, lectura o miembro, y vincularla con una ficha existente del directorio. Una persona puede tener una cuenta de acceso y un único registro congregacional asociado.</p>
   <p>Rechazar bloquea el acceso, pero conserva la cuenta en Supabase Auth; no elimina su registro ni sus credenciales.</p>
 </div>
@@ -603,7 +603,7 @@
         <!-- SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS -->
         <section class="rounded-xl border border-blue-200 dark:border-blue-900/60 p-4 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Solicitudes de registro de hermanos</h4><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Revisa los datos enviados desde el acceso público y aprueba o rechaza cada solicitud.</p></div>
+            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Solicitudes de ingreso de miembros</h4><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Revisa los datos enviados desde el acceso público y aprueba o rechaza cada solicitud.</p></div>
             <button type="button" onclick="loadPendingMemberRequests()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-semibold"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualizar</button>
           </div>
           <p id="member-requests-status" class="text-xs text-slate-500 dark:text-slate-400" role="status">Cargando solicitudes...</p>
@@ -626,7 +626,7 @@
                   <th class="py-2.5 px-3">Usuario</th>
                   <th class="py-2.5 px-3">Rol de acceso</th>
                   <th class="py-2.5 px-3">Miembro asociado</th>
-                  <th class="py-2.5 px-3 text-right">Estado / Acción</th>
+                  <th class="py-2.5 px-3 text-right">Estado / Acceso</th>
                 </tr>
               </thead>
               <tbody id="users-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
