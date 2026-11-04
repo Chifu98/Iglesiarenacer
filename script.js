@@ -1098,12 +1098,12 @@ async function createMemberAccess(memberId) {
     renderUsersTable();
     const status = data?.status === "already_linked" ? "La cuenta ya estaba vinculada." : "La cuenta quedó creada y vinculada.";
     alert(status + " Enviamos un enlace seguro a " + email + " para que establezca o cambie su contraseña. No necesitas conocer su clave.");
-    viewDetails(member.id);
   } catch (error) {
     console.error("Error creando acceso de miembro:", error);
     alert("No se pudo completar el acceso: " + (error.message || "Error inesperado."));
   } finally {
-    if (button) { button.disabled = false; button.textContent = "Crear acceso a Renacer"; }
+    if (button) button.disabled = false;
+    viewDetails(member.id);
   }
 }
 
