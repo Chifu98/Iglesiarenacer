@@ -33,7 +33,7 @@ function getProfilePhotoPath(value) {
   if (value.startsWith(marker)) return value.slice(marker.length);
   try {
     const url = new URL(value);
-    const match = url.pathname.match(/\\/storage\\/v1\\/object\\/(?:public|sign)\\/profile-photos\\/(.+)$/);
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/profile-photos\/(.+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   } catch (_) {
     return null;
