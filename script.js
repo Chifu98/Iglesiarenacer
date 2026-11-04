@@ -15,7 +15,7 @@ function hasRole(role) {
   return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Hermano", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
 function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("pastor")); }
 let members = [];
@@ -1081,7 +1081,7 @@ function renderUsersTable() {
       { value: "pastor", label: "Pastor" },
       { value: "lider", label: "Líder" },
       { value: "servidor", label: "Servidor" },
-      { value: "hermano", label: "Hermano" }
+      { value: "hermano", label: "Miembro" }
     ];
     const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
