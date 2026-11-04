@@ -1580,7 +1580,7 @@ function canViewVisitsModule() {
 }
 
 function canDeleteVisitCards() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider")));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || (hasRole("lider") && !hasRole("servidor"))));
 }
 
 function renderVisitCards() {
