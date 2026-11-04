@@ -17,14 +17,46 @@ function hasRole(role) {
 function roleDisplayName(role) {
   return ({ hermano: "Miembro", miembro: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
-function isMemberOnly() { return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor")); }
+function isMemberOnly() { return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider") && !hasRole("servidor")); }
 let members = [];
 let prayerRequests = [];
 let announcements = [];
 let currentAvatarBase64 = "";
+let memberBirthdayData = null;
 
 let realtimeChannel = null;
 let realtimeRefreshTimer = null;
+
+function getProfilePhotoPath(value) {
+  if (typeof value !== "string" || !value) return null;
+  const marker = "storage:profile-photos/";
+  if (value.startsWith(marker)) return value.slice(marker.length);
+  try {
+    const url = new URL(value);
+    const match = url.pathname.match(/\\/storage\\/v1\\/object\\/(?:public|sign)\\/profile-photos\\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeProfileAvatarForDb(value) {
+  const path = getProfilePhotoPath(value);
+  return path ? "storage:profile-photos/" + path : (value || null);
+}
+
+async function resolveProfileAvatarForDisplay(value) {
+  const path = getProfilePhotoPath(value);
+  if (!path) return value || "";
+  const { data, error } = await window.supabaseClient.storage
+    .from("profile-photos")
+    .createSignedUrl(path, 86400);
+  if (error || !data?.signedUrl) {
+    console.warn("No se pudo generar un enlace temporal para una fotografía de perfil:", error);
+    return "";
+  }
+  return data.signedUrl;
+}
 
 function mapDbMemberToApp(row) {
   return {
@@ -65,7 +97,7 @@ function mapAppMemberToDb(member) {
     status: member.status || "Activo",
     baptized: member.baptized || null,
     birthday: member.birthday || null,
-    avatar: member.avatar || null,
+    avatar: normalizeProfileAvatarForDb(member.avatar),
     inviter_member_id: member.status !== "Activo" ? (member.inviterMemberId || null) : null,
     inviter_name: member.status !== "Activo" ? (member.inviterName || null) : null,
     inviter_relationship: member.status !== "Activo" ? (member.inviterRelationship || null) : null,
@@ -104,6 +136,22 @@ async function refreshCloudData() {
   if (requestsResult.error) throw requestsResult.error;
   if (announcementsResult.error) throw announcementsResult.error;
 
+  memberBirthdayData = null;
+  if (isMemberOnly()) {
+    const { data: birthdayRows, error: birthdayError } = await client.rpc("listar_cumpleanos_congregacion");
+    if (birthdayError) {
+      console.warn("No se pudo cargar el listado de cumpleaños autorizado:", birthdayError);
+      memberBirthdayData = [];
+    } else {
+      memberBirthdayData = (birthdayRows || []).map(row => ({
+        name: row.nombre || "",
+        birthday: row.cumpleanos || "",
+        avatar: "",
+        phone: ""
+      }));
+    }
+  }
+
   let privateNotes = new Map();
   let leaderNotes = new Map();
   if (currentUser && (hasRole("admin") || hasRole("pastor"))) {
@@ -122,10 +170,14 @@ async function refreshCloudData() {
     });
   }
 
-  members = (membersResult.data || []).map(row => ({
-    ...mapDbMemberToApp(row),
-    notes: privateNotes.get(row.id) || "",
-    leaderNotes: (leaderNotes.get(row.id) || []).join("\n\n")
+  members = await Promise.all((membersResult.data || []).map(async row => {
+    const member = {
+      ...mapDbMemberToApp(row),
+      notes: privateNotes.get(row.id) || "",
+      leaderNotes: (leaderNotes.get(row.id) || []).join("\n\n")
+    };
+    member.avatar = await resolveProfileAvatarForDisplay(member.avatar);
+    return member;
   }));
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
@@ -317,8 +369,6 @@ async function submitPublicMemberRegistration(event) {
   const ministry = document.getElementById("public-member-ministry").value;
   const baptized = document.getElementById("public-member-baptized").value;
   const birthday = document.getElementById("public-member-birthday").value;
-  const profileFile = document.getElementById("public-member-avatar-file").files[0] || null;
-  if (profileFile && (!profileFile.type.startsWith("image/") || profileFile.size > 2 * 1024 * 1024)) { showPublicMemberMessage("La foto debe ser una imagen y pesar como máximo 2 MB."); return; }
 
   if (name.length < 3 || phone.length < 7 || !email || !birthday || password.length < 8 || passwordConfirm.length < 8) {
     showPublicMemberMessage("Revisa tus datos. El correo es obligatorio y ambas contraseñas deben tener al menos 8 caracteres.");
@@ -352,20 +402,11 @@ async function submitPublicMemberRegistration(event) {
     if (requestError) throw requestError;
     requestId = request;
     if (!requestId) throw new Error("No se pudo obtener el identificador de la solicitud.");
-    let avatarUrl = null;
-    if (profileFile) {
-      const ext = (profileFile.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-      const photoPath = "pending/" + requestId + "/" + crypto.randomUUID() + "." + ext;
-      const { error: uploadError } = await window.supabaseClient.storage.from("profile-photos").upload(photoPath, profileFile, { contentType: profileFile.type, upsert: false });
-      if (uploadError) throw uploadError;
-      avatarUrl = window.supabaseClient.storage.from("profile-photos").getPublicUrl(photoPath).data.publicUrl;
-    }
-
     const { data, error } = await window.supabaseClient.auth.signUp({
       email,
       password,
       options: {
-        data: { nombre: name, tipo_cuenta: "miembro", solicitud_id: requestId, avatar_url: avatarUrl },
+        data: { nombre: name, tipo_cuenta: "miembro", solicitud_id: requestId },
         emailRedirectTo: window.location.origin
       }
     });
@@ -757,6 +798,58 @@ function setSupabaseBackupStatus(message, isError = false) {
     : "text-slate-500 dark:text-slate-400");
 }
 
+const RENACER_BACKUP_TABLES = [
+  "anuncios",
+  "avisos_congregacion",
+  "miembros",
+  "miembros_app",
+  "notas_lideres",
+  "notas_pastorales",
+  "perfiles_app",
+  "peticiones_oracion",
+  "registro_auditoria",
+  "solicitudes_registro_miembros"
+];
+const RENACER_BACKUP_BUCKETS = ["profile-photos", "sitio-publico"];
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+
+async function readStorageBucketForBackup(bucket, folder = "") {
+  const files = [];
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await window.supabaseClient.storage
+      .from(bucket)
+      .list(folder, { limit: pageSize, offset, sortBy: { column: "name", order: "asc" } });
+    if (error) throw new Error("No se pudo listar el almacenamiento " + bucket + ": " + error.message);
+    for (const item of data || []) {
+      const path = folder ? folder + "/" + item.name : item.name;
+      if (item.id === null) {
+        files.push(...await readStorageBucketForBackup(bucket, path));
+        continue;
+      }
+      const { data: blob, error: downloadError } = await window.supabaseClient.storage.from(bucket).download(path);
+      if (downloadError) throw new Error("No se pudo respaldar " + bucket + "/" + path + ": " + downloadError.message);
+      files.push({
+        bucket,
+        path,
+        contentType: item.metadata?.mimetype || blob.type || "application/octet-stream",
+        base64: arrayBufferToBase64(await blob.arrayBuffer())
+      });
+    }
+    if (!data || data.length < pageSize) break;
+  }
+  return files;
+}
+
 async function createSupabaseBackup() {
   if (!currentUser || !hasRole("admin")) {
     alert("Solo un administrador puede crear copias de seguridad.");
@@ -765,39 +858,39 @@ async function createSupabaseBackup() {
 
   const button = document.querySelector('button[onclick="createSupabaseBackup()"]');
   if (button) button.disabled = true;
-  setSupabaseBackupStatus("Consultando Supabase y preparando el archivo...");
+  setSupabaseBackupStatus("Consultando todas las tablas y archivos de Supabase...");
 
   try {
-    const [membersRows, requestRows, notesRows] = await Promise.all([
-      readSupabaseTableForBackup("miembros_app"),
-      readSupabaseTableForBackup("peticiones_oracion"),
-      readSupabaseTableForBackup("notas_pastorales")
-    ]);
+    const tableEntries = await Promise.all(RENACER_BACKUP_TABLES.map(async table => [
+      table, await readSupabaseTableForBackup(table)
+    ]));
+    const data = Object.fromEntries(tableEntries);
+    const storageFiles = [];
+    for (const bucket of RENACER_BACKUP_BUCKETS) {
+      setSupabaseBackupStatus("Respaldando fotografías y archivos: " + bucket + "...");
+      storageFiles.push(...await readStorageBucketForBackup(bucket));
+    }
 
     const backup = {
       app: "Iglesia Renacer - Control Congregacional",
       format: "renacer-supabase-backup",
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: new Date().toISOString(),
       exportedBy: currentUser.name || "Administrador",
       source: "Supabase",
-      data: {
-        miembros_app: membersRows,
-        peticiones_oracion: requestRows,
-        notas_pastorales: notesRows.map(row => ({
-          miembro_id: row.miembro_id,
-          nota: row.nota,
-          updated_at: row.updated_at
-        }))
-      }
+      includesAuthAccounts: false,
+      excludesDevicePushSubscriptions: true,
+      data,
+      storageFiles
     };
 
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = "Iglesia_Renacer_Supabase_Backup_" + dateStr + ".json";
-    downloadFile(JSON.stringify(backup, null, 2), filename, "application/json");
+    downloadFile(JSON.stringify(backup), filename, "application/json");
+    const totalRows = Object.values(data).reduce((sum, rows) => sum + rows.length, 0);
     setSupabaseBackupStatus(
-      "Copia creada: " + membersRows.length + " miembros, " +
-      requestRows.length + " peticiones y " + notesRows.length + " notas pastorales."
+      "Copia completa creada: " + totalRows + " registros en " + RENACER_BACKUP_TABLES.length +
+      " tablas y " + storageFiles.length + " archivos. Guarda este JSON en un lugar seguro: contiene datos personales y notas privadas."
     );
   } catch (error) {
     console.error("Error creando copia de Supabase:", error);
@@ -824,37 +917,32 @@ async function restoreSupabaseBackup(event) {
     const data = parsed && parsed.data;
     const validFormat = parsed &&
       parsed.format === "renacer-supabase-backup" &&
-      parsed.schemaVersion === 1 &&
+      [1, 2].includes(parsed.schemaVersion) &&
       data &&
       Array.isArray(data.miembros_app) &&
       Array.isArray(data.peticiones_oracion) &&
       Array.isArray(data.notas_pastorales);
-
     if (!validFormat) {
-      throw new Error("El archivo no es una copia de Supabase válida de Iglesia Renacer o su versión no es compatible.");
+      throw new Error("El archivo no es una copia válida de Iglesia Renacer o su versión no es compatible.");
     }
 
-    const validMembers = data.miembros_app.every(row =>
-      row && typeof row.id === "string" && row.id.length > 0
+    const storageFiles = Array.isArray(parsed.storageFiles) ? parsed.storageFiles : [];
+    const validFiles = storageFiles.every(item =>
+      item && RENACER_BACKUP_BUCKETS.includes(item.bucket) &&
+      typeof item.path === "string" && item.path.length > 0 &&
+      !item.path.split("/").some(part => part === "..") &&
+      typeof item.base64 === "string" &&
+      typeof item.contentType === "string"
     );
-    const validRequests = data.peticiones_oracion.every(row =>
-      row && typeof row.id === "string" && row.id.length > 0
-    );
-    const validNotes = data.notas_pastorales.every(row =>
-      row && typeof row.miembro_id === "string" &&
-      typeof row.nota === "string"
-    );
-    if (!validMembers || !validRequests || !validNotes) {
-      throw new Error("El archivo contiene registros sin identificadores válidos.");
-    }
+    if (!validFiles) throw new Error("El respaldo contiene archivos de almacenamiento no válidos.");
 
+    const rowCount = Object.values(data).filter(Array.isArray).reduce((sum, rows) => sum + rows.length, 0);
     const confirmed = confirm(
       "Vas a restaurar desde: " + file.name + "\n\n" +
-      "Miembros: " + data.miembros_app.length + "\n" +
-      "Peticiones: " + data.peticiones_oracion.length + "\n" +
-      "Notas pastorales: " + data.notas_pastorales.length + "\n\n" +
-      "Los registros con el mismo ID serán actualizados y los que falten serán recuperados. " +
-      "Los registros actuales que no estén en el archivo NO se eliminarán. " +
+      "Registros de base de datos: " + rowCount + "\n" +
+      "Archivos/fotografías: " + storageFiles.length + "\n\n" +
+      "La base de datos se restaurará en una sola transacción. Los registros con el mismo ID se actualizarán; los registros que no estén en el respaldo no se eliminarán. " +
+      "Las cuentas de Auth y sus contraseñas no se exportan ni se recrean. Las suscripciones push se volverán a registrar desde cada dispositivo. " +
       "¿Deseas continuar?"
     );
     if (!confirmed) {
@@ -862,37 +950,43 @@ async function restoreSupabaseBackup(event) {
       return;
     }
 
-    setSupabaseBackupStatus("Restaurando miembros...");
-    const upsertInBatches = async (table, rows, conflict) => {
-      const batchSize = 100;
-      for (let i = 0; i < rows.length; i += batchSize) {
-        const batch = rows.slice(i, i + batchSize);
-        const { error } = await window.supabaseClient
-          .from(table)
-          .upsert(batch, { onConflict: conflict });
-        if (error) throw new Error("Error en " + table + ": " + error.message);
-      }
-    };
+    // Se cargan primero los archivos. Si un archivo falla, la transacción de base de datos aún no ha comenzado.
+    for (let i = 0; i < storageFiles.length; i++) {
+      const item = storageFiles[i];
+      setSupabaseBackupStatus("Restaurando archivo " + (i + 1) + " de " + storageFiles.length + "...");
+      const binary = atob(item.base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+      const blob = new Blob([bytes], { type: item.contentType });
+      const { error } = await window.supabaseClient.storage.from(item.bucket).upload(item.path, blob, {
+        contentType: item.contentType,
+        upsert: true
+      });
+      if (error) throw new Error("Error restaurando " + item.bucket + "/" + item.path + ": " + error.message);
+    }
 
-    await upsertInBatches("miembros_app", data.miembros_app, "id");
-    setSupabaseBackupStatus("Restaurando peticiones...");
-    await upsertInBatches("peticiones_oracion", data.peticiones_oracion, "id");
-    setSupabaseBackupStatus("Restaurando notas pastorales...");
-    await upsertInBatches("notas_pastorales", data.notas_pastorales, "miembro_id");
+    setSupabaseBackupStatus("Restaurando registros en una transacción...");
+    const { data: restoreResult, error: restoreError } = await window.supabaseClient.rpc(
+      "restaurar_respaldo_renacer",
+      { p_data: data }
+    );
+    if (restoreError) throw new Error("La base de datos no se modificó porque falló la transacción: " + restoreError.message);
 
     await refreshCloudData();
     renderDashboard();
     renderTable();
     renderRequests();
     renderBirthdayModule();
+    await loadProfilesFromCloud();
 
-    setSupabaseBackupStatus("Restauración completada. Los datos ya están sincronizados con Supabase.");
-    alert("Restauración completada correctamente. Se recuperaron o actualizaron los registros del archivo.");
+    setSupabaseBackupStatus("Restauración completada. " + (restoreResult?.rows_restored ?? rowCount) +
+      " registros procesados y " + storageFiles.length + " archivos restaurados.");
+    alert("Restauración completada correctamente. La base de datos se restauró transaccionalmente y los archivos fueron cargados.");
   } catch (error) {
     console.error("Error restaurando copia de Supabase:", error);
     setSupabaseBackupStatus("No se pudo completar la restauración: " + error.message, true);
     alert("No se pudo completar la restauración: " + error.message +
-      "\n\nLos registros procesados antes del error podrían haberse guardado. Revisa los datos antes de repetirla.");
+      "\n\nSi el error ocurrió durante la carga de archivos, algunos archivos podrían haberse cargado antes del fallo. La base de datos se mantiene íntegra si la función de restauración informó un error.");
   } finally {
     event.target.value = "";
   }
@@ -1706,7 +1800,8 @@ function previewAvatar(event) {
 
 function getBirthdayMembersForSelectedMonth() {
   const monthSelect = document.getElementById('share-birthday-month').value;
-  return members.filter(m => {
+  const source = isMemberOnly() ? (memberBirthdayData || []) : members;
+  return source.filter(m => {
     if (!m.birthday) return false;
     const parts = m.birthday.split('-');
     return parts.length >= 2 && parts[1] === monthSelect;
