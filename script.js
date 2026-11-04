@@ -309,6 +309,7 @@ async function submitPublicMemberRegistration(event) {
   const phone = document.getElementById("public-member-phone").value.trim();
   const email = document.getElementById("public-member-email").value.trim().toLowerCase();
   const password = document.getElementById("public-member-password").value;
+  const passwordConfirm = document.getElementById("public-member-password-confirm").value;
   const address = document.getElementById("public-member-address").value.trim();
   const maritalStatus = document.getElementById("public-member-marital").value;
   const spouseName = (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)")
@@ -319,8 +320,13 @@ async function submitPublicMemberRegistration(event) {
   const profileFile = document.getElementById("public-member-avatar-file").files[0] || null;
   if (profileFile && (!profileFile.type.startsWith("image/") || profileFile.size > 2 * 1024 * 1024)) { showPublicMemberMessage("La foto debe ser una imagen y pesar como máximo 2 MB."); return; }
 
-  if (name.length < 3 || phone.length < 7 || !email || !birthday || password.length < 8) {
-    showPublicMemberMessage("Revisa tus datos. El correo es obligatorio y la contraseña debe tener al menos 8 caracteres.");
+  if (name.length < 3 || phone.length < 7 || !email || !birthday || password.length < 8 || passwordConfirm.length < 8) {
+    showPublicMemberMessage("Revisa tus datos. El correo es obligatorio y ambas contraseñas deben tener al menos 8 caracteres.");
+    return;
+  }
+  if (password !== passwordConfirm) {
+    showPublicMemberMessage("Las contraseñas no coinciden. Verifica ambos campos antes de continuar.");
+    document.getElementById("public-member-password-confirm").focus();
     return;
   }
 
@@ -1767,16 +1773,16 @@ function renderBirthdayModule() {
     `;
 
     const cardsGrid = document.createElement('div');
-    cardsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3';
+    cardsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4';
 
     weekMembers.forEach(member => {
       const card = document.createElement('div');
-      card.className = "bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 flex items-center justify-between";
+      card.className = "min-w-0 min-h-[88px] bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-sm";
 
       const initials = member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-      let avatarHtml = `<div class="w-8 h-8 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0">${escapeHtml(initials)}</div>`;
+      let avatarHtml = `<div class="w-12 h-12 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-sm shrink-0">${escapeHtml(initials)}</div>`;
       if (member.avatar) {
-        avatarHtml = `<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-amber-400/40"><img src="${escapeHtml(member.avatar)}" class="w-full h-full object-cover" alt=""></div>`;
+        avatarHtml = `<div class="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-amber-400/50"><img src="${escapeHtml(member.avatar)}" class="w-full h-full object-cover" alt=""></div>`;
       }
 
       const parts = member.birthday.split('-');
@@ -1785,11 +1791,11 @@ function renderBirthdayModule() {
         : '🎂 Fecha de cumpleaños';
 
       card.innerHTML = `
-        <div class="flex items-center gap-2.5 overflow-hidden">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
           ${avatarHtml}
-          <div class="truncate">
-            <p class="text-xs font-semibold text-slate-800 dark:text-white truncate">${escapeHtml(member.name)}</p>
-            <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">${escapeHtml(birthYearText)}</p>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-bold text-slate-800 dark:text-white whitespace-normal break-words leading-snug">${escapeHtml(member.name)}</p>
+            <p class="mt-1 text-xs text-amber-600 dark:text-amber-400 font-semibold whitespace-normal">${escapeHtml(birthYearText)}</p>
           </div>
         </div>
         <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('¡Feliz Cumpleaños ' + member.name + '! Que Dios te bendiga grandemente en este día. 🎂🎉 - Iglesia Renacer')}" target="_blank" rel="noopener noreferrer" title="Felicitar por WhatsApp" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition shrink-0">
