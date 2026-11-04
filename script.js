@@ -66,9 +66,9 @@ function mapAppMemberToDb(member) {
     baptized: member.baptized || null,
     birthday: member.birthday || null,
     avatar: member.avatar || null,
-    inviter_member_id: member.status === "En Visita" ? (member.inviterMemberId || null) : null,
-    inviter_name: member.status === "En Visita" ? (member.inviterName || null) : null,
-    inviter_relationship: member.status === "En Visita" ? (member.inviterRelationship || null) : null,
+    inviter_member_id: member.status !== "Activo" ? (member.inviterMemberId || null) : null,
+    inviter_name: member.status !== "Activo" ? (member.inviterName || null) : null,
+    inviter_relationship: member.status !== "Activo" ? (member.inviterRelationship || null) : null,
     updated_at: new Date().toISOString()
   };
 }
@@ -2319,15 +2319,15 @@ async function handleFormSubmit(e) {
     status: (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))
       ? "En Visita"
       : document.getElementById("input-status").value,
-    inviterMemberId: document.getElementById("input-status").value === "En Visita" &&
+    inviterMemberId: document.getElementById("input-status").value !== "Activo" &&
       document.getElementById("input-inviter-member").value !== "__manual__"
       ? document.getElementById("input-inviter-member").value : "",
-    inviterName: document.getElementById("input-status").value === "En Visita"
+    inviterName: document.getElementById("input-status").value !== "Activo"
       ? (document.getElementById("input-inviter-member").value === "__manual__"
         ? document.getElementById("input-inviter-name").value.trim()
         : (members.find(member => String(member.id) === document.getElementById("input-inviter-member").value)?.name || ""))
       : "",
-    inviterRelationship: document.getElementById("input-status").value === "En Visita"
+    inviterRelationship: document.getElementById("input-status").value !== "Activo"
       ? document.getElementById("input-inviter-relationship").value.trim() : "",
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
