@@ -1755,7 +1755,7 @@ function renderBirthdayModule() {
 
   weeks.forEach((weekMembers, weekIndex) => {
     const firstDay = Math.max(1, weekIndex * 7 - firstWeekday + 1);
-    const lastDay = Math.min(daysInMonth, firstDay + 6);
+    const lastDay = Math.min(daysInMonth, (weekIndex + 1) * 7 - firstWeekday);
     const weekSection = document.createElement('section');
     weekSection.className = 'space-y-3';
 
