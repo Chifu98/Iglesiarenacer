@@ -2218,7 +2218,7 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
