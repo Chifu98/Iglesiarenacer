@@ -1007,7 +1007,7 @@ async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
   const selectElement = document.getElementById("user-roles-" + userId);
   if (!selectElement) return;
-  const allowedRoles = ["admin", "pastor", "lider", "servidor", "hermano"];
+  const allowedRoles = ["admin", "pastor", "lider", "servidor", "miembro"];
   const targetUser = users.find(user => user.id === userId);
   const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
   if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
