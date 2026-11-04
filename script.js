@@ -1068,6 +1068,45 @@ async function linkUserToMember(userId, memberId) {
     : "La cuenta quedó desvinculada del registro de miembros.");
 }
 
+async function createMemberAccess(memberId) {
+  if (!currentUser || !hasRole("admin")) return;
+  const member = members.find(item => String(item.id) === String(memberId));
+  if (!member) return;
+  if (member.status !== "Activo") {
+    alert("Primero cambia el estado congregacional a Activo y guarda la ficha.");
+    return;
+  }
+  const email = String(member.email || "").trim().toLowerCase();
+  if (!email) {
+    alert("Esta ficha no tiene correo. Edita sus datos y registra un correo válido antes de crear el acceso.");
+    return;
+  }
+  if (!confirm("Se habilitará el acceso de " + member.name + " usando " + email + ". Luego se enviará un enlace para que establezca su propia contraseña. ¿Continuar?")) return;
+  const button = document.getElementById("view-create-access-button");
+  if (button) { button.disabled = true; button.textContent = "Preparando acceso..."; }
+  try {
+    const { data, error } = await window.supabaseClient.functions.invoke("crear-acceso-miembro", {
+      body: { member_id: String(member.id) }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    const { error: emailError } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: new URL("restablecer.html", window.location.href).toString()
+    });
+    if (emailError) throw emailError;
+    await loadProfilesFromCloud();
+    renderUsersTable();
+    const status = data?.status === "already_linked" ? "La cuenta ya estaba vinculada." : "La cuenta quedó creada y vinculada.";
+    alert(status + " Enviamos un enlace seguro a " + email + " para que establezca o cambie su contraseña. No necesitas conocer su clave.");
+    viewDetails(member.id);
+  } catch (error) {
+    console.error("Error creando acceso de miembro:", error);
+    alert("No se pudo completar el acceso: " + (error.message || "Error inesperado."));
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Crear acceso a Renacer"; }
+  }
+}
+
 async function resetUserPassword(userId) {
   if (!currentUser || !hasRole("admin")) return;
   const targetUser = users.find(user => user.id === userId);
@@ -1137,7 +1176,7 @@ function renderUsersTable() {
       '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Roles independientes (Ctrl / Cmd para varios)</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500"><div class="flex flex-col items-end gap-2">' + statusAction +
-      '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="resetUserPassword(this.dataset.userId)" class="px-2.5 py-1.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold">Enviar restablecimiento</button></div></td>';
+      '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="resetUserPassword(this.dataset.userId)" class="px-2.5 py-1.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold">Enviar enlace de contraseña</button></div></td>';
 
     tbody.appendChild(tr);
   });
@@ -2398,6 +2437,22 @@ function viewDetails(id) {
   if (leaderNotesText) leaderNotesText.textContent = member.leaderNotes || 'Sin notas de líderes.';
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
   if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
+  const accessControls = document.getElementById("view-admin-access-controls");
+  if (accessControls) {
+    const linkedAccount = users.find(user => String(user.memberId) === String(member.id));
+    accessControls.classList.toggle("hidden", !(currentUser && hasRole("admin")));
+    const accessButton = document.getElementById("view-create-access-button");
+    const accessStatus = document.getElementById("view-admin-access-status");
+    if (accessButton) {
+      accessButton.disabled = member.status !== "Activo" || !String(member.email || "").trim();
+      accessButton.textContent = linkedAccount ? "Reenviar enlace de contraseña" : "Crear acceso a Renacer";
+    }
+    if (accessStatus) {
+      accessStatus.textContent = linkedAccount
+        ? "Acceso vinculado a " + linkedAccount.username + ". Puedes reenviar el enlace para establecer una nueva contraseña."
+        : (member.status !== "Activo" ? "La ficha debe estar Activa para habilitar el acceso." : (!member.email ? "Registra un correo electrónico para continuar." : "Esta ficha todavía no tiene una cuenta de acceso."));
+    }
+  }
 
   document.getElementById('details-modal').classList.remove('hidden');
   lucide.createIcons();
