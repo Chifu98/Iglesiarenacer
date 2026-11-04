@@ -304,6 +304,31 @@
         </div>
       </section>
 
+      <!-- VISIT CARDS MODULE -->
+      <section id="visit-cards-module" class="hidden bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-amber-200/80 dark:border-amber-700/40 p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="contact-round" class="w-5 h-5 text-amber-500"></i>
+              Tarjetas de Visitas
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Seguimiento de las personas nuevas que nos visitan y de quién las invitó.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="visit-cards-count" class="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-bold">0 visitas</span>
+            <button type="button" onclick="refreshVisitCards()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-amber-600" title="Actualizar tarjetas"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        <div id="visit-cards-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+        <div id="visit-cards-empty" class="hidden text-center py-10">
+          <div class="inline-flex p-3 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 mb-2"><i data-lucide="users-round" class="w-6 h-6"></i></div>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">No hay visitas registradas</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Cuando se registre una persona con estado “En Visita”, aparecerá aquí.</p>
+        </div>
+      </section>
+
+      
+
       <!-- BIRTHDAYS SHARE MODULE SECTION -->
       <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
@@ -358,51 +383,6 @@
         </div>
       </section>
 
-      <!-- ANNOUNCEMENTS MODULE SECTION -->
-      <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-5 sm:p-6 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
-          <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="megaphone" class="w-5 h-5 text-amber-500"></i>
-              Anuncios congregacionales
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Información, avisos y actividades importantes de Iglesia Renacer.</p>
-          </div>
-          <button id="btn-new-announcement" type="button" onclick="openAnnouncementModal()" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-bold shadow-sm">
-            <i data-lucide="plus" class="w-4 h-4"></i> Nuevo anuncio
-          </button>
-        </div>
-        <div id="announcements-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
-        <div id="announcements-empty" class="hidden text-center py-8">
-          <div class="inline-flex p-3 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 mb-2"><i data-lucide="megaphone" class="w-6 h-6"></i></div>
-          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Todavía no hay anuncios publicados.</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Los avisos de la congregación aparecerán aquí.</p>
-        </div>
-      </section>
-
-      <!-- VISIT CARDS MODULE -->
-      <section id="visit-cards-module" class="hidden bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-amber-200/80 dark:border-amber-700/40 p-6 space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
-          <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <i data-lucide="contact-round" class="w-5 h-5 text-amber-500"></i>
-              Tarjetas de Visitas
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Seguimiento de las personas nuevas que nos visitan y de quién las invitó.</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="visit-cards-count" class="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-bold">0 visitas</span>
-            <button type="button" onclick="refreshVisitCards()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-amber-600" title="Actualizar tarjetas"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
-          </div>
-        </div>
-        <div id="visit-cards-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-        <div id="visit-cards-empty" class="hidden text-center py-10">
-          <div class="inline-flex p-3 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 mb-2"><i data-lucide="users-round" class="w-6 h-6"></i></div>
-          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">No hay visitas registradas</p>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Cuando se registre una persona con estado “En Visita”, aparecerá aquí.</p>
-        </div>
-      </section>
-
       <!-- PRAYER REQUESTS MODULE SECTION -->
       <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
@@ -453,6 +433,28 @@
 
         <div id="requests-empty-state" class="hidden text-center py-8">
           <p class="text-xs text-slate-500 dark:text-slate-400">No hay peticiones de oración que coincidan con el filtro seleccionado.</p>
+        </div>
+      </section>
+
+      <!-- ANNOUNCEMENTS MODULE SECTION -->
+      <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-700/80 p-5 sm:p-6 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="megaphone" class="w-5 h-5 text-amber-500"></i>
+              Anuncios congregacionales
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Información, avisos y actividades importantes de Iglesia Renacer.</p>
+          </div>
+          <button id="btn-new-announcement" type="button" onclick="openAnnouncementModal()" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-bold shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Nuevo anuncio
+          </button>
+        </div>
+        <div id="announcements-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
+        <div id="announcements-empty" class="hidden text-center py-8">
+          <div class="inline-flex p-3 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 mb-2"><i data-lucide="megaphone" class="w-6 h-6"></i></div>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Todavía no hay anuncios publicados.</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Los avisos de la congregación aparecerán aquí.</p>
         </div>
       </section>
 
