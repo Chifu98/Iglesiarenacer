@@ -17,7 +17,7 @@ function hasRole(role) {
 function roleDisplayName(role) {
   return ({ hermano: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
-function isBrotherOnly() { return !!(currentUser && hasRole("hermano") && !hasRole("admin") && !hasRole("pastor")); }
+function isMemberOnly() { return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor")); }
 let members = [];
 let prayerRequests = [];
 let announcements = [];
@@ -353,7 +353,7 @@ async function submitPublicMemberRegistration(event) {
       email,
       password,
       options: {
-        data: { nombre: name, tipo_cuenta: "hermano", solicitud_id: requestId, avatar_url: avatarUrl },
+        data: { nombre: name, tipo_cuenta: "miembro", solicitud_id: requestId, avatar_url: avatarUrl },
         emailRedirectTo: window.location.origin
       }
     });
@@ -375,7 +375,7 @@ async function submitPublicMemberRegistration(event) {
       true
     );
   } catch (error) {
-    console.error("Error creando solicitud/cuenta de hermano:", { error, requestId });
+    console.error("Error creando solicitud/cuenta de miembro:", { error, requestId });
     showPublicMemberMessage(
       "No se pudo completar el registro. " +
       (requestId
@@ -569,7 +569,7 @@ function showAppView() {
 
   document.getElementById("current-user-name").textContent = currentUser.name;
   const badge = document.getElementById("current-user-role-badge");
-  const dashboardRoles = currentUser.roles.length > 1 ? currentUser.roles.filter(role => role !== "hermano") : currentUser.roles;
+  const dashboardRoles = currentUser.roles.length > 1 ? currentUser.roles.filter(role => role !== "miembro") : currentUser.roles;
   badge.textContent = dashboardRoles.map(role => roleDisplayName(role).toUpperCase()).join(" + ");
 
   applyRolePermissions();
@@ -1007,7 +1007,7 @@ async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
   const selectElement = document.getElementById("user-roles-" + userId);
   if (!selectElement) return;
-  const allowedRoles = ["admin", "pastor", "lider", "servidor", "hermano"];
+  const allowedRoles = ["admin", "pastor", "lider", "servidor", "miembro"];
   const targetUser = users.find(user => user.id === userId);
   const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
   if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
@@ -1081,7 +1081,7 @@ function renderUsersTable() {
       { value: "pastor", label: "Pastor" },
       { value: "lider", label: "Líder" },
       { value: "servidor", label: "Servidor" },
-      { value: "hermano", label: "Miembro" }
+      { value: "miembro", label: "Miembro" }
     ];
     const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
@@ -2032,7 +2032,7 @@ function openRequestModal() {
   if (!currentUser) return;
   document.getElementById("request-form").reset();
   document.getElementById("request-member-name").value = currentUser.name || "";
-  if (isBrotherOnly() && !currentUser.memberId) {
+  if (isMemberOnly() && !currentUser.memberId) {
     alert("Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.");
     return;
   }
@@ -2048,7 +2048,7 @@ async function handleRequestSubmit(e) {
   e.preventDefault();
   if (!currentUser) return;
 
-  const memberId = isBrotherOnly() ? currentUser.memberId : null;
+  const memberId = isMemberOnly() ? currentUser.memberId : null;
   const memberName = document.getElementById("request-member-name").value.trim();
   if (!memberName) {
     alert("Escribe el nombre de quien solicita la oración.");
