@@ -331,7 +331,7 @@ function showAccessOption(option) {
   if (loginPanel) loginPanel.classList.toggle("hidden", option !== "login");
   if (membersPanel) membersPanel.classList.toggle("hidden", option !== "members");
   if (loginError) loginError.classList.add("hidden");
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function togglePublicSpouseField() {
@@ -527,7 +527,7 @@ function updateAnnouncementPushButton(enabled) {
   button.innerHTML = (enabled
     ? '<i data-lucide="bell-ring" class="w-5 h-5"></i><span class="hidden sm:inline">Avisos activos</span>'
     : '<i data-lucide="bell" class="w-5 h-5"></i><span class="hidden sm:inline">Activar avisos</span>');
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 async function refreshAnnouncementPushButton() {
@@ -752,7 +752,7 @@ async function openUsersModal() {
     await loadProfilesFromCloud();
     renderUsersTable();
     document.getElementById("users-modal").classList.remove("hidden");
-    lucide.createIcons();
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     await loadPendingMemberRequests();
   } catch (error) {
     console.error(error);
@@ -1300,7 +1300,7 @@ function renderUsersTable() {
     tbody.appendChild(tr);
   });
 
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 /* SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS (SOLO ADMIN PARA REVISAR) */
@@ -1534,7 +1534,7 @@ function renderAnnouncements() {
     card.append(header, body);
     container.appendChild(card);
   });
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function openAnnouncementModal(id = "") {
@@ -1552,7 +1552,7 @@ function openAnnouncementModal(id = "") {
     document.getElementById("announcement-modal-title").textContent = "Editar anuncio";
   }
   document.getElementById("announcement-modal").classList.remove("hidden");
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function closeAnnouncementModal() {
@@ -1722,7 +1722,7 @@ function renderVisitCards() {
     `;
     container.appendChild(card);
   });
-  if (window.lucide) lucide.createIcons();
+  if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 async function refreshVisitCards() {
@@ -1823,7 +1823,7 @@ function renderBirthdayModule() {
 
   if (birthdayMembers.length === 0) {
     emptyState.classList.remove('hidden');
-    lucide.createIcons();
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     return;
   }
 
@@ -1905,7 +1905,7 @@ function renderBirthdayModule() {
     container.appendChild(weekSection);
   });
 
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function shareBirthdays(format) {
@@ -2007,7 +2007,7 @@ function renderRequests() {
     });
   }
 
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function shareRequests(format) {
@@ -2274,7 +2274,7 @@ function renderTable() {
     });
   }
 
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function handleMaritalStatusChange() {
@@ -2415,7 +2415,7 @@ function openRequestModal() {
     return;
   }
   document.getElementById('request-modal').classList.remove('hidden');
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function closeRequestModal() {
@@ -2792,7 +2792,7 @@ function viewDetails(id) {
   }
 
   document.getElementById('details-modal').classList.remove('hidden');
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 
@@ -2885,5 +2885,5 @@ function formatDate(dateStr) {
 document.addEventListener("DOMContentLoaded", function() {
   initTheme();
   loadData();
-  lucide.createIcons();
+  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 });
