@@ -650,7 +650,7 @@ function scheduleCloudRefresh() {
 
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
-  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("servidor"));
+  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
 
@@ -667,7 +667,7 @@ function applyRolePermissions() {
   if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
-  // Servidor puede crear miembros; solo Admin y Pastor pueden editarlos.
+  // Líder puede gestionar miembros; Servidor puede consultar y crear.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
@@ -1863,7 +1863,7 @@ function renderTable() {
   const ministryFilter = document.getElementById('filter-ministry').value;
   const statusFilter = document.getElementById('filter-status').value;
 
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor"));
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"));
   const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddLeaderNote = currentUser && hasRole("lider");
 
@@ -2001,7 +2001,7 @@ function populateSpouseSelect(currentMemberId = '') {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2117,10 +2117,10 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"))) return;
 
   const id = document.getElementById("member-id").value;
-  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
+  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider")) {
     alert("El rol Servidor solo puede crear miembros, no editar registros existentes.");
     return;
   }
@@ -2270,7 +2270,7 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
 
   const member = members.find(item => item.id === id);
   if (!member) return;
