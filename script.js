@@ -1081,7 +1081,7 @@ function renderUsersTable() {
       { value: "pastor", label: "Pastor" },
       { value: "lider", label: "Líder" },
       { value: "servidor", label: "Servidor" },
-      { value: "hermano", label: "Miembro" }
+      { value: "miembro", label: "Miembro" }
     ];
     const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
