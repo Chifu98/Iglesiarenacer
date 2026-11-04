@@ -15,7 +15,7 @@ function hasRole(role) {
   return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Miembro", miembro: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
 }
 function isMemberOnly() { return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor")); }
 let members = [];
@@ -1466,6 +1466,7 @@ function renderPersonalWelcomeCard() {
   const avatar = document.getElementById("welcome-member-avatar");
   const initialsNode = document.getElementById("welcome-member-initials");
   const ministryNode = document.getElementById("welcome-member-ministry");
+  const roleNode = document.getElementById("welcome-member-role");
   const statusNode = document.getElementById("welcome-member-status");
   const profileButton = document.getElementById("welcome-view-profile");
   if (!nameNode || !currentUser) return;
@@ -1492,6 +1493,10 @@ function renderPersonalWelcomeCard() {
     initialsNode.textContent = initials;
     initialsNode.classList.remove("hidden");
   }
+
+  const assignedRoles = Array.isArray(currentUser.roles) ? currentUser.roles : (currentUser.role ? [currentUser.role] : []);
+  roleNode.textContent = assignedRoles.length ? assignedRoles.map(role => roleDisplayName(role).toUpperCase()).join(" + ") : "USUARIO";
+  roleNode.classList.toggle("hidden", !roleNode.textContent);
 
   ministryNode.textContent = linkedMember ? (linkedMember.ministry || "General") : "";
   ministryNode.classList.toggle("hidden", !linkedMember);
