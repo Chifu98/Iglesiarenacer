@@ -1711,48 +1711,99 @@ function renderBirthdayModule() {
   const container = document.getElementById('birthday-module-list');
   const emptyState = document.getElementById('birthday-module-empty');
   const birthdayMembers = getBirthdayMembersForSelectedMonth();
+  const monthSelect = document.getElementById('share-birthday-month').value;
+  const monthNames = {
+    "01": "enero", "02": "febrero", "03": "marzo", "04": "abril",
+    "05": "mayo", "06": "junio", "07": "julio", "08": "agosto",
+    "09": "septiembre", "10": "octubre", "11": "noviembre", "12": "diciembre"
+  };
 
   container.innerHTML = '';
 
   if (birthdayMembers.length === 0) {
     emptyState.classList.remove('hidden');
-  } else {
-    emptyState.classList.add('hidden');
-    birthdayMembers.forEach(m => {
+    lucide.createIcons();
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+
+  // Agrupa las fechas en semanas de calendario de lunes a domingo.
+  // La primera y última semana se recortan visualmente a los días del mes seleccionado.
+  const year = new Date().getFullYear();
+  const monthNumber = Number(monthSelect);
+  const firstWeekday = (new Date(Date.UTC(year, monthNumber - 1, 1)).getUTCDay() + 6) % 7;
+  const daysInMonth = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  const weeks = new Map();
+
+  birthdayMembers
+    .filter(member => member.birthday)
+    .sort((a, b) => Number(a.birthday.split('-')[2]) - Number(b.birthday.split('-')[2]))
+    .forEach(member => {
+      const day = Number(member.birthday.split('-')[2]);
+      if (!Number.isInteger(day) || day < 1 || day > daysInMonth) return;
+      const weekIndex = Math.floor((day - 1 + firstWeekday) / 7);
+      if (!weeks.has(weekIndex)) weeks.set(weekIndex, []);
+      weeks.get(weekIndex).push(member);
+    });
+
+  weeks.forEach((weekMembers, weekIndex) => {
+    const firstDay = Math.max(1, weekIndex * 7 - firstWeekday + 1);
+    const lastDay = Math.min(daysInMonth, firstDay + 6);
+    const weekSection = document.createElement('section');
+    weekSection.className = 'space-y-3';
+
+    const heading = document.createElement('div');
+    heading.className = 'flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2';
+    heading.innerHTML = `
+      <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+        <i data-lucide="calendar-days" class="w-4 h-4"></i>
+      </span>
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 dark:text-white">Semana ${weekIndex + 1}</h4>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Lunes a domingo · ${firstDay} al ${lastDay} de ${monthNames[monthSelect]}</p>
+      </div>
+      <span class="ml-auto text-[11px] font-semibold text-amber-700 dark:text-amber-300">${weekMembers.length} ${weekMembers.length === 1 ? 'cumpleaños' : 'cumpleaños'}</span>
+    `;
+
+    const cardsGrid = document.createElement('div');
+    cardsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3';
+
+    weekMembers.forEach(member => {
       const card = document.createElement('div');
       card.className = "bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700/80 flex items-center justify-between";
-      
-      const initials = m.name.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase();
+
+      const initials = member.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
       let avatarHtml = `<div class="w-8 h-8 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0">${escapeHtml(initials)}</div>`;
-      if (m.avatar) {
-        avatarHtml = `<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-amber-400/40"><img src="${escapeHtml(m.avatar)}" class="w-full h-full object-cover"></div>`;
+      if (member.avatar) {
+        avatarHtml = `<div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-amber-400/40"><img src="${escapeHtml(member.avatar)}" class="w-full h-full object-cover" alt=""></div>`;
       }
 
-      let birthYearText = "";
-      if (m.birthday) {
-        const parts = m.birthday.split('-');
-        if (parts.length === 3) {
-          const year = parts[0];
-          const dayMonth = `${parts[2]}/${parts[1]}`;
-          birthYearText = `🎂 ${dayMonth} (${year})`;
-        }
-      }
+      const parts = member.birthday.split('-');
+      const birthYearText = parts.length === 3
+        ? `🎂 ${parts[2]}/${parts[1]} (${parts[0]})`
+        : '🎂 Fecha de cumpleaños';
 
       card.innerHTML = `
         <div class="flex items-center gap-2.5 overflow-hidden">
           ${avatarHtml}
           <div class="truncate">
-            <p class="text-xs font-semibold text-slate-800 dark:text-white truncate">${escapeHtml(m.name)}</p>
+            <p class="text-xs font-semibold text-slate-800 dark:text-white truncate">${escapeHtml(member.name)}</p>
             <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">${escapeHtml(birthYearText)}</p>
           </div>
         </div>
-        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('¡Feliz Cumpleaños ' + m.name + '! Que Dios te bendiga grandemente en este día. 🎂🎉 - Iglesia Renacer')}" target="_blank" title="Felicitar por WhatsApp" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition shrink-0">
+        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('¡Feliz Cumpleaños ' + member.name + '! Que Dios te bendiga grandemente en este día. 🎂🎉 - Iglesia Renacer')}" target="_blank" rel="noopener noreferrer" title="Felicitar por WhatsApp" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition shrink-0">
           <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
         </a>
       `;
-      container.appendChild(card);
+      cardsGrid.appendChild(card);
     });
-  }
+
+    weekSection.appendChild(heading);
+    weekSection.appendChild(cardsGrid);
+    container.appendChild(weekSection);
+  });
+
   lucide.createIcons();
 }
 
