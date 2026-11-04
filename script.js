@@ -43,7 +43,10 @@ function mapDbMemberToApp(row) {
     birthday: row.birthday || "",
     notes: "", // Notas pastorales privadas, cargadas según RLS.
     leaderNotes: "",
-    avatar: row.avatar || ""
+    avatar: row.avatar || "",
+    inviterMemberId: row.inviter_member_id || "",
+    inviterName: row.inviter_name || "",
+    inviterRelationship: row.inviter_relationship || ""
   };
 }
 
@@ -63,6 +66,9 @@ function mapAppMemberToDb(member) {
     baptized: member.baptized || null,
     birthday: member.birthday || null,
     avatar: member.avatar || null,
+    inviter_member_id: member.status !== "Activo" ? (member.inviterMemberId || null) : null,
+    inviter_name: member.status !== "Activo" ? (member.inviterName || null) : null,
+    inviter_relationship: member.status !== "Activo" ? (member.inviterRelationship || null) : null,
     updated_at: new Date().toISOString()
   };
 }
@@ -2077,6 +2083,51 @@ function populateSpouseSelect(currentMemberId = '') {
   });
 }
 
+function populateInviterSelect(currentMemberId = "") {
+  const select = document.getElementById("input-inviter-member");
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Seleccionar del directorio --</option>';
+  members
+    .filter(member => String(member.id) !== String(currentMemberId))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "es"))
+    .forEach(member => {
+      const option = document.createElement("option");
+      option.value = String(member.id);
+      option.textContent = member.name;
+      select.appendChild(option);
+    });
+  const manual = document.createElement("option");
+  manual.value = "__manual__";
+  manual.textContent = "No aparece en el directorio / Escribir nombre";
+  select.appendChild(manual);
+}
+
+function toggleInviterManualField() {
+  const select = document.getElementById("input-inviter-member");
+  const container = document.getElementById("inviter-manual-container");
+  const name = document.getElementById("input-inviter-name");
+  if (!select || !container) return;
+  const manual = select.value === "__manual__";
+  container.classList.toggle("hidden", !manual);
+  if (!manual && name) name.value = "";
+}
+
+function toggleVisitInvitationFields() {
+  const status = document.getElementById("input-status");
+  const section = document.getElementById("visit-invitation-section");
+  if (!status || !section) return;
+  section.classList.toggle("hidden", status.value !== "En Visita");
+  if (status.value === "Activo") {
+    const select = document.getElementById("input-inviter-member");
+    const name = document.getElementById("input-inviter-name");
+    const relationship = document.getElementById("input-inviter-relationship");
+    if (select) select.value = "";
+    if (name) name.value = "";
+    if (relationship) relationship.value = "";
+    toggleInviterManualField();
+  }
+}
+
 function openModal(isEdit = false) {
   if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider"))) return;
   const modal = document.getElementById('member-modal');
@@ -2085,6 +2136,11 @@ function openModal(isEdit = false) {
   if (!isEdit) {
     document.getElementById('member-form').reset();
     document.getElementById('member-id').value = '';
+    populateInviterSelect("");
+    document.getElementById("input-inviter-member").value = "";
+    document.getElementById("input-inviter-name").value = "";
+    document.getElementById("input-inviter-relationship").value = "";
+    toggleInviterManualField();
     document.getElementById('input-birthday').value = new Date().toISOString().split('T')[0];
     document.getElementById('input-marital-status').value = 'Soltero (a)';
     currentAvatarBase64 = "";
@@ -2102,6 +2158,7 @@ function openModal(isEdit = false) {
     }
     const serverHint = document.getElementById("server-visit-only-hint");
     if (serverHint) serverHint.classList.toggle("hidden", !restrictedServer);
+    toggleVisitInvitationFields();
     title.textContent = 'Agregar Nuevo Hermano';
   } else {
     title.textContent = 'Editar Información del Hermano';
@@ -2262,6 +2319,16 @@ async function handleFormSubmit(e) {
     status: (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))
       ? "En Visita"
       : document.getElementById("input-status").value,
+    inviterMemberId: document.getElementById("input-status").value !== "Activo" &&
+      document.getElementById("input-inviter-member").value !== "__manual__"
+      ? document.getElementById("input-inviter-member").value : "",
+    inviterName: document.getElementById("input-status").value !== "Activo"
+      ? (document.getElementById("input-inviter-member").value === "__manual__"
+        ? document.getElementById("input-inviter-name").value.trim()
+        : (members.find(member => String(member.id) === document.getElementById("input-inviter-member").value)?.name || ""))
+      : "",
+    inviterRelationship: document.getElementById("input-status").value !== "Activo"
+      ? document.getElementById("input-inviter-relationship").value.trim() : "",
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
@@ -2360,6 +2427,16 @@ function editMember(id) {
   document.getElementById('input-notes').value = member.notes || '';
 
   openModal(true);
+  populateInviterSelect(member.id);
+  if (member.inviterMemberId) {
+    document.getElementById("input-inviter-member").value = String(member.inviterMemberId);
+  } else if (member.inviterName) {
+    document.getElementById("input-inviter-member").value = "__manual__";
+    document.getElementById("input-inviter-name").value = member.inviterName;
+  }
+  document.getElementById("input-inviter-relationship").value = member.inviterRelationship || "";
+  toggleInviterManualField();
+  toggleVisitInvitationFields();
 }
 
 async function deleteMember(id) {
