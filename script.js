@@ -360,8 +360,8 @@ async function submitPublicMemberRegistration(event) {
     if (error) throw error;
     if (!data.user) throw new Error("Supabase no devolvió la cuenta creada. Contacta al administrador.");
 
-    // Supabase puede ocultar la existencia de correos duplicados cuando la confirmación
-    // está activada. En ese caso no se debe presentar la solicitud como completada.
+    // La confirmación de correo debe estar desactivada en Supabase Auth para que
+    // las nuevas cuentas queden creadas sin verificación por email.
     if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
       throw new Error("Este correo ya tiene una cuenta o no está disponible. Si ya te registraste, inicia sesión o contacta al administrador.");
     }
@@ -371,7 +371,7 @@ async function submitPublicMemberRegistration(event) {
     form.reset();
     togglePublicSpouseField();
     showPublicMemberMessage(
-      "¡Solicitud y cuenta creadas! Revisa tu correo para confirmar la dirección, si se te solicita. Tu acceso seguirá bloqueado hasta que un administrador apruebe tu incorporación.",
+      "¡Solicitud enviada correctamente! No necesitas confirmar tu correo. Tu cuenta quedará pendiente y solo podrás ingresar cuando un administrador apruebe tu incorporación.",
       true
     );
   } catch (error) {
@@ -1068,6 +1068,27 @@ async function linkUserToMember(userId, memberId) {
     : "La cuenta quedó desvinculada del registro de miembros.");
 }
 
+async function resetUserPassword(userId) {
+  if (!currentUser || !hasRole("admin")) return;
+  const targetUser = users.find(user => user.id === userId);
+  if (!targetUser || !targetUser.username || !String(targetUser.username).includes("@")) {
+    alert("No hay un correo electrónico válido asociado a esta cuenta.");
+    return;
+  }
+  if (!confirm("¿Enviar un enlace para restablecer la contraseña de " + targetUser.name + " (" + targetUser.username + ")?")) return;
+
+  try {
+    const { error } = await window.supabaseClient.auth.resetPasswordForEmail(targetUser.username, {
+      redirectTo: new URL("restablecer.html", window.location.href).toString()
+    });
+    if (error) throw error;
+    alert("Se envió un enlace de restablecimiento al correo de " + targetUser.name + ". El usuario deberá abrirlo y elegir una contraseña nueva.");
+  } catch (error) {
+    console.error("Error enviando recuperación de contraseña:", error);
+    alert("No se pudo enviar el enlace de restablecimiento: " + error.message);
+  }
+}
+
 function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
   tbody.innerHTML = "";
@@ -1115,7 +1136,8 @@ function renderUsersTable() {
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Roles independientes (Ctrl / Cmd para varios)</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
-      '<td class="py-2.5 px-3 text-right text-slate-500">' + statusAction + '</td>';
+      '<td class="py-2.5 px-3 text-right text-slate-500"><div class="flex flex-col items-end gap-2">' + statusAction +
+      '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="resetUserPassword(this.dataset.userId)" class="px-2.5 py-1.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold">Enviar restablecimiento</button></div></td>';
 
     tbody.appendChild(tr);
   });
