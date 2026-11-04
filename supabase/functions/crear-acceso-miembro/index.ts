@@ -42,6 +42,11 @@ Deno.serve(async (req: Request) => {
     const email = String(member.email || "").trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Registra un correo electrónico válido en la ficha." }, 400);
 
+    const { data: duplicateMember, error: duplicateMemberError } = await adminClient
+      .from("miembros_app").select("id").ilike("email", email).neq("id", memberId).limit(1).maybeSingle();
+    if (duplicateMemberError) throw duplicateMemberError;
+    if (duplicateMember) return json({ error: "Este correo también figura en otra ficha. Corrige el duplicado antes de habilitar el acceso." }, 409);
+
     const { data: linkedProfile, error: linkedError } = await adminClient
       .from("perfiles_app").select("id,miembro_id,usuario").eq("miembro_id", memberId).maybeSingle();
     if (linkedError) throw linkedError;
@@ -73,14 +78,22 @@ Deno.serve(async (req: Request) => {
       authUser = created.user;
     } else {
       const { data: existingProfile, error: existingError } = await adminClient
-        .from("perfiles_app").select("id,miembro_id").eq("id", authUser.id).maybeSingle();
+        .from("perfiles_app").select("id,miembro_id,rol,roles").eq("id", authUser.id).maybeSingle();
       if (existingError) throw existingError;
       if (existingProfile?.miembro_id && existingProfile.miembro_id !== memberId) {
         return json({ error: "La cuenta ya está vinculada a otra ficha congregacional." }, 409);
       }
+      const existingRoles = Array.isArray(existingProfile?.roles)
+        ? existingProfile.roles
+        : (existingProfile?.rol ? [existingProfile.rol] : []);
       const profilePayload = {
-        nombre: member.name, usuario: email, rol: "miembro", roles: ["miembro"],
-        activo: true, estado_solicitud: "aprobado", miembro_id: memberId,
+        nombre: member.name,
+        usuario: email,
+        rol: existingProfile?.rol || "miembro",
+        roles: Array.from(new Set([...existingRoles, "miembro"])),
+        activo: true,
+        estado_solicitud: "aprobado",
+        miembro_id: memberId,
       };
       const { error: upsertError } = await adminClient.from("perfiles_app")
         .upsert({ id: authUser.id, ...profilePayload }, { onConflict: "id" });
