@@ -660,6 +660,9 @@ function applyRolePermissions() {
   const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
+  const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasRole("servidor");
+  const visitModule = document.getElementById("visit-cards-module");
+  if (visitModule) visitModule.classList.toggle("hidden", !canViewVisitCards);
 
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
@@ -1572,8 +1575,89 @@ function viewCurrentMemberProfile() {
   if (linkedMember) viewDetails(linkedMember.id);
 }
 
+function canViewVisitsModule() {
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor")));
+}
+
+function canDeleteVisitCards() {
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || (hasRole("lider") && !hasRole("servidor"))));
+}
+
+function renderVisitCards() {
+  const module = document.getElementById("visit-cards-module");
+  const container = document.getElementById("visit-cards-list");
+  const empty = document.getElementById("visit-cards-empty");
+  const count = document.getElementById("visit-cards-count");
+  if (!module || !container || !empty || !count) return;
+  const canView = canViewVisitsModule();
+  module.classList.toggle("hidden", !canView);
+  if (!canView) { container.replaceChildren(); return; }
+
+  const visits = members.filter(member => member.status === "En Visita");
+  count.textContent = visits.length + (visits.length === 1 ? " visita" : " visitas");
+  container.replaceChildren();
+  empty.classList.toggle("hidden", visits.length > 0);
+
+  visits.forEach(member => {
+    const card = document.createElement("article");
+    card.className = "relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-700/50 bg-gradient-to-br from-white via-amber-50/70 to-white dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 p-5 shadow-sm";
+    const initials = (member.name || "?").trim().split(/\\s+/).map(part => part[0]).slice(0,2).join("").toUpperCase();
+    const inviter = member.inviterName || "No especificado";
+    const relationship = member.inviterRelationship || "No especificado";
+    card.innerHTML = `
+      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-amber-400/10"></div>
+      <div class="relative flex items-start gap-3">
+        <div class="w-12 h-12 shrink-0 rounded-xl bg-church-900 text-amber-300 flex items-center justify-center font-bold text-sm">${escapeHtml(initials)}</div>
+        <div class="min-w-0 flex-1">
+          <p class="text-[10px] uppercase tracking-[0.18em] font-bold text-amber-700 dark:text-amber-400">Nueva visita</p>
+          <h4 class="font-bold text-slate-900 dark:text-white text-lg leading-tight break-words">${escapeHtml(member.name || "Sin nombre")}</h4>
+        </div>
+        <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">En Visita</span>
+      </div>
+      <div class="relative mt-5 space-y-3 border-t border-amber-200/70 dark:border-slate-700 pt-4">
+        <div class="flex items-start gap-2"><i data-lucide="user-round-plus" class="w-4 h-4 mt-0.5 text-amber-600 shrink-0"></i><div class="min-w-0"><p class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Invitado por</p><p class="text-sm font-semibold text-slate-800 dark:text-slate-100 break-words">${escapeHtml(inviter)}</p></div></div>
+        <div class="flex items-start gap-2"><i data-lucide="heart-handshake" class="w-4 h-4 mt-0.5 text-amber-600 shrink-0"></i><div class="min-w-0"><p class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Parentesco / relación</p><p class="text-sm text-slate-700 dark:text-slate-300 break-words">${escapeHtml(relationship)}</p></div></div>
+      </div>
+      ${canDeleteVisitCards() ? `<div class="relative mt-4 pt-3 border-t border-amber-200/70 dark:border-slate-700 flex justify-end"><button type="button" onclick="deleteVisitCard('${escapeHtml(String(member.id))}')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar tarjeta</button></div>` : ""}
+    `;
+    container.appendChild(card);
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+async function refreshVisitCards() {
+  if (!canViewVisitsModule()) return;
+  try {
+    await refreshCloudData();
+    renderDashboard();
+  } catch (error) {
+    console.error("Error actualizando tarjetas de visitas:", error);
+    alert("No se pudieron actualizar las tarjetas: " + error.message);
+  }
+}
+
+async function deleteVisitCard(id) {
+  if (!canDeleteVisitCards()) {
+    alert("Solo Administradores, Pastores y Líderes pueden eliminar tarjetas de visitas.");
+    return;
+  }
+  const visit = members.find(member => String(member.id) === String(id) && member.status === "En Visita");
+  if (!visit) return;
+  if (!confirm("¿Eliminar la tarjeta de " + visit.name + "? Esta acción también eliminará su ficha de visita del registro congregacional.")) return;
+  const { error } = await window.supabaseClient.from("miembros_app").delete().eq("id", id).eq("status", "En Visita");
+  if (error) {
+    alert("No se pudo eliminar la tarjeta: " + error.message);
+    return;
+  }
+  members = members.filter(member => String(member.id) !== String(id));
+  renderDashboard();
+  renderTable();
+  renderBirthdayModule();
+}
+
 function renderDashboard() {
   renderPersonalWelcomeCard();
+  renderVisitCards();
   const total = members.length;
   const active = members.filter(m => m.status === 'Activo').length;
   const visits = members.filter(m => m.status === 'En Visita').length;
