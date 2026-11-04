@@ -650,6 +650,7 @@ function scheduleCloudRefresh() {
 
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
+  const isServerRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
   const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
@@ -669,6 +670,15 @@ function applyRolePermissions() {
 
   // Líder puede gestionar miembros; Servidor puede consultar y crear.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
+  const memberStatusInput = document.getElementById("input-status");
+  const serverStatusHint = document.getElementById("server-visit-only-hint");
+  if (memberStatusInput && isServerRestricted) {
+    memberStatusInput.value = "En Visita";
+    memberStatusInput.disabled = true;
+  } else if (memberStatusInput) {
+    memberStatusInput.disabled = false;
+  }
+  if (serverStatusHint) serverStatusHint.classList.toggle("hidden", !isServerRestricted);
   if (btnAddRequest) btnAddRequest.classList.remove("hidden");
 
   if (isAdmin) {
@@ -1929,7 +1939,8 @@ function renderTable() {
   const ministryFilter = document.getElementById('filter-ministry').value;
   const statusFilter = document.getElementById('filter-status').value;
 
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider"));
+  const serverRestricted = currentUser && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  const canEdit = currentUser && !serverRestricted && (hasRole("admin") || hasRole("pastor") || hasRole("lider"));
   const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddLeaderNote = currentUser && hasRole("lider");
 
@@ -2083,6 +2094,14 @@ function openModal(isEdit = false) {
     document.getElementById('avatar-preview-initials').textContent = '--';
 
     handleMaritalStatusChange();
+    const restrictedServer = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+    const statusInput = document.getElementById("input-status");
+    if (statusInput) {
+      statusInput.disabled = restrictedServer;
+      statusInput.value = restrictedServer ? "En Visita" : "Activo";
+    }
+    const serverHint = document.getElementById("server-visit-only-hint");
+    if (serverHint) serverHint.classList.toggle("hidden", !restrictedServer);
     title.textContent = 'Agregar Nuevo Hermano';
   } else {
     title.textContent = 'Editar Información del Hermano';
@@ -2240,7 +2259,9 @@ async function handleFormSubmit(e) {
     spouseName: spouseName,
     spouseId: spouseId,
     ministry: document.getElementById("input-ministry").value,
-    status: document.getElementById("input-status").value,
+    status: (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))
+      ? "En Visita"
+      : document.getElementById("input-status").value,
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
@@ -2289,7 +2310,8 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
+  const serverRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
@@ -2341,7 +2363,8 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
+  const serverRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
 
   const member = members.find(item => item.id === id);
   if (!member) return;
