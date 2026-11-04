@@ -2075,8 +2075,13 @@ async function handleRequestSubmit(e) {
   e.preventDefault();
   if (!currentUser) return;
 
-  const memberId = isMemberOnly() ? currentUser.memberId : null;
   const memberName = document.getElementById("request-member-name").value.trim();
+  const linkedMember = currentUser.memberId
+    ? members.find(member => String(member.id) === String(currentUser.memberId))
+    : null;
+  const isOwnRequest = linkedMember &&
+    memberName.localeCompare(linkedMember.name || currentUser.name || "", "es", { sensitivity: "base" }) === 0;
+  const memberId = isOwnRequest ? linkedMember.id : null;
   if (!memberName) {
     alert("Escribe el nombre de quien solicita la oración.");
     return;
