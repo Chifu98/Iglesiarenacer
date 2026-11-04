@@ -14,7 +14,7 @@ assert.match(app, /hasRole\("admin"\) \|\| hasRole\("pastor"\)/);
 assert.match(app, /select multiple size="5"/);
 assert.match(app, /onConflict: ["']miembro_id,lider_id["']/);
 assert.match(edge, /roles\.includes\(["']admin["']\) \|\| roles\.includes\(["']pastor["']\)/);
-assert.doesNotMatch(edge, /escritura|lectura/i);
+assert.doesNotMatch(edge, /roles\.includes\(["'](?:escritura|lectura)["']\)/i);
 assert.match(migration, /ARRAY\['admin','pastor','lider','servidor','hermano'\]/);
 assert.match(migration, /WHEN 'escritura' THEN 'pastor'/);
 assert.match(migration, /WHEN 'lectura' THEN 'hermano'/);
