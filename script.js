@@ -2317,7 +2317,17 @@ function getFilteredRequests() {
 function renderRequests() {
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
-  const filtered = getFilteredRequests();
+  const filtered = [...getFilteredRequests()];
+  const sortMode = document.getElementById('sort-prayer-requests')?.value || 'newest';
+  filtered.sort((a, b) => {
+    if (sortMode === 'oldest') return new Date(a.createdAt) - new Date(b.createdAt);
+    if (sortMode === 'name') {
+      const nameA = (a.memberName || members.find(m => m.id === a.memberId)?.name || '').toLocaleLowerCase('es');
+      const nameB = (b.memberName || members.find(m => m.id === b.memberId)?.name || '').toLocaleLowerCase('es');
+      return nameA.localeCompare(nameB, 'es');
+    }
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
   const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions());
 
   container.innerHTML = '';
@@ -2334,7 +2344,7 @@ function renderRequests() {
       const timeFormatted = reqDate.toLocaleDateString('es-CL') + ' · ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const card = document.createElement('div');
-      card.className = "prayer-request-card bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-4";
+      card.className = "prayer-request-card bg-slate-50 dark:bg-slate-900/60 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-row items-start justify-between gap-5";
 
       card.innerHTML = `
         <div>
