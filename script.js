@@ -25,6 +25,7 @@ function isMemberOnly() {
     !hasRole("lider") && !hasServerMinistryPermissions());
 }
 let members = [];
+let visitCards = [];
 let prayerRequests = [];
 let announcements = [];
 let currentAvatarBase64 = "";
@@ -200,6 +201,21 @@ async function refreshCloudData() {
     .order("created_at", { ascending: false });
   if (antecedentResult.error) throw antecedentResult.error;
   antecedentNotes = antecedentResult.data || [];
+  const serverOnly = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
+  if (serverOnly) {
+    const { data: visitRows, error: visitError } = await client.rpc("listar_tarjetas_visita_servidor");
+    if (visitError) throw visitError;
+    visitCards = (visitRows || []).map(row => ({
+      id: row.id,
+      name: row.name || "",
+      status: row.status || "En Visita",
+      createdAt: row.created_at || "",
+      inviterName: row.inviter_name || "",
+      inviterRelationship: row.inviter_relationship || ""
+    }));
+  } else {
+    visitCards = members.filter(member => member.status === "En Visita");
+  }
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
 }
@@ -884,6 +900,9 @@ function applyRolePermissions() {
   const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions();
   const visitModule = document.getElementById("visit-cards-module");
   if (visitModule) visitModule.classList.toggle("hidden", !canViewVisitCards);
+  const memberTable = document.getElementById("members-table-body");
+  const memberSection = memberTable ? memberTable.closest("section") : null;
+  if (memberSection) memberSection.classList.toggle("hidden", isServerRestricted);
 
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
@@ -2042,7 +2061,7 @@ function canViewVisitsModule() {
 }
 
 function canDeleteVisitCards() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider")));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions()));
 }
 
 function renderVisitCards() {
@@ -2063,7 +2082,7 @@ function renderVisitCards() {
   }
 
   const now = Date.now();
-  const visitRecords = members.filter(member => member.status === "En Visita");
+  const visitRecords = visitCards.filter(member => member.status === "En Visita");
   const isRecentVisit = member => {
     const createdAt = member.createdAt ? new Date(member.createdAt).getTime() : NaN;
     return Number.isFinite(createdAt) && createdAt > now - 24 * 60 * 60 * 1000;
@@ -2132,7 +2151,7 @@ async function deleteVisitCard(id) {
     alert("Solo Administradores, Pastores y Líderes pueden eliminar tarjetas de visitas.");
     return;
   }
-  const visit = members.find(member => String(member.id) === String(id) && member.status === "En Visita");
+  const visit = visitCards.find(member => String(member.id) === String(id) && member.status === "En Visita");
   if (!visit) return;
   if (!confirm("¿Eliminar la tarjeta de " + visit.name + "? Esta acción también eliminará su ficha de visita del registro congregacional.")) return;
   const { error } = await window.supabaseClient.from("miembros_app").delete().eq("id", id).eq("status", "En Visita");
@@ -2140,10 +2159,14 @@ async function deleteVisitCard(id) {
     alert("No se pudo eliminar la tarjeta: " + error.message);
     return;
   }
-  members = members.filter(member => String(member.id) !== String(id));
+  visitCards = visitCards.filter(member => String(member.id) !== String(id));
+  const serverOnly = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
+  if (!serverOnly) {
+    members = members.filter(member => String(member.id) !== String(id));
+    renderTable();
+    renderBirthdayModule();
+  }
   renderDashboard();
-  renderTable();
-  renderBirthdayModule();
 }
 
 function renderDashboard() {
@@ -2151,7 +2174,7 @@ function renderDashboard() {
   renderVisitCards();
   const total = members.length;
   const active = members.filter(m => m.status === 'Activo').length;
-  const visits = members.filter(m => m.status === 'En Visita').length;
+  const visits = visitCards.filter(m => m.status === 'En Visita').length;
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
   const activeMinistries = new Set(members.map(m => m.ministry).filter(m => m && m !== 'General')).size;
 
@@ -2885,11 +2908,14 @@ async function handleFormSubmit(e) {
     avatar: avatarToSave
   };
 
-  if (id) {
-    const index = members.findIndex(member => member.id === id);
-    if (index !== -1) members[index] = memberData;
-  } else {
-    members.unshift(memberData);
+  const serverOnly = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
+  if (!serverOnly) {
+    if (id) {
+      const index = members.findIndex(member => member.id === id);
+      if (index !== -1) members[index] = memberData;
+    } else {
+      members.unshift(memberData);
+    }
   }
 
   if ((maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)") &&
@@ -2907,6 +2933,14 @@ async function handleFormSubmit(e) {
     if (hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor")) {
       const { error } = await window.supabaseClient.from("miembros_app").insert(mapAppMemberToDb(memberData));
       if (error) throw error;
+      visitCards.unshift({
+        id: memberData.id,
+        name: memberData.name,
+        status: "En Visita",
+        createdAt: memberData.createdAt,
+        inviterName: memberData.inviterName,
+        inviterRelationship: memberData.inviterRelationship
+      });
     } else {
       await saveMembers();
     }
