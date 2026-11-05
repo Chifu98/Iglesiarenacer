@@ -1444,7 +1444,7 @@ function renderUsersTable() {
     const roleOptions = roleChoices.map(choice =>
       '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<div class="space-y-1"><select multiple size="4" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Rol de acceso de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<div class="space-y-1"><select id="user-roles-' + escapeHtml(user.id) + '" aria-label="Rol de acceso de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
       'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
       (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
