@@ -1143,6 +1143,13 @@ async function restoreSupabaseBackup(event) {
       { p_data: data }
     );
     if (restoreError) throw new Error("La base de datos no se modificó porque falló la transacción: " + restoreError.message);
+    if (Array.isArray(data.notas_antecedentes) && data.notas_antecedentes.length) {
+      const { error: antecedentRestoreError } = await window.supabaseClient.rpc(
+        "restaurar_antecedentes_respaldo",
+        { p_rows: data.notas_antecedentes }
+      );
+      if (antecedentRestoreError) throw new Error("No se pudieron restaurar los antecedentes: " + antecedentRestoreError.message);
+    }
 
     await refreshCloudData();
     renderDashboard();
