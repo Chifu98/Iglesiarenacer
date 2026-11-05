@@ -77,3 +77,21 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+
+/* Ficha personal adaptable: ancho amplio, desplazamiento interno y antecedentes en paralelo. */
+#details-modal { overflow-y: auto; overscroll-behavior: contain; }
+#details-modal > div { width: min(100%, 72rem); max-height: 92dvh; min-height: 0; }
+#details-modal-content { overflow-x: hidden; overscroll-behavior: contain; }
+#details-modal-content > * { min-width: 0; }
+#details-modal-content p, #details-modal-content h4 { overflow-wrap: anywhere; }
+#view-history-grid > section { min-width: 0; }
+#view-pastoral-history, #view-leader-history { max-height: 25rem; overflow-y: auto; overscroll-behavior: contain; padding-right: .25rem; }
+#users-table-body td { vertical-align: middle; }
+@media (max-width: 640px) {
+  #details-modal { padding: .5rem !important; align-items: flex-end !important; }
+  #details-modal > div { width: 100%; max-height: 94dvh; border-radius: 1rem 1rem .65rem .65rem; }
+  #details-modal-content { padding: .9rem; }
+  #view-history-grid { gap: .85rem; }
+  #view-pastoral-history, #view-leader-history { max-height: 18rem; }
+}
