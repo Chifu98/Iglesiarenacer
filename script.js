@@ -1445,10 +1445,12 @@ function renderUsersTable() {
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
     const name = document.createElement("td");
     name.className = "py-3 px-3 font-semibold text-slate-900 dark:text-white";
+    name.dataset.label = "Miembro";
     name.textContent = member.name || "Sin nombre";
 
     const roleCell = document.createElement("td");
     roleCell.className = "py-2.5 px-3 min-w-[145px]";
+    roleCell.dataset.label = "Rol de acceso";
     const roleSelect = document.createElement("select");
     roleSelect.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
     roleSelect.setAttribute("aria-label", "Rol de acceso de " + (member.name || "miembro"));
@@ -1470,6 +1472,7 @@ function renderUsersTable() {
 
     const ministryCell = document.createElement("td");
     ministryCell.className = "py-2.5 px-3 min-w-[155px]";
+    ministryCell.dataset.label = "Ministerio asignado";
     const ministrySelect = document.createElement("select");
     ministrySelect.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
     ministrySelect.setAttribute("aria-label", "Ministerio asignado de " + (member.name || "miembro"));
@@ -1507,6 +1510,7 @@ function renderUsersTable() {
 
     const accountCell = document.createElement("td");
     accountCell.className = "py-3 px-3 text-xs";
+    accountCell.dataset.label = "Cuenta";
     accountCell.textContent = linkedUser
       ? (linkedUser.active ? "Cuenta activa" : "Cuenta pendiente/inactiva") + " · " + (linkedUser.username || "")
       : "Sin cuenta vinculada";
