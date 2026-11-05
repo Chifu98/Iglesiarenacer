@@ -2905,7 +2905,8 @@ async function handleFormSubmit(e) {
     baptized: document.getElementById("input-baptized").value,
     birthday: document.getElementById("input-birthday").value || "",
     notes: document.getElementById("input-notes").value.trim(),
-    avatar: avatarToSave
+    avatar: avatarToSave,
+    createdAt: oldMember?.createdAt || new Date().toISOString()
   };
 
   const serverOnly = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
