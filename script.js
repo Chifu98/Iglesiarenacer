@@ -2172,12 +2172,21 @@ async function deleteVisitCard(id) {
   renderDashboard();
 }
 
+function countRecentVisitCards() {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  return visitCards.filter(member => {
+    if (member.status !== "En Visita" || !member.createdAt) return false;
+    const createdAt = new Date(member.createdAt).getTime();
+    return Number.isFinite(createdAt) && createdAt > cutoff;
+  }).length;
+}
+
 function renderDashboard() {
   renderPersonalWelcomeCard();
   renderVisitCards();
   const total = members.length;
   const active = members.filter(m => m.status === 'Activo').length;
-  const visits = visitCards.filter(m => m.status === 'En Visita').length;
+  const visits = countRecentVisitCards();
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
   const activeMinistries = new Set(members.map(m => m.ministry).filter(m => m && m !== 'General')).size;
 
