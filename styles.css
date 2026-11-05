@@ -230,3 +230,66 @@ img { max-width: 100%; }
     justify-content: space-between;
   }
 }
+
+
+/* En móviles, mostrar siempre el nombre y el rol en el encabezado de inicio. */
+@media (max-width: 640px) {
+  #app-container > header > div {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    height: auto;
+    min-height: 0;
+    padding: .7rem .85rem;
+    gap: .7rem;
+  }
+  #app-container > header > div > div:first-child {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+  #app-container > header > div > div:first-child h1 {
+    font-size: 1rem;
+    line-height: 1.25rem;
+  }
+  #app-container > header > div > div:first-child p {
+    max-width: none;
+    font-size: .6rem;
+    line-height: .85rem;
+  }
+  #app-container > header > div > div:last-child {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .4rem;
+  }
+  #app-container > header > div > div:last-child > div:first-child {
+    order: -1;
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: .5rem .7rem;
+    border-color: rgb(245 158 11 / 35%);
+    background: rgb(245 158 11 / 8%);
+  }
+  #app-container > header #current-user-name {
+    color: #f59e0b;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  #app-container > header #current-user-role-badge {
+    flex: 0 0 auto;
+    color: #fbbf24;
+    background: rgb(245 158 11 / 18%);
+  }
+  #app-container > header button {
+    flex: 0 0 auto;
+    min-width: 2.55rem;
+    min-height: 2.55rem;
+    padding: .55rem;
+  }
+}
