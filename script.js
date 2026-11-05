@@ -888,15 +888,10 @@ function applyRolePermissions() {
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
   const btnManageUsers = document.getElementById("btn-manage-users");
-  const notesField = document.getElementById("notes-field");
-  const notesSection = document.getElementById("view-notes-section");
-  const leaderNotesField = document.getElementById("leader-notes-field");
-  const leaderNotesSection = document.getElementById("view-leader-notes-section");
-  if (notesField) notesField.classList.toggle("hidden", !canPastoralNotes);
-  if (notesSection) notesSection.classList.toggle("hidden", !canPastoralNotes);
-  // Las notas de líderes se administran en el editor privado por autor, no en la ficha del miembro.
-  if (leaderNotesField) leaderNotesField.classList.add("hidden");
-  if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
+  const pastoralHistory = document.getElementById("view-pastoral-history-section");
+  const leaderHistory = document.getElementById("view-leader-history-section");
+  if (pastoralHistory) pastoralHistory.classList.toggle("hidden", !canPastoralNotes);
+  if (leaderHistory) leaderHistory.classList.toggle("hidden", !canLeaderNotes);
 
   // Administración/Pastorado gestionan fichas; el ministerio Servidores puede consultar y crear visitas.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
@@ -3039,9 +3034,17 @@ function viewDetails(id) {
   document.getElementById('view-baptized').textContent = member.baptized;
   document.getElementById('view-address').textContent = member.address || 'Sin dirección';
   document.getElementById('view-date').textContent = member.birthday ? formatDate(member.birthday) : 'N/A';
-  document.getElementById('view-notes').textContent = member.notes || 'Sin observaciones pastorales.';
-  const leaderNotesText = document.getElementById('view-leader-notes');
-  if (leaderNotesText) leaderNotesText.textContent = member.leaderNotes || 'Sin notas de líderes.';
+  const pastoralHistory = document.getElementById("view-pastoral-history-section");
+  const leaderHistory = document.getElementById("view-leader-history-section");
+  const canPastoral = hasRole("admin") || hasRole("pastor");
+  const canLeader = canPastoral || hasRole("lider");
+  if (pastoralHistory) pastoralHistory.classList.toggle("hidden", !canPastoral);
+  if (leaderHistory) leaderHistory.classList.toggle("hidden", !canLeader);
+  const addPastoral = document.getElementById("add-pastoral-note-button");
+  const addLeader = document.getElementById("add-leader-note-button");
+  if (addPastoral) addPastoral.classList.toggle("hidden", !canPastoral);
+  if (addLeader) addLeader.classList.toggle("hidden", !hasRole("lider"));
+  loadAntecedentNotes(member.id).catch(error => console.error("No se pudo cargar el historial:", error));
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
   if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
   const ministryControls = document.getElementById("view-ministry-management");
