@@ -810,6 +810,10 @@ function startRealtimeSync() {
       scheduleCloudRefresh
     )
     .on("postgres_changes",
+      { event: "*", schema: "public", table: "solicitudes_ministerio" },
+      scheduleCloudRefresh
+    )
+    .on("postgres_changes",
       { event: "*", schema: "public", table: "solicitudes_registro_miembros" },
       () => { if (currentUser && hasRole("admin") && !document.getElementById("users-modal").classList.contains("hidden")) loadPendingMemberRequests(); }
     )
@@ -842,6 +846,7 @@ function scheduleCloudRefresh() {
       await refreshCloudData();
       renderDashboard();
       renderTable();
+      await refreshMinistryModules();
       renderRequests();
       renderAnnouncements();
       renderBirthdayModule();
@@ -958,7 +963,8 @@ const RENACER_BACKUP_TABLES = [
   "perfiles_app",
   "peticiones_oracion",
   "registro_auditoria",
-  "solicitudes_registro_miembros"
+  "solicitudes_registro_miembros",
+  "solicitudes_ministerio"
 ];
 const RENACER_BACKUP_BUCKETS = ["profile-photos", "sitio-publico"];
 
