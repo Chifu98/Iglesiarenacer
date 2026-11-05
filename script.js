@@ -2334,17 +2334,17 @@ function renderRequests() {
       const timeFormatted = reqDate.toLocaleDateString('es-CL') + ' · ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const card = document.createElement('div');
-      card.className = "bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-3";
+      card.className = "prayer-request-card bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-4";
 
       card.innerHTML = `
         <div>
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-bold text-amber-600 dark:text-amber-400">${escapeHtml(memberName)}</span>
-            <span class="text-xs text-slate-400 flex items-center gap-1">
+            <span class="prayer-request-name text-lg font-bold text-amber-600 dark:text-amber-400">${escapeHtml(memberName)}</span>
+            <span class="prayer-request-date text-sm text-slate-400 flex items-center gap-2">
               <i data-lucide="clock" class="w-3 h-3"></i> ${escapeHtml(timeFormatted)}
             </span>
           </div>
-          <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mt-3">"${escapeHtml(req.text)}"</p>
+          <p class="prayer-request-text text-base leading-relaxed font-medium text-slate-800 dark:text-slate-200 mt-4">"${escapeHtml(req.text)}"</p>
         </div>
         ${canEdit ? `
         <div class="flex justify-end pt-2 border-t border-slate-200/60 dark:border-slate-800">
