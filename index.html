@@ -698,22 +698,14 @@
 
         <!-- Tabla de Usuarios -->
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Perfiles y solicitudes de acceso</h4>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Desde aquí puedes asignar roles, vincular fichas y enviar a cada usuario un enlace seguro para establecer o restablecer su contraseña. No se muestran ni se administran contraseñas directamente.</p>
+          <h4 class="text-sm font-bold text-slate-800 dark:text-white mb-1">Asignación de roles</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Todos los miembros del registro. Selecciona el rol que corresponda; solo se podrá asignar cuando exista una cuenta de acceso vinculada.</p>
           <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
             <table class="w-full text-left border-collapse text-xs">
               <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300">
-                <tr>
-                  <th class="py-2.5 px-3">Nombre</th>
-                  <th class="py-2.5 px-3">Usuario</th>
-                  <th class="py-2.5 px-3">Rol de acceso</th>
-                  <th class="py-2.5 px-3">Miembro asociado</th>
-                  <th class="py-2.5 px-3 text-right">Estado / Acceso</th>
-                </tr>
+                <tr><th class="py-2.5 px-3">Miembro</th><th class="py-2.5 px-3">Rol de acceso</th><th class="py-2.5 px-3">Cuenta</th></tr>
               </thead>
-              <tbody id="users-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
-                <!-- Dynamic user rows -->
-              </tbody>
+              <tbody id="users-table-body" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
             </table>
           </div>
         </div>
@@ -960,7 +952,7 @@
 
   <!-- MODAL FORM: CREATE PRAYER REQUEST -->
   <div id="request-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-5xl overflow-hidden flex flex-col max-h-[92dvh]">
       <div class="bg-church-900 px-6 py-4 flex justify-between items-center text-white">
         <h3 class="font-bold text-lg flex items-center gap-2">
           <i data-lucide="file-plus" class="w-5 h-5 text-amber-400"></i>
@@ -1004,7 +996,7 @@
         </button>
       </div>
 
-      <div class="p-6 space-y-4">
+      <div class="p-4 sm:p-6 space-y-4 overflow-y-auto min-h-0" id="details-modal-content">
         <div class="flex items-center gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
           <div id="view-avatar-container" class="w-14 h-14 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-base shrink-0 overflow-hidden border-2 border-amber-400/50">
             <span id="view-avatar-initials">--</span>
@@ -1016,7 +1008,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-sm">
           <div>
             <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Teléfono</p>
             <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-phone">--</p>
@@ -1045,7 +1037,7 @@
             <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Cumpleaños</p>
             <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-date">--</p>
           </div>
-          <div class="col-span-2">
+          <div class="sm:col-span-2 lg:col-span-3">
             <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Dirección</p>
             <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-address">--</p>
           </div>
@@ -1083,20 +1075,20 @@
           <button id="view-change-photo-button" type="button" onclick="document.getElementById('view-own-photo-file').click()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-semibold">Cambiar mi foto</button>
           <p class="text-xs text-slate-500 mt-2">Solo puedes modificar tu fotografía de perfil. Máximo 2 MB.</p>
         </div>
-        <section id="view-pastoral-history-section" class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+        <div id="view-history-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-700 pt-4"><section id="view-pastoral-history-section" class="min-w-0 space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Antecedentes pastorales</h4><p class="text-[11px] text-slate-500">Registro privado de acompañamiento pastoral</p></div>
             <button id="add-pastoral-note-button" type="button" onclick="openPrivateNoteModal(window.currentDetailsMemberId,'pastoral')" class="px-3 py-2 rounded-lg bg-violet-700 hover:bg-violet-800 text-white text-xs font-semibold">Añadir comentario</button>
           </div>
           <div id="view-pastoral-history" class="space-y-2"></div>
         </section>
-        <section id="view-leader-history-section" class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+        <section id="view-leader-history-section" class="min-w-0 space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Antecedentes de liderazgo</h4><p class="text-[11px] text-slate-500">Seguimiento y observaciones del ministerio</p></div>
             <button id="add-leader-note-button" type="button" onclick="openPrivateNoteModal(window.currentDetailsMemberId,'leader')" class="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Añadir comentario</button>
           </div>
           <div id="view-leader-history" class="space-y-2"></div>
-        </section>
+        </section></div>
       </div>
     </div>
   </div>
