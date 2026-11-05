@@ -190,3 +190,22 @@ img { max-width: 100%; }
   #requests-container .prayer-request-name { font-size: 1.15rem; }
   #requests-container .prayer-request-text { font-size: 1rem; line-height: 1.7rem; }
 }
+
+
+/* Barra de control superior y tarjetas rectangulares de peticiones. */
+.prayer-requests-toolbar { align-items: center; }
+#requests-container { display: grid; grid-template-columns: minmax(0, 1fr); gap: .85rem; }
+#requests-container .prayer-request-card { min-height: 0; width: 100%; border-radius: .85rem; padding: 1.15rem 1.4rem; display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
+#requests-container .prayer-request-card > div:first-child { flex: 1; min-width: 0; }
+#requests-container .prayer-request-name { font-size: 1.12rem; line-height: 1.5rem; }
+#requests-container .prayer-request-date { margin-top: .25rem; font-size: .8rem; }
+#requests-container .prayer-request-text { margin-top: .7rem; font-size: 1rem; line-height: 1.65rem; }
+#requests-container .prayer-request-card > div:last-child { flex: 0 0 auto; border: 0; padding: 0; }
+@media (max-width: 640px) {
+ .prayer-requests-toolbar { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: .6rem; }
+ .prayer-requests-toolbar > div:first-child { grid-column: 1 / -1; width: 100%; }
+ .prayer-requests-toolbar select { width: 100%; min-width: 0; }
+ .prayer-requests-toolbar button { width: 100%; min-height: 2.6rem; }
+ #requests-container .prayer-request-card { padding: 1rem 1.1rem; gap: .5rem; }
+ #requests-container .prayer-request-text { font-size: .96rem; line-height: 1.55rem; }
+}
