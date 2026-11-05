@@ -15,9 +15,15 @@ function hasRole(role) {
   return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
 function roleDisplayName(role) {
-  return ({ hermano: "Miembro", miembro: "Miembro", admin: "Administrador", pastor: "Pastor", servidor: "Servidor", lider: "Líder" })[role] || role;
+  return ({ hermano: "Miembro", miembro: "Miembro", admin: "Administrador", pastor: "Pastor", lider: "Líder" })[role] || role;
 }
-function isMemberOnly() { return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider") && !hasRole("servidor")); }
+function hasServerMinistryPermissions() {
+  return !!(currentUser && currentUser.ministry === "Servidor");
+}
+function isMemberOnly() {
+  return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor") &&
+    !hasRole("lider") && !hasServerMinistryPermissions());
+}
 let members = [];
 let prayerRequests = [];
 let announcements = [];
@@ -137,6 +143,13 @@ async function refreshCloudData() {
   if (membersResult.error) throw membersResult.error;
   if (requestsResult.error) throw requestsResult.error;
   if (announcementsResult.error) throw announcementsResult.error;
+
+  if (currentUser && currentUser.memberId) {
+    const ownMemberRow = (membersResult.data || []).find(row => String(row.id) === String(currentUser.memberId));
+    currentUser.ministry = ownMemberRow ? (ownMemberRow.ministry || "General") : "General";
+  } else if (currentUser) {
+    currentUser.ministry = "General";
+  }
 
   memberBirthdayData = null;
   if (isMemberOnly()) {
@@ -858,11 +871,11 @@ function scheduleCloudRefresh() {
 
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
-  const isServerRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
-  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("servidor"));
+  const isServerRestricted = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
+  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions());
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
-  const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasRole("servidor");
+  const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions();
   const visitModule = document.getElementById("visit-cards-module");
   if (visitModule) visitModule.classList.toggle("hidden", !canViewVisitCards);
 
@@ -879,7 +892,7 @@ function applyRolePermissions() {
   if (leaderNotesField) leaderNotesField.classList.add("hidden");
   if (leaderNotesSection) leaderNotesSection.classList.toggle("hidden", !canLeaderNotes);
 
-  // Líder puede gestionar miembros; Servidor puede consultar y crear.
+  // Administración/Pastorado gestionan fichas; el ministerio Servidores puede consultar y crear visitas.
   if (btnAddMember) btnAddMember.classList.toggle("hidden", !canManageMembers);
   const memberStatusInput = document.getElementById("input-status");
   const serverStatusHint = document.getElementById("server-visit-only-hint");
@@ -1282,7 +1295,7 @@ async function saveUserRoles(userId) {
   if (!currentUser || !hasRole("admin")) return;
   const selectElement = document.getElementById("user-roles-" + userId);
   if (!selectElement) return;
-  const allowedRoles = ["admin", "pastor", "lider", "servidor", "miembro"];
+  const allowedRoles = ["admin", "pastor", "lider", "miembro"];
   const targetUser = users.find(user => user.id === userId);
   const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
   if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
@@ -1415,14 +1428,13 @@ function renderUsersTable() {
       { value: "admin", label: "Administrador" },
       { value: "pastor", label: "Pastor" },
       { value: "lider", label: "Líder" },
-      { value: "servidor", label: "Servidor" },
       { value: "miembro", label: "Miembro" }
     ];
     const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
     const roleOptions = roleChoices.map(choice =>
       '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<div class="space-y-1"><select multiple size="5" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<div class="space-y-1"><select multiple size="4" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
       'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
       (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
@@ -1832,11 +1844,11 @@ function viewCurrentMemberProfile() {
 }
 
 function canViewVisitsModule() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor")));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions()));
 }
 
 function canDeleteVisitCards() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || (hasRole("lider") && !hasRole("servidor"))));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider")));
 }
 
 function renderVisitCards() {
@@ -2148,7 +2160,7 @@ function renderRequests() {
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
   const filtered = getFilteredRequests();
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions());
 
   container.innerHTML = '';
 
@@ -2366,7 +2378,7 @@ function renderTable() {
   const ministryFilter = document.getElementById('filter-ministry').value;
   const statusFilter = document.getElementById('filter-status').value;
 
-  const serverRestricted = currentUser && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  const serverRestricted = currentUser && hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
   const canEdit = currentUser && !serverRestricted && (hasRole("admin") || hasRole("pastor"));
   const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddLeaderNote = currentUser && hasRole("lider");
@@ -2550,7 +2562,7 @@ function toggleVisitInvitationFields() {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2689,7 +2701,7 @@ async function handleFormSubmit(e) {
 
   const id = document.getElementById("member-id").value;
   if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
-    alert("El rol Servidor solo puede crear miembros, no editar registros existentes.");
+    alert("El ministerio Servidores solo puede crear fichas de visitas, no editar registros existentes.");
     return;
   }
   const currentMemberId = id || Date.now().toString();
