@@ -14,23 +14,32 @@ let currentUser = null;
 
 let rolePreviewOriginalUser = null;
 let rolePreviewActive = false;
+const rolePreviewMinistries = ["Alabanza", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
 
-function startRolePreview(role) {
-  if (!currentUser || !currentUser.roles?.includes("admin")) return;
+function startRolePreview(role, selectedMinistry = "") {
+  const adminUser = rolePreviewOriginalUser || currentUser;
+  if (!adminUser || !adminUser.roles?.includes("admin")) return;
   const supported = ["admin", "pastor", "lider", "miembro", "servidor"];
   if (!supported.includes(role)) return;
   if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles] };
 
   const activeMember = members.find(member => member.status === "Activo");
-  const leaderMember = members.find(member => member.status === "Activo" && member.ministry && member.ministry !== "General" && member.ministry !== "Servidor");
   const ownMember = activeMember || members[0];
+  const ministry = role === "lider"
+    ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
+      (rolePreviewMinistries.includes(currentUser?.ministry) ? currentUser.ministry :
+        (rolePreviewMinistries.find(name => members.some(member => member.status === "Activo" && member.ministry === name)) || "Alabanza")))
+    : "";
+  const leaderMember = role === "lider"
+    ? members.find(member => member.status === "Activo" && member.ministry === ministry)
+    : null;
   const previewUser = {
     ...rolePreviewOriginalUser,
     name: role === "admin" ? rolePreviewOriginalUser.name : "Vista de " + roleDisplayName(role),
     roles: role === "servidor" ? ["miembro"] : [role],
     role: role === "servidor" ? "miembro" : role,
     memberId: role === "admin" || role === "pastor" ? "" : String((role === "lider" ? leaderMember : ownMember)?.id || ""),
-    ministry: role === "servidor" ? "Servidor" : (role === "lider" ? (leaderMember?.ministry || "Alabanza") : (ownMember?.ministry || "General"))
+    ministry: role === "servidor" ? "Servidor" : (role === "lider" ? ministry : (ownMember?.ministry || "General"))
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
@@ -38,13 +47,22 @@ function startRolePreview(role) {
   if (bar) {
     bar.classList.toggle("hidden", !rolePreviewActive);
     const label = document.getElementById("role-preview-label");
-    if (label) label.textContent = roleDisplayName(role) + (role === "lider" ? " · " + previewUser.ministry : role === "servidor" ? " · Ministerio Servidor" : "");
+    if (label) label.textContent = roleDisplayName(role) + (role === "lider" ? " · " + ministry : role === "servidor" ? " · Ministerio Servidor" : "");
   }
+  const ministryControl = document.getElementById("role-preview-ministry-control");
+  const ministrySelect = document.getElementById("role-preview-ministry-select");
+  if (ministryControl) ministryControl.classList.toggle("hidden", !rolePreviewActive || role !== "lider");
+  if (ministrySelect && role === "lider") ministrySelect.value = ministry;
   const selector = document.getElementById("role-preview-select");
   if (selector) selector.value = role;
   const app = document.getElementById("app-container");
   if (app) app.classList.toggle("role-preview-mode", rolePreviewActive);
   showAppView();
+}
+
+function changeRolePreviewMinistry(ministry) {
+  if (!rolePreviewActive || !rolePreviewOriginalUser) return;
+  startRolePreview("lider", ministry);
 }
 
 function stopRolePreview() {
@@ -54,6 +72,8 @@ function stopRolePreview() {
   rolePreviewActive = false;
   const bar = document.getElementById("role-preview-bar");
   if (bar) bar.classList.add("hidden");
+  const ministryControl = document.getElementById("role-preview-ministry-control");
+  if (ministryControl) ministryControl.classList.add("hidden");
   const app = document.getElementById("app-container");
   if (app) app.classList.remove("role-preview-mode");
   const selector = document.getElementById("role-preview-select");
