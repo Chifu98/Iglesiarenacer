@@ -2809,7 +2809,7 @@ async function handleRequestSubmit(e) {
         created_at: newReq.createdAt,
         created_by: currentUser.id
       })
-.select("id,member_id,member_name,description,created_at")
+.select("id,member_id,member_name,description,created_at,created_by")
       .single();
 
     if (error) throw error;
