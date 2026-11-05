@@ -161,6 +161,17 @@
             <span id="current-user-role-badge" class="px-2 py-0.5 rounded-md text-[10px] uppercase font-bold bg-amber-500/20 text-amber-300">ADMIN</span>
           </div>
 
+          <div id="role-preview-control" class="hidden sm:flex items-center gap-2">
+            <label for="role-preview-select" class="sr-only">Vista previa por rol</label>
+            <select id="role-preview-select" onchange="startRolePreview(this.value)" class="max-w-[10rem] px-2.5 py-2 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs font-semibold">
+              <option value="admin">Vista: Administrador</option>
+              <option value="pastor">Vista: Pastor</option>
+              <option value="lider">Vista: Líder</option>
+              <option value="miembro">Vista: Miembro</option>
+              <option value="servidor">Vista: Servidor</option>
+            </select>
+          </div>
+
           <!-- User Management Button (Admin only) -->
           <button id="btn-manage-users" onclick="openUsersModal()" title="Gestión de Usuarios y Base de Datos" class="hidden p-2.5 rounded-xl bg-church-800 hover:bg-slate-700 text-amber-400 hover:text-white transition flex items-center justify-center border border-slate-700">
             <i data-lucide="shield-check" class="w-5 h-5"></i>
@@ -201,6 +212,16 @@
         </div>
       </div>
     </header>
+
+    <div id="role-preview-bar" class="hidden sticky top-0 z-40 border-b border-amber-300 bg-amber-50 dark:bg-amber-950/95 dark:border-amber-700 px-4 py-3">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <div class="min-w-0 flex-1">
+          <p class="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">Vista previa · Solo lectura</p>
+          <p class="text-sm text-amber-900 dark:text-amber-100">Estás viendo la aplicación como: <strong id="role-preview-label">Miembro</strong>. Los cambios y acciones están bloqueados.</p>
+        </div>
+        <button id="role-preview-exit" type="button" onclick="stopRolePreview()" class="shrink-0 px-4 py-2 rounded-lg bg-church-900 text-white text-xs font-semibold">Volver a Administrador</button>
+      </div>
+    </div>
 
     <!-- MAIN CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
