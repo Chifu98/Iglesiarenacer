@@ -1422,7 +1422,7 @@ function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
   tbody.innerHTML = "";
 
-  users.forEach(user => {
+  users.filter(user => !(user.active || user.requestStatus === "aprobado")).forEach(user => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
