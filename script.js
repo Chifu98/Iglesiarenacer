@@ -1428,57 +1428,93 @@ async function resetUserPassword(userId) {
 
 function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  users.filter(user => !(user.active === true && user.requestStatus === "aprobado")).forEach(user => {
+  const roleChoices = [
+    { value: "miembro", label: "Miembro" },
+    { value: "lider", label: "Líder" },
+    { value: "pastor", label: "Pastor" },
+    { value: "admin", label: "Administrador" }
+  ];
+
+  [...members].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es")).forEach(member => {
+    const linkedUser = users.find(user => String(user.memberId) === String(member.id));
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
-
-    const roleChoices = [
-      { value: "admin", label: "Administrador" },
-      { value: "pastor", label: "Pastor" },
-      { value: "lider", label: "Líder" },
-      { value: "miembro", label: "Miembro" }
-    ];
-    const selectedRoles = new Set(Array.isArray(user.roles) ? user.roles : []);
-    const roleOptions = roleChoices.map(choice =>
-      '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
-    ).join("");
-    const roleControl = '<div class="space-y-1"><select id="user-roles-' + escapeHtml(user.id) + '" aria-label="Rol de acceso de ' + escapeHtml(user.name) + '" ' +
-      (user.id === currentUser.id ? "disabled " : "") +
-      'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
-      (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
-    const memberOptions = '<option value="">Sin vincular</option>' + members.map(member =>
-      '<option value="' + escapeHtml(member.id) + '"' + (user.memberId === member.id ? " selected" : "") + '>' +
-      escapeHtml(member.name) + '</option>'
-    ).join("");
-    const memberControl = '<select aria-label="Vincular miembro a ' + escapeHtml(user.name) + '" ' +
-      (user.id === currentUser.id ? "disabled " : "") +
-      'onchange="linkUserToMember(\'' + escapeHtml(user.id) + '\', this.value)" ' +
-      'class="min-w-[150px] max-w-[210px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' +
-      memberOptions + '</select>';
-
-    let statusAction = "";
-    if (user.active || user.requestStatus === "aprobado") {
-      statusAction = '<span class="text-emerald-600 dark:text-emerald-400">Aprobado</span>';
-    } else if (user.requestStatus === "rechazado") {
-      statusAction = '<span class="text-rose-600 dark:text-rose-400">Rechazado</span>';
+    const name = document.createElement("td");
+    name.className = "py-3 px-3 font-semibold text-slate-900 dark:text-white";
+    name.textContent = member.name || "Sin nombre";
+    const roleCell = document.createElement("td");
+    roleCell.className = "py-2.5 px-3";
+    const select = document.createElement("select");
+    select.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
+    select.setAttribute("aria-label", "Rol de acceso de " + (member.name || "miembro"));
+    roleChoices.forEach(choice => {
+      const option = document.createElement("option");
+      option.value = choice.value;
+      option.textContent = choice.label;
+      select.appendChild(option);
+    });
+    if (linkedUser) {
+      const activeRole = (linkedUser.roles && linkedUser.roles[0]) || linkedUser.role || "miembro";
+      select.value = roleChoices.some(choice => choice.value === activeRole) ? activeRole : "miembro";
+      select.disabled = linkedUser.id === currentUser.id;
+      select.id = "member-role-" + member.id;
     } else {
-      statusAction = '<span class="text-amber-600 dark:text-amber-400">Pendiente de aprobación de incorporación</span>';
+      select.value = "miembro";
+      select.disabled = true;
     }
-
-    tr.innerHTML =
-      '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
-      '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Un solo rol de acceso por cuenta</div></div></td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
-      '<td class="py-2.5 px-3 text-right text-slate-500"><div class="flex flex-col items-end gap-2">' + statusAction +
-      '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="resetUserPassword(this.dataset.userId)" class="px-2.5 py-1.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold">Enviar enlace de contraseña</button></div></td>';
-
+    roleCell.appendChild(select);
+    if (linkedUser && linkedUser.id !== currentUser.id) {
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "ml-2 mt-1 sm:mt-0 px-3 py-2 rounded-lg bg-church-800 hover:bg-church-900 text-white text-xs font-semibold";
+      save.textContent = "Guardar";
+      save.addEventListener("click", () => saveMemberRole(member.id));
+      roleCell.appendChild(save);
+    } else if (linkedUser && linkedUser.id === currentUser.id) {
+      const note = document.createElement("p");
+      note.className = "mt-1 text-[10px] text-amber-600 dark:text-amber-400";
+      note.textContent = "No puedes cambiar tu propio rol";
+      roleCell.appendChild(note);
+    }
+    const accountCell = document.createElement("td");
+    accountCell.className = "py-3 px-3 text-xs";
+    accountCell.textContent = linkedUser
+      ? (linkedUser.active ? "Cuenta activa" : "Cuenta pendiente/inactiva") + " · " + (linkedUser.username || "")
+      : "Sin cuenta vinculada";
+    accountCell.classList.add(linkedUser ? "text-slate-600" : "text-amber-600", "dark:text-slate-400");
+    tr.append(name, roleCell, accountCell);
     tbody.appendChild(tr);
   });
+}
 
-  if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+async function saveMemberRole(memberId) {
+  if (!currentUser || !hasRole("admin")) return;
+  const member = members.find(item => String(item.id) === String(memberId));
+  const linkedUser = users.find(user => String(user.memberId) === String(memberId));
+  const select = document.getElementById("member-role-" + memberId);
+  const allowedRoles = ["admin", "pastor", "lider", "miembro"];
+  if (!member || !linkedUser || !select || linkedUser.id === currentUser.id || !allowedRoles.includes(select.value)) {
+    alert("No se puede asignar el rol: verifica que el miembro tenga una cuenta vinculada.");
+    return;
+  }
+  const nextRoles = [select.value];
+  if (JSON.stringify(nextRoles) === JSON.stringify(linkedUser.roles || [linkedUser.role])) return;
+  if (!confirm("¿Asignar el rol " + roleDisplayName(select.value) + " a " + member.name + "?")) {
+    renderUsersTable();
+    return;
+  }
+  const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", linkedUser.id);
+  if (error) {
+    alert("No se pudo actualizar el rol: " + error.message);
+    renderUsersTable();
+    return;
+  }
+  await loadProfilesFromCloud();
+  renderUsersTable();
+  alert("Rol actualizado correctamente. La persona deberá actualizar la página para aplicar los permisos.");
 }
 
 function renderApprovedAccessTable() {
