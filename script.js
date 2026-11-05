@@ -39,7 +39,7 @@ function startRolePreview(role, selectedMinistry = "") {
     roles: role === "servidor" ? ["miembro"] : [role],
     role: role === "servidor" ? "miembro" : role,
     memberId: role === "admin" || role === "pastor" ? "" : String((role === "lider" ? leaderMember : ownMember)?.id || ""),
-    ministry: role === "servidor" ? "Servidor" : (role === "lider" ? ministry : (ownMember?.ministry || "General"))
+    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (ownMember?.ministry || "General"))))
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
@@ -1432,8 +1432,17 @@ async function saveUserRoles(userId) {
   if (!confirm("¿Asignar a " + targetUser.name + " el rol " + nextRoles.map(roleDisplayName).join("") + "?")) { renderUsersTable(); return; }
   const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
   if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
+
+  let ministryWarning = "";
+  if (nextRoles.includes("pastor") && targetUser.memberId) {
+    const { error: ministryError } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
+      p_miembro_id: String(targetUser.memberId), p_ministerio: "General"
+    });
+    if (ministryError) ministryWarning = " El rol se actualizó, pero no se pudo cambiar su ficha a General: " + ministryError.message;
+    else await refreshCloudData();
+  }
   await loadProfilesFromCloud(); renderUsersTable();
-  alert("Roles actualizados. El usuario deberá actualizar la página para aplicar los permisos.");
+  alert("Roles actualizados." + (nextRoles.includes("pastor") ? " La ficha asociada queda en el ministerio General." : "") + ministryWarning + " El usuario deberá actualizar la página para aplicar los permisos.");
 }
 async function linkUserToMember(userId, memberId) {
   if (!currentUser || !hasRole("admin")) return;
@@ -1476,11 +1485,19 @@ async function linkUserToMember(userId, memberId) {
     return;
   }
 
+  let ministryWarning = "";
+  if (normalizedMemberId && (targetUser.roles || []).includes("pastor")) {
+    const { error: ministryError } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
+      p_miembro_id: String(normalizedMemberId), p_ministerio: "General"
+    });
+    if (ministryError) ministryWarning = " La vinculación se guardó, pero no se pudo cambiar la ficha a General: " + ministryError.message;
+    else await refreshCloudData();
+  }
   await loadProfilesFromCloud();
   renderUsersTable();
-  alert(normalizedMemberId
+  alert((normalizedMemberId
     ? "Cuenta vinculada correctamente con el miembro seleccionado."
-    : "La cuenta quedó desvinculada del registro de miembros.");
+    : "La cuenta quedó desvinculada del registro de miembros.") + ministryWarning);
 }
 
 async function createMemberAccess(memberId) {
