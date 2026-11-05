@@ -680,9 +680,25 @@
           </div>
         </section>
 
+        <!-- MÓDULO INDEPENDIENTE DE CUENTAS APROBADAS -->
+        <section class="rounded-xl border border-blue-200 dark:border-blue-900/60 p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Accesos aprobados</h4><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Cuentas habilitadas, usuario, rol, ficha asociada y recuperación de contraseña.</p></div>
+            <button type="button" onclick="loadProfilesFromCloud().then(renderApprovedAccessTable)" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-semibold"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualizar</button>
+          </div>
+          <p id="approved-users-status" class="text-xs text-slate-500 dark:text-slate-400" role="status">Cargando cuentas aprobadas...</p>
+          <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+            <table class="min-w-[760px] w-full text-left text-xs">
+              <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300"><tr><th class="px-3 py-2.5">Nombre</th><th class="px-3 py-2.5">Usuario</th><th class="px-3 py-2.5">Rol de acceso</th><th class="px-3 py-2.5">Miembro asociado</th><th class="px-3 py-2.5 text-right">Contraseña</th></tr></thead>
+              <tbody id="approved-users-table-body" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
+            </table>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">El restablecimiento envía un enlace seguro al correo del usuario. Las contraseñas actuales nunca se muestran ni se almacenan en esta pantalla.</p>
+        </section>
+
         <!-- Tabla de Usuarios -->
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Accesos y contraseñas de usuarios</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Perfiles y solicitudes de acceso</h4>
           <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Desde aquí puedes asignar roles, vincular fichas y enviar a cada usuario un enlace seguro para establecer o restablecer su contraseña. No se muestran ni se administran contraseñas directamente.</p>
           <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
             <table class="w-full text-left border-collapse text-xs">
@@ -928,14 +944,6 @@
           <input type="date" id="input-birthday" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
         </div>
 
-        <div id="notes-field">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Notas Pastorales</label>
-          <textarea id="input-notes" rows="3" placeholder="Observaciones pastorales privadas..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
-        </div>
-        <div id="leader-notes-field">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Notas de Líderes</label>
-          <textarea id="input-leader-notes" rows="3" placeholder="Seguimiento, acuerdos y observaciones del liderazgo..." class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
-        </div>
 
         <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
           <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
@@ -1074,14 +1082,20 @@
           <button id="view-change-photo-button" type="button" onclick="document.getElementById('view-own-photo-file').click()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-semibold">Cambiar mi foto</button>
           <p class="text-xs text-slate-500 mt-2">Solo puedes modificar tu fotografía de perfil. Máximo 2 MB.</p>
         </div>
-        <div id="view-notes-section" class="border-t border-slate-100 dark:border-slate-700 pt-3">
-          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Notas Pastorales</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700 whitespace-pre-wrap" id="view-notes">--</p>
-        </div>
-        <div id="view-leader-notes-section" class="border-t border-slate-100 dark:border-slate-700 pt-3">
-          <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Notas de Líderes</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200/60 dark:border-slate-700 whitespace-pre-wrap" id="view-leader-notes">--</p>
-        </div>
+        <section id="view-pastoral-history-section" class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Antecedentes pastorales</h4><p class="text-[11px] text-slate-500">Registro privado de acompañamiento pastoral</p></div>
+            <button id="add-pastoral-note-button" type="button" onclick="openPrivateNoteModal(window.currentDetailsMemberId,'pastoral')" class="px-3 py-2 rounded-lg bg-violet-700 hover:bg-violet-800 text-white text-xs font-semibold">Añadir comentario</button>
+          </div>
+          <div id="view-pastoral-history" class="space-y-2"></div>
+        </section>
+        <section id="view-leader-history-section" class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div><h4 class="text-sm font-bold text-slate-800 dark:text-white">Antecedentes de liderazgo</h4><p class="text-[11px] text-slate-500">Seguimiento y observaciones del ministerio</p></div>
+            <button id="add-leader-note-button" type="button" onclick="openPrivateNoteModal(window.currentDetailsMemberId,'leader')" class="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold">Añadir comentario</button>
+          </div>
+          <div id="view-leader-history" class="space-y-2"></div>
+        </section>
       </div>
     </div>
   </div>
