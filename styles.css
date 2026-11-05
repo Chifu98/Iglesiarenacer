@@ -95,3 +95,68 @@ img { max-width: 100%; }
   #view-history-grid { gap: .85rem; }
   #view-pastoral-history, #view-leader-history { max-height: 18rem; }
 }
+
+
+/* Asignación de roles: tabla completa en móvil mediante filas tipo ficha. */
+@media (max-width: 640px) {
+  #role-assignment-table-wrap { overflow: visible; border: 0; }
+  #role-assignment-table,
+  #role-assignment-table thead,
+  #role-assignment-table tbody,
+  #role-assignment-table tr,
+  #role-assignment-table td { display: block; width: 100%; }
+  #role-assignment-table thead { display: none; }
+  #role-assignment-table tbody { display: grid; gap: .75rem; }
+  #role-assignment-table tbody tr {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: .85rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+  }
+  .dark #role-assignment-table tbody tr {
+    border-color: #475569;
+    background: #1e293b;
+  }
+  #role-assignment-table tbody td {
+    display: grid;
+    grid-template-columns: minmax(7.1rem, 34%) minmax(0, 1fr);
+    align-items: start;
+    gap: .55rem;
+    min-width: 0;
+    padding: .7rem .8rem;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .dark #role-assignment-table tbody td { border-color: #334155; }
+  #role-assignment-table tbody td:last-child { border-bottom: 0; }
+  #role-assignment-table tbody td::before {
+    content: attr(data-label);
+    color: #64748b;
+    font-size: .65rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+  }
+  .dark #role-assignment-table tbody td::before { color: #cbd5e1; }
+  #role-assignment-table tbody td:first-child {
+    display: block;
+    padding: .85rem .9rem;
+    background: #f1f5f9;
+    font-size: .9rem;
+    line-height: 1.25rem;
+    overflow-wrap: anywhere;
+  }
+  #role-assignment-table tbody td:first-child::before { display: none; }
+  .dark #role-assignment-table tbody td:first-child { background: #0f172a; }
+  #role-assignment-table select { width: 100%; min-width: 0; max-width: none; }
+  #role-assignment-table tbody td button {
+    display: block;
+    width: 100%;
+    min-height: 2.65rem;
+    margin: .55rem 0 0;
+  }
+  #role-assignment-table tbody td p { overflow-wrap: anywhere; }
+}
