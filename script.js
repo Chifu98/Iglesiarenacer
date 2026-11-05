@@ -2685,7 +2685,7 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
 
   const id = document.getElementById("member-id").value;
   if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
