@@ -983,6 +983,8 @@ function applyRolePermissions() {
   const btnAddMember = document.getElementById("btn-add-member");
   const btnAddRequest = document.getElementById("btn-add-request");
   const btnManageUsers = document.getElementById("btn-manage-users");
+  const rolePreviewControl = document.getElementById("role-preview-control");
+  if (rolePreviewControl) rolePreviewControl.classList.toggle("hidden", !isAdmin);
   const pastoralHistory = document.getElementById("view-pastoral-history-section");
   const leaderHistory = document.getElementById("view-leader-history-section");
   if (pastoralHistory) pastoralHistory.classList.toggle("hidden", !canPastoralNotes);
