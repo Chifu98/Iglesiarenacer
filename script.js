@@ -2562,7 +2562,7 @@ function toggleVisitInvitationFields() {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()) || (isEdit && hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2583,7 +2583,7 @@ function openModal(isEdit = false) {
     document.getElementById('avatar-preview-initials').textContent = '--';
 
     handleMaritalStatusChange();
-    const restrictedServer = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+    const restrictedServer = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
     const statusInput = document.getElementById("input-status");
     if (statusInput) {
       statusInput.disabled = restrictedServer;
@@ -2677,7 +2677,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions())) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -2697,10 +2697,10 @@ async function deleteRequest(id) {
 
 async function handleFormSubmit(e) {
   e.preventDefault();
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions())) return;
 
   const id = document.getElementById("member-id").value;
-  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
+  if (id && hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor")) {
     alert("El ministerio Servidores solo puede crear fichas de visitas, no editar registros existentes.");
     return;
   }
@@ -2749,7 +2749,7 @@ async function handleFormSubmit(e) {
     spouseName: spouseName,
     spouseId: spouseId,
     ministry: document.getElementById("input-ministry").value,
-    status: (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))
+    status: (hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor"))
       ? "En Visita"
       : document.getElementById("input-status").value,
     inviterMemberId: document.getElementById("input-status").value !== "Activo" &&
@@ -2787,7 +2787,7 @@ async function handleFormSubmit(e) {
   }
 
   try {
-    if (hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
+    if (hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor")) {
       const { error } = await window.supabaseClient.from("miembros_app").insert(mapAppMemberToDb(memberData));
       if (error) throw error;
     } else {
@@ -2810,7 +2810,7 @@ async function handleFormSubmit(e) {
 }
 
 function editMember(id) {
-  const serverRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  const serverRestricted = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
   if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
@@ -2873,7 +2873,7 @@ function editMember(id) {
 }
 
 async function deleteMember(id) {
-  const serverRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
+  const serverRestricted = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
   if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
 
   const member = members.find(item => item.id === id);
