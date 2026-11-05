@@ -160,3 +160,73 @@ img { max-width: 100%; }
   }
   #role-assignment-table tbody td p { overflow-wrap: anywhere; }
 }
+
+
+/* Navegación adaptable para tablets y iPads (vertical y horizontal). */
+@media (min-width: 641px) and (max-width: 1024px) {
+  #app-container > header {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  #app-container > header > div {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: .8rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    row-gap: .8rem;
+  }
+  #app-container > header > div > div:first-child {
+    flex: 1 1 100%;
+    min-width: 0;
+    gap: .75rem;
+  }
+  #app-container > header > div > div:first-child h1 {
+    font-size: 1.2rem;
+    line-height: 1.5rem;
+  }
+  #app-container > header > div > div:first-child p {
+    font-size: .7rem;
+    line-height: 1rem;
+    overflow-wrap: anywhere;
+  }
+  #app-container > header > div > div:last-child {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+  }
+  #app-container > header button {
+    flex: 0 0 auto;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: .65rem;
+  }
+  #app-container > header #btn-announcement-notifications span,
+  #app-container > header #btn-add-request span,
+  #app-container > header #btn-add-member span {
+    display: none;
+  }
+  #app-container > header #current-user-name {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 820px) {
+  #app-container > header > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  #app-container > header > div > div:last-child {
+    justify-content: space-between;
+  }
+}
