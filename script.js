@@ -973,6 +973,7 @@ const RENACER_BACKUP_TABLES = [
   "avisos_congregacion",
   "miembros",
   "miembros_app",
+  "notas_antecedentes",
   "notas_lideres",
   "notas_pastorales",
   "perfiles_app",
