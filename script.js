@@ -202,8 +202,10 @@ async function refreshCloudData() {
     .order("created_at", { ascending: false });
   if (antecedentResult.error) throw antecedentResult.error;
   antecedentNotes = antecedentResult.data || [];
-  const serverOnly = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
-  if (serverOnly) {
+  const visitCardsViaRpc = !!currentUser && !hasRole("admin") && !hasRole("pastor") &&
+    (hasRole("lider") || hasRole("miembro") || hasRole("hermano") || hasServerMinistryPermissions());
+  if (visitCardsViaRpc) {
+    // La RPC entrega exclusivamente los datos de las tarjetas; no habilita lectura de fichas generales.
     const { data: visitRows, error: visitError } = await client.rpc("listar_tarjetas_visita_servidor");
     if (visitError) throw visitError;
     visitCards = (visitRows || []).map(row => ({
@@ -898,7 +900,7 @@ function applyRolePermissions() {
   const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions());
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
-  const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions();
+  const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasRole("miembro") || hasRole("hermano") || hasServerMinistryPermissions();
   const visitModule = document.getElementById("visit-cards-module");
   if (visitModule) visitModule.classList.toggle("hidden", !canViewVisitCards);
   const memberTable = document.getElementById("members-table-body");
@@ -2058,11 +2060,11 @@ function viewCurrentMemberProfile() {
 }
 
 function canViewVisitsModule() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions()));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("miembro") || hasRole("hermano") || hasServerMinistryPermissions()));
 }
 
 function canDeleteVisitCards() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions()));
+  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()));
 }
 
 function renderVisitCards() {
@@ -2149,7 +2151,7 @@ async function refreshVisitCards() {
 
 async function deleteVisitCard(id) {
   if (!canDeleteVisitCards()) {
-    alert("Solo Administradores, Pastores y Líderes pueden eliminar tarjetas de visitas.");
+    alert("Solo Administradores, Pastores y el ministerio Servidor pueden eliminar tarjetas de visitas.");
     return;
   }
   const visit = visitCards.find(member => String(member.id) === String(id) && member.status === "En Visita");
