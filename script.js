@@ -2293,36 +2293,6 @@ function renderBirthdayModule() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
-function shareBirthdays(format) {
-  const monthSelect = document.getElementById('share-birthday-month').value;
-  const monthNames = {
-    "01": "Enero", "02": "Febrero", "03": "Marzo", "04": "Abril", 
-    "05": "Mayo", "06": "Junio", "07": "Julio", "08": "Agosto", 
-    "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
-  };
-
-  const birthdayMembers = getBirthdayMembersForSelectedMonth();
-
-  if (birthdayMembers.length === 0) {
-    alert(`No hay hermanos registrados con fecha de cumpleaños en el mes de ${monthNames[monthSelect]}.`);
-    return;
-  }
-
-  let textContent = `🎂 CUMPLEAÑEROS DE ${monthNames[monthSelect].toUpperCase()} - IGLESIA RENACER\n\n`;
-  birthdayMembers.forEach((m, idx) => {
-    textContent += `${idx + 1}. ${m.name} - Fecha: ${m.birthday} (Tel: ${m.phone})\n`;
-  });
-
-  if (format === 'txt') {
-    downloadFile(textContent, `Cumpleanos_${monthNames[monthSelect]}.txt`, 'text/plain');
-  } else if (format === 'whatsapp') {
-    const encodedText = encodeURIComponent(textContent);
-    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
-  } else if (format === 'image') {
-    generateImage(`Cumpleaños de ${monthNames[monthSelect]}`, birthdayMembers.map(m => `${m.name} (${m.birthday})`), `Cumpleanos_${monthNames[monthSelect]}.png`);
-  }
-}
-
 function getFilteredRequests() {
   const searchVal = document.getElementById('search-request-input').value.toLowerCase().trim();
   const timeFilter = document.getElementById('filter-request-time').value;
@@ -2360,33 +2330,28 @@ function renderRequests() {
     filtered.forEach(req => {
       const member = members.find(m => m.id === req.memberId);
       const memberName = req.memberName || (member ? member.name : 'Hermano General');
-      const memberMinistry = member ? (member.ministry || 'General') : 'Sin ministerio';
-      
       const reqDate = new Date(req.createdAt);
-      const timeFormatted = reqDate.toLocaleDateString() + ' ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeFormatted = reqDate.toLocaleDateString('es-CL') + ' · ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const card = document.createElement('div');
       card.className = "bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-3";
 
       card.innerHTML = `
         <div>
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200/50">
-              ${escapeHtml(memberMinistry)}
-            </span>
+          <div class="flex flex-col gap-1">
+            <span class="text-sm font-bold text-amber-600 dark:text-amber-400">${escapeHtml(memberName)}</span>
             <span class="text-xs text-slate-400 flex items-center gap-1">
               <i data-lucide="clock" class="w-3 h-3"></i> ${escapeHtml(timeFormatted)}
             </span>
           </div>
-          <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mt-2">"${escapeHtml(req.text)}"</p>
+          <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mt-3">"${escapeHtml(req.text)}"</p>
         </div>
-        <div class="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800 text-xs">
-          <span class="font-semibold text-slate-700 dark:text-slate-300">Hermano: ${escapeHtml(memberName)}</span>
-          ${canEdit ? `
+        ${canEdit ? `
+        <div class="flex justify-end pt-2 border-t border-slate-200/60 dark:border-slate-800">
           <button onclick="deleteRequest('${escapeHtml(req.id)}')" title="Eliminar petición" class="text-slate-400 hover:text-rose-600 transition">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>` : ''}
-        </div>
+          </button>
+        </div>` : ''}
       `;
       container.appendChild(card);
     });
@@ -2425,59 +2390,6 @@ async function refreshPrayerRequests() {
   }
 }
 
-function shareRequests(format) {
-  const filtered = getFilteredRequests();
-  if (filtered.length === 0) {
-    alert("No hay peticiones de oración para exportar.");
-    return;
-  }
-
-  const dateStr = new Date().toLocaleDateString('es-ES');
-  let textContent = `🙏 PETICIONES DE ORACIÓN - IGLESIA RENACER (${dateStr})\n\n`;
-  
-  filtered.forEach((req, index) => {
-    const member = members.find(m => m.id === req.memberId);
-    const name = member ? member.name : 'Hermano';
-    textContent += `${index + 1}. ${name}: "${req.text}"\n`;
-  });
-
-  if (format === 'txt') {
-    downloadFile(textContent, `Peticiones_Oracion_${dateStr.replace(/\//g, '-')}.txt`, 'text/plain');
-  } else if (format === 'whatsapp') {
-    const encodedText = encodeURIComponent(textContent);
-    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
-  } else if (format === 'image') {
-    generateImage("Peticiones de Oración", filtered.map(r => {
-      const m = members.find(mem => mem.id === r.memberId);
-      return `${m ? m.name : 'Hermano'}: "${r.text}"`;
-    }), "peticiones_oracion.png");
-  }
-}
-
-function shareVisits(format) {
-  const visits = members.filter(m => m.status === 'En Visita');
-  if (visits.length === 0) {
-    alert("No hay registros de personas en estado 'En Visita' para exportar.");
-    return;
-  }
-
-  const dateStr = new Date().toLocaleDateString('es-ES');
-  let textContent = `🤝 LISTA DE VISITAS - IGLESIA RENACER (${dateStr})\n\n`;
-  
-  visits.forEach((v, index) => {
-    textContent += `${index + 1}. ${v.name} - Tel: ${v.phone} (${v.notes || 'Sin notas'})\n`;
-  });
-
-  if (format === 'txt') {
-    downloadFile(textContent, `Visitas_${dateStr.replace(/\//g, '-')}.txt`, 'text/plain');
-  } else if (format === 'whatsapp') {
-    const encodedText = encodeURIComponent(textContent);
-    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
-  } else if (format === 'image') {
-    generateImage("Hermanos En Visita", visits.map(v => `${v.name} - Tel: ${v.phone}`), "lista_visitas.png");
-  }
-}
-
 function downloadFile(content, fileName, contentType) {
   const a = document.createElement("a");
   const file = new Blob([content], { type: contentType });
@@ -2485,55 +2397,6 @@ function downloadFile(content, fileName, contentType) {
   a.download = fileName;
   a.click();
   URL.revokeObjectURL(a.href);
-}
-
-function generateImage(title, items, filename) {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-
-  const width = 800;
-  const lineHeight = 40;
-  const padding = 50;
-  const height = padding * 2 + 100 + items.length * lineHeight;
-
-  canvas.width = width;
-  canvas.height = height;
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, '#102a43');
-  gradient.addColorStop(1, '#0b1b2b');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.fillStyle = '#f59e0b';
-  ctx.font = 'bold 28px Inter, sans-serif';
-  ctx.fillText('Iglesia Renacer', padding, padding + 30);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px Inter, sans-serif';
-  ctx.fillText(title, padding, padding + 70);
-
-  ctx.strokeStyle = '#f59e0b';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(padding, padding + 85);
-  ctx.lineTo(width - padding, padding + 85);
-  ctx.stroke();
-
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = '16px Inter, sans-serif';
-  
-  let y = padding + 125;
-  items.forEach((item, idx) => {
-    const text = `${idx + 1}. ${item}`;
-    ctx.fillText(text.length > 75 ? text.substring(0, 72) + '...' : text, padding, y);
-    y += lineHeight;
-  });
-
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
 }
 
 let privateNoteContext = null;
