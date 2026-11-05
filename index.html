@@ -163,12 +163,12 @@
 
           <div id="role-preview-control" class="flex items-center gap-2">
             <label for="role-preview-select" class="sr-only">Vista previa por rol</label>
-            <select id="role-preview-select" onchange="startRolePreview(this.value)" class="max-w-[10rem] px-2.5 py-2 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-200 text-xs font-semibold">
-              <option value="admin">Vista: Administrador</option>
-              <option value="pastor">Vista: Pastor</option>
-              <option value="lider">Vista: Líder</option>
-              <option value="miembro">Vista: Miembro</option>
-              <option value="servidor">Vista: Servidor</option>
+            <select id="role-preview-select" onchange="startRolePreview(this.value)" class="max-w-[10rem] px-2.5 py-2 rounded-lg bg-church-900 border border-slate-600 text-amber-400 text-xs font-bold shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30">
+              <option value="admin" class="bg-slate-900 text-amber-400">Vista: Administrador</option>
+              <option value="pastor" class="bg-slate-900 text-amber-400">Vista: Pastor</option>
+              <option value="lider" class="bg-slate-900 text-amber-400">Vista: Líder</option>
+              <option value="miembro" class="bg-slate-900 text-amber-400">Vista: Miembro</option>
+              <option value="servidor" class="bg-slate-900 text-amber-400">Vista: Servidor</option>
             </select>
           </div>
 
@@ -213,13 +213,13 @@
       </div>
     </header>
 
-    <div id="role-preview-bar" class="hidden sticky top-0 z-40 border-b border-amber-300 bg-amber-50 dark:bg-amber-950/95 dark:border-amber-700 px-4 py-3">
+    <div id="role-preview-bar" class="hidden sticky top-0 z-40 border-b border-slate-700 bg-church-900 px-4 py-3 shadow-md">
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
         <div class="min-w-0 flex-1">
-          <p class="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">Vista previa · Solo lectura</p>
-          <p class="text-sm text-amber-900 dark:text-amber-100">Estás viendo la aplicación como: <strong id="role-preview-label">Miembro</strong>. Los cambios y acciones están bloqueados.</p>
+          <p class="text-xs font-bold uppercase tracking-wide text-amber-400">Vista previa · Solo lectura</p>
+          <p class="text-sm text-slate-100">Estás viendo la aplicación como: <strong id="role-preview-label">Miembro</strong>. Los cambios y acciones están bloqueados.</p>
         </div>
-        <button id="role-preview-exit" type="button" onclick="stopRolePreview()" class="shrink-0 px-4 py-2 rounded-lg bg-church-900 text-white text-xs font-semibold">Volver a Administrador</button>
+        <button id="role-preview-exit" type="button" onclick="stopRolePreview()" class="shrink-0 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-500/50 text-amber-400 text-xs font-bold transition">Volver a Administrador</button>
       </div>
     </div>
 
