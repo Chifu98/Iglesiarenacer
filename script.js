@@ -11,6 +11,75 @@ function escapeHtml(str) {
 
 let users = [];
 let currentUser = null;
+
+let rolePreviewOriginalUser = null;
+let rolePreviewActive = false;
+
+function startRolePreview(role) {
+  if (!currentUser || !currentUser.roles?.includes("admin")) return;
+  const supported = ["admin", "pastor", "lider", "miembro", "servidor"];
+  if (!supported.includes(role)) return;
+  if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles] };
+
+  const activeMember = members.find(member => member.status === "Activo");
+  const leaderMember = members.find(member => member.status === "Activo" && member.ministry && member.ministry !== "General" && member.ministry !== "Servidor");
+  const ownMember = activeMember || members[0];
+  const previewUser = {
+    ...rolePreviewOriginalUser,
+    name: role === "admin" ? rolePreviewOriginalUser.name : "Vista de " + roleDisplayName(role),
+    roles: role === "servidor" ? ["miembro"] : [role],
+    role: role === "servidor" ? "miembro" : role,
+    memberId: role === "admin" || role === "pastor" ? "" : String((role === "lider" ? leaderMember : ownMember)?.id || ""),
+    ministry: role === "servidor" ? "Servidor" : (role === "lider" ? (leaderMember?.ministry || "Alabanza") : (ownMember?.ministry || "General"))
+  };
+  currentUser = previewUser;
+  rolePreviewActive = role !== "admin";
+  const bar = document.getElementById("role-preview-bar");
+  if (bar) {
+    bar.classList.toggle("hidden", !rolePreviewActive);
+    const label = document.getElementById("role-preview-label");
+    if (label) label.textContent = roleDisplayName(role) + (role === "lider" ? " · " + previewUser.ministry : role === "servidor" ? " · Ministerio Servidor" : "");
+  }
+  const selector = document.getElementById("role-preview-select");
+  if (selector) selector.value = role;
+  const app = document.getElementById("app-container");
+  if (app) app.classList.toggle("role-preview-mode", rolePreviewActive);
+  showAppView();
+}
+
+function stopRolePreview() {
+  if (!rolePreviewOriginalUser) return;
+  currentUser = rolePreviewOriginalUser;
+  rolePreviewOriginalUser = null;
+  rolePreviewActive = false;
+  const bar = document.getElementById("role-preview-bar");
+  if (bar) bar.classList.add("hidden");
+  const app = document.getElementById("app-container");
+  if (app) app.classList.remove("role-preview-mode");
+  const selector = document.getElementById("role-preview-select");
+  if (selector) selector.value = "admin";
+  showAppView();
+}
+
+document.addEventListener("click", event => {
+  if (!rolePreviewActive) return;
+  const target = event.target.closest("button, input[type='submit']");
+  if (!target) return;
+  if (target.closest("#role-preview-bar")) return;
+  const action = target.getAttribute("onclick") || "";
+  if (/showTab|switchTab|showSection|navigateTo|setActiveTab|changeTab/i.test(action)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  alert("La vista por roles es solo de consulta. Sal de la vista previa para realizar acciones.");
+}, true);
+
+document.addEventListener("submit", event => {
+  if (!rolePreviewActive) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  alert("La vista por roles es solo de consulta. Sal de la vista previa para realizar acciones.");
+}, true);
+
 function hasRole(role) {
   return !!(currentUser && Array.isArray(currentUser.roles) && currentUser.roles.includes(role));
 }
@@ -660,6 +729,10 @@ function showAppView() {
   document.getElementById("login-view").classList.add("hidden");
   document.getElementById("app-container").classList.remove("hidden");
 
+  const previewBar = document.getElementById("role-preview-bar");
+  if (previewBar) previewBar.classList.toggle("hidden", !rolePreviewActive);
+  const appContainer = document.getElementById("app-container");
+  if (appContainer) appContainer.classList.toggle("role-preview-mode", rolePreviewActive);
   document.getElementById("current-user-name").textContent = currentUser.name;
   const badge = document.getElementById("current-user-role-badge");
   const dashboardRoles = currentUser.roles.length > 1 ? currentUser.roles.filter(role => role !== "miembro") : currentUser.roles;
@@ -2545,7 +2618,12 @@ function renderTable() {
 
   tbody.innerHTML = '';
 
-  const filtered = members.filter(m => {
+  const roleScopedMembers = rolePreviewActive && hasRole("lider")
+    ? members.filter(member => member.ministry === currentUser.ministry)
+    : rolePreviewActive && isMemberOnly()
+      ? members.filter(member => String(member.id) === String(currentUser.memberId))
+      : members;
+  const filtered = roleScopedMembers.filter(m => {
     const matchesSearch = 
       m.name.toLowerCase().includes(searchVal) || 
       m.phone.toLowerCase().includes(searchVal) || 
