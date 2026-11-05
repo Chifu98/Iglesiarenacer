@@ -293,3 +293,83 @@ img { max-width: 100%; }
     padding: .55rem;
   }
 }
+
+
+/* Vista previa de roles: controles cómodos y sin desbordes en móvil, tablet y escritorio. */
+#role-preview-control,
+#role-preview-bar,
+#role-preview-bar > div,
+#role-preview-bar > div > div {
+  min-width: 0;
+}
+#role-preview-select,
+#role-preview-ministry-select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.75rem;
+}
+#role-preview-bar p,
+#role-preview-label {
+  overflow-wrap: anywhere;
+}
+#role-preview-ministry-control {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+#role-preview-exit {
+  min-height: 2.75rem;
+  white-space: normal;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  #role-preview-control {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  #role-preview-select {
+    width: 100%;
+  }
+  #role-preview-bar {
+    padding-left: .85rem;
+    padding-right: .85rem;
+  }
+  #role-preview-bar > div {
+    align-items: stretch;
+    gap: .7rem;
+  }
+  #role-preview-ministry-control {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+  #role-preview-ministry-select {
+    flex: 1 1 10rem;
+    width: 100%;
+  }
+  #role-preview-exit {
+    width: 100%;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  #role-preview-bar > div {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: .75rem;
+  }
+  #role-preview-bar > div > div:first-child {
+    flex: 1 1 100%;
+  }
+  #role-preview-ministry-control {
+    flex: 1 1 auto;
+  }
+  #role-preview-ministry-select {
+    width: min(100%, 18rem);
+  }
+  #role-preview-exit {
+    flex: 0 0 auto;
+  }
+}
