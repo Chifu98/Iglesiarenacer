@@ -1478,6 +1478,43 @@ function renderUsersTable() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
+function renderApprovedAccessTable() {
+  const tbody = document.getElementById("approved-users-table-body");
+  const status = document.getElementById("approved-users-status");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  const approved = users.filter(user => user.active || user.requestStatus === "aprobado");
+  if (!approved.length) {
+    if (status) status.textContent = "Todavía no hay cuentas aprobadas.";
+    return;
+  }
+  if (status) status.textContent = "Cuentas aprobadas: " + approved.length + ".";
+  approved.forEach(user => {
+    const member = members.find(item => String(item.id) === String(user.memberId));
+    const roles = (user.roles && user.roles.length ? user.roles : (user.role ? [user.role] : []))
+      .map(roleDisplayName).join(" · ") || "Sin rol";
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
+    [user.name || "Sin nombre", user.username || "Sin usuario", roles, member ? member.name : "Sin ficha asociada"].forEach((value, index) => {
+      const td = document.createElement("td");
+      td.className = "px-3 py-3 " + (index === 1 ? "font-mono text-xs text-slate-500" : "text-sm text-slate-700 dark:text-slate-200");
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    const action = document.createElement("td");
+    action.className = "px-3 py-3 text-right";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold";
+    button.textContent = "Enviar enlace de reseteo";
+    button.disabled = !user.username || !String(user.username).includes("@");
+    button.addEventListener("click", () => resetUserPassword(user.id));
+    action.appendChild(button);
+    tr.appendChild(action);
+    tbody.appendChild(tr);
+  });
+}
+
 /* SOLICITUDES PÚBLICAS DE REGISTRO DE MIEMBROS (SOLO ADMIN PARA REVISAR) */
 async function loadPendingMemberRequests() {
   if (!currentUser || !hasRole("admin")) return;
@@ -2326,22 +2363,55 @@ function generateImage(title, items, filename) {
 }
 
 let privateNoteContext = null;
+async function loadAntecedentNotes(memberId) {
+  const { data, error } = await window.supabaseClient.from("notas_antecedentes")
+    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,created_at")
+    .eq("miembro_id", String(memberId))
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  antecedentNotes = antecedentNotes.filter(note => String(note.miembro_id) !== String(memberId)).concat(data || []);
+  renderAntecedentHistory(memberId, "pastoral");
+  renderAntecedentHistory(memberId, "lider");
+}
+
+function renderAntecedentHistory(memberId, type) {
+  const target = document.getElementById(type === "pastoral" ? "view-pastoral-history" : "view-leader-history");
+  if (!target) return;
+  target.innerHTML = "";
+  const records = antecedentNotes.filter(note => String(note.miembro_id) === String(memberId) && note.tipo === type);
+  if (!records.length) {
+    const empty = document.createElement("p");
+    empty.className = "text-xs text-slate-400 italic";
+    empty.textContent = "Todavía no hay registros en esta sección.";
+    target.appendChild(empty);
+    return;
+  }
+  records.forEach(note => {
+    const card = document.createElement("article");
+    card.className = "rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 p-3 space-y-2";
+    const body = document.createElement("p");
+    body.className = "text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words";
+    body.textContent = note.contenido;
+    const meta = document.createElement("p");
+    meta.className = "text-[11px] text-slate-500 dark:text-slate-400";
+    const date = note.created_at ? new Date(note.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible";
+    meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + date;
+    card.append(body, meta);
+    target.appendChild(card);
+  });
+}
+
 async function openPrivateNoteModal(memberId, type) {
   const member = members.find(item => String(item.id) === String(memberId));
   if (!member || !currentUser) return;
   if (type === "pastoral" && !(hasRole("admin") || hasRole("pastor"))) return;
   if (type === "leader" && !hasRole("lider")) return;
   privateNoteContext = { memberId: String(memberId), type };
-  document.getElementById("private-note-title").textContent = type === "pastoral" ? "Nota pastoral privada" : "Nota personal de líder";
+  document.getElementById("private-note-title").textContent = type === "pastoral" ? "Nuevo antecedente pastoral" : "Nuevo antecedente de líder";
   document.getElementById("private-note-member").textContent = member.name;
   const field = document.getElementById("private-note-text");
-  if (type === "pastoral") field.value = member.notes || "";
-  else {
-    const { data, error } = await window.supabaseClient.from("notas_lideres").select("nota")
-      .eq("miembro_id", String(memberId)).eq("lider_id", currentUser.id).maybeSingle();
-    if (error) { alert("No se pudo cargar la nota: " + error.message); return; }
-    field.value = data ? data.nota || "" : "";
-  }
+  field.value = "";
+  field.placeholder = "Escribe el nuevo comentario. Se guardará con tu nombre y fecha.";
   document.getElementById("private-note-modal").classList.remove("hidden");
 }
 function closePrivateNoteModal() {
@@ -2351,28 +2421,24 @@ function closePrivateNoteModal() {
 async function savePrivateNote(event) {
   event.preventDefault();
   if (!privateNoteContext || !currentUser) return;
-  const member = members.find(item => String(item.id) === privateNoteContext.memberId);
-  if (!member) return;
   const note = document.getElementById("private-note-text").value.trim();
-  const now = new Date().toISOString();
-  let result;
-  if (privateNoteContext.type === "pastoral") {
-    if (!(hasRole("admin") || hasRole("pastor"))) return;
-    result = await window.supabaseClient.from("notas_pastorales").upsert({
-      miembro_id: privateNoteContext.memberId, nota: note, updated_at: now, updated_by: currentUser.id
-    }, { onConflict: "miembro_id" });
-    if (!result.error) member.notes = note;
-  } else {
-    if (!hasRole("lider")) return;
-    result = await window.supabaseClient.from("notas_lideres").upsert({
-      miembro_id: privateNoteContext.memberId, lider_id: currentUser.id, nota: note,
-      updated_at: now, updated_by: currentUser.id
-    }, { onConflict: "miembro_id,lider_id" });
-    if (!result.error) member.leaderNotes = note ? "Mi nota: " + note : "";
-  }
-  if (result.error) { alert("No se pudo guardar la nota: " + result.error.message); return; }
+  if (!note) { alert("Escribe un comentario antes de guardar."); return; }
+  const type = privateNoteContext.type === "pastoral" ? "pastoral" : "lider";
+  if (type === "pastoral" && !(hasRole("admin") || hasRole("pastor"))) return;
+  if (type === "lider" && !hasRole("lider")) return;
+  const memberId = privateNoteContext.memberId;
+  const { error } = await window.supabaseClient.from("notas_antecedentes").insert({
+    miembro_id: memberId, tipo: type, contenido: note
+  });
+  if (error) { alert("No se pudo guardar el antecedente: " + error.message); return; }
   closePrivateNoteModal();
-  alert("Nota guardada correctamente.");
+  try {
+    await loadAntecedentNotes(memberId);
+    alert("Comentario guardado con tu nombre y fecha/hora.");
+  } catch (refreshError) {
+    console.error(refreshError);
+    alert("El comentario se guardó, pero no se pudo actualizar el historial. Vuelve a abrir la ficha.");
+  }
 }
 
 function renderTable() {
