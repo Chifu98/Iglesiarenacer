@@ -160,3 +160,33 @@ img { max-width: 100%; }
   }
   #role-assignment-table tbody td p { overflow-wrap: anywhere; }
 }
+
+/* Peticiones de oración: tarjetas más amplias y texto más legible. */
+#requests-container .prayer-request-card {
+  min-height: 13rem;
+  padding: 1.5rem;
+  gap: 1.25rem;
+}
+#requests-container .prayer-request-name {
+  display: block;
+  font-size: 1.2rem;
+  line-height: 1.65rem;
+}
+#requests-container .prayer-request-date {
+  margin-top: .35rem;
+  font-size: .875rem;
+  line-height: 1.35rem;
+}
+#requests-container .prayer-request-text {
+  font-size: 1.05rem;
+  line-height: 1.8rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  #requests-container .prayer-request-card {
+    min-height: 12rem;
+    padding: 1.25rem;
+  }
+  #requests-container .prayer-request-name { font-size: 1.15rem; }
+  #requests-container .prayer-request-text { font-size: 1rem; line-height: 1.7rem; }
+}
