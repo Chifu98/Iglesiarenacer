@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS public.solicitudes_ministerio (
 CREATE UNIQUE INDEX IF NOT EXISTS solicitudes_ministerio_una_pendiente_por_miembro ON public.solicitudes_ministerio(miembro_id) WHERE estado='pendiente';
 CREATE INDEX IF NOT EXISTS solicitudes_ministerio_estado_ministerio_idx ON public.solicitudes_ministerio(estado,ministerio,creado_en);
 ALTER TABLE public.solicitudes_ministerio ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS solicitudes_ministerio_no_direct_access ON public.solicitudes_ministerio;
+CREATE POLICY solicitudes_ministerio_no_direct_access ON public.solicitudes_ministerio
+ FOR ALL TO authenticated USING (false) WITH CHECK (false);
 REVOKE ALL ON TABLE public.solicitudes_ministerio FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.solicitar_ingreso_ministerio(p_ministerio text)
