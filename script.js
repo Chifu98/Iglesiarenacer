@@ -121,7 +121,8 @@ function mapDbRequestToApp(row) {
     memberId: row.member_id || "",
     memberName: row.member_name || "",
     text: row.description || "",
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    createdBy: row.created_by || ""
   };
 }
 
@@ -2322,6 +2323,7 @@ function renderBirthdayModule() {
 function getFilteredRequests() {
   const searchVal = document.getElementById('search-request-input').value.toLowerCase().trim();
   const timeFilter = document.getElementById('filter-request-time').value;
+  const ownershipFilter = document.getElementById('filter-request-owner')?.value || 'all';
   const now = new Date();
   const oneDayMs = 24 * 60 * 60 * 1000;
 
@@ -2336,11 +2338,18 @@ function getFilteredRequests() {
       matchesTime = (now - reqDate) <= oneDayMs;
     }
 
-    return matchesSearch && matchesTime;
+    const matchesOwner = ownershipFilter !== 'mine' || (currentUser && req.createdBy === currentUser.id);
+    return matchesSearch && matchesTime && matchesOwner;
   });
 }
 
 function renderRequests() {
+  const ownerFilter = document.getElementById('filter-request-owner');
+  if (ownerFilter) {
+    const memberCanFilterOwn = isMemberOnly();
+    ownerFilter.classList.toggle('hidden', !memberCanFilterOwn);
+    if (!memberCanFilterOwn) ownerFilter.value = 'all';
+  }
   const container = document.getElementById('requests-container');
   const emptyState = document.getElementById('requests-empty-state');
   const filtered = [...getFilteredRequests()];
