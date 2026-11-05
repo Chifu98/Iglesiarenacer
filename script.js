@@ -1837,7 +1837,8 @@ function renderAnnouncements() {
     title.textContent = item.titulo;
     const meta = document.createElement("p");
     meta.className = "text-[11px] text-slate-500 dark:text-slate-400 mt-1";
-    meta.textContent = "Publicado " + formatAnnouncementDate(item.creado_en);
+    const creatorName = String(item.creado_por_nombre || "Usuario registrado");
+    meta.textContent = "Publicado el " + formatAnnouncementDate(item.creado_en) + " · Creado por " + creatorName;
     heading.append(title, meta);
     header.appendChild(heading);
 
@@ -1865,6 +1866,34 @@ function renderAnnouncements() {
     container.appendChild(card);
   });
   if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+async function refreshAnnouncements() {
+  const button = document.getElementById("refresh-announcements-button");
+  const icon = document.getElementById("refresh-announcements-icon");
+  const label = document.getElementById("refresh-announcements-label");
+  if (!currentUser || !window.supabaseClient) return;
+
+  if (button) button.disabled = true;
+  if (icon) icon.classList.add("animate-spin");
+  if (label) label.textContent = "Actualizando...";
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("anuncios")
+      .select("*")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    announcements = data || [];
+    renderAnnouncements();
+  } catch (error) {
+    console.error("No se pudieron actualizar los anuncios:", error);
+    alert("No fue posible actualizar los anuncios. Revisa tu conexión e inténtalo nuevamente.");
+  } finally {
+    if (button) button.disabled = false;
+    if (icon) icon.classList.remove("animate-spin");
+    if (label) label.textContent = "Actualizar";
+  }
 }
 
 function openAnnouncementModal(id = "") {
@@ -1912,7 +1941,7 @@ async function handleAnnouncementSubmit(event) {
       }).eq("id", id);
     } else {
       query = window.supabaseClient.from("anuncios").insert({
-        titulo, contenido, creado_por: currentUser.id
+        titulo, contenido, creado_por: currentUser.id, creado_por_nombre: currentUser.name || "Usuario registrado"
       });
     }
     const { error } = await query;
@@ -2252,9 +2281,6 @@ function renderBirthdayModule() {
             <p class="mt-1 text-xs text-amber-600 dark:text-amber-400 font-semibold whitespace-normal">${escapeHtml(birthYearText)}</p>
           </div>
         </div>
-        <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('¡Feliz Cumpleaños ' + member.name + '! Que Dios te bendiga grandemente en este día. 🎂🎉 - Iglesia Renacer')}" target="_blank" rel="noopener noreferrer" title="Felicitar por WhatsApp" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition shrink-0">
-          <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-        </a>
       `;
       cardsGrid.appendChild(card);
     });
