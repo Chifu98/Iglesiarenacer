@@ -29,6 +29,7 @@ let prayerRequests = [];
 let announcements = [];
 let currentAvatarBase64 = "";
 let memberBirthdayData = null;
+let antecedentNotes = [];
 
 let realtimeChannel = null;
 let realtimeRefreshTimer = null;
@@ -194,6 +195,11 @@ async function refreshCloudData() {
     member.avatar = await resolveProfileAvatarForDisplay(member.avatar);
     return member;
   }));
+  const antecedentResult = await client.from("notas_antecedentes")
+    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,created_at")
+    .order("created_at", { ascending: false });
+  if (antecedentResult.error) throw antecedentResult.error;
+  antecedentNotes = antecedentResult.data || [];
   prayerRequests = (requestsResult.data || []).map(mapDbRequestToApp);
   announcements = announcementsResult.data || [];
 }
@@ -919,6 +925,7 @@ async function openUsersModal() {
   try {
     await loadProfilesFromCloud();
     renderUsersTable();
+    renderApprovedAccessTable();
     document.getElementById("users-modal").classList.remove("hidden");
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     await loadPendingMemberRequests();
