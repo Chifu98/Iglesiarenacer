@@ -1307,12 +1307,12 @@ async function saveUserRoles(userId) {
   if (!selectElement) return;
   const allowedRoles = ["admin", "pastor", "lider", "miembro"];
   const targetUser = users.find(user => user.id === userId);
-  const nextRoles = Array.from(selectElement.selectedOptions).map(option => option.value);
+  const nextRoles = selectElement.value ? [selectElement.value] : [];
   if (!targetUser || userId === currentUser.id || !nextRoles.length || nextRoles.some(role => !allowedRoles.includes(role)) || new Set(nextRoles).size !== nextRoles.length) {
     alert("Selecciona al menos un rol válido. No puedes modificar tu propia asignación."); renderUsersTable(); return;
   }
   if (JSON.stringify([...nextRoles].sort()) === JSON.stringify([...(targetUser.roles || [])].sort())) return;
-  if (!confirm("¿Asignar a " + targetUser.name + " estos roles independientes: " + nextRoles.map(roleDisplayName).join(" + ") + "?")) { renderUsersTable(); return; }
+  if (!confirm("¿Asignar a " + targetUser.name + " el rol " + nextRoles.map(roleDisplayName).join("") + "?")) { renderUsersTable(); return; }
   const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
   if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
   await loadProfilesFromCloud(); renderUsersTable();
@@ -1444,7 +1444,7 @@ function renderUsersTable() {
     const roleOptions = roleChoices.map(choice =>
       '<option value="' + choice.value + '"' + (selectedRoles.has(choice.value) ? " selected" : "") + '>' + choice.label + '</option>'
     ).join("");
-    const roleControl = '<div class="space-y-1"><select multiple size="4" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Roles independientes de ' + escapeHtml(user.name) + '" ' +
+    const roleControl = '<div class="space-y-1"><select multiple size="4" id="user-roles-' + escapeHtml(user.id) + '" aria-label="Rol de acceso de ' + escapeHtml(user.name) + '" ' +
       (user.id === currentUser.id ? "disabled " : "") +
       'class="min-w-[125px] max-w-[150px] px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-[10px]">' + roleOptions + '</select>' +
       (user.id === currentUser.id ? '' : '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="saveUserRoles(this.dataset.userId)" class="text-[10px] px-2 py-1 rounded bg-church-800 text-white">Guardar roles</button>') + '</div>';
@@ -1470,7 +1470,7 @@ function renderUsersTable() {
     tr.innerHTML =
       '<td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white">' + escapeHtml(user.name) + '</td>' +
       '<td class="py-2.5 px-3 font-mono text-slate-500 dark:text-slate-400">' + escapeHtml(user.username) + '</td>' +
-      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Roles independientes (Ctrl / Cmd para varios)</div></div></td>' +
+      '<td class="py-2.5 px-3"><div class="space-y-1">' + roleControl + '<div class="text-[10px] text-slate-400">Un solo rol de acceso por cuenta</div></div></td>' +
       '<td class="py-2.5 px-3"><div class="space-y-1">' + memberControl + '<div class="text-[10px] text-slate-400">' + (user.memberId ? 'Miembro vinculado' : 'Sin miembro asociado') + '</div></div></td>' +
       '<td class="py-2.5 px-3 text-right text-slate-500"><div class="flex flex-col items-end gap-2">' + statusAction +
       '<button type="button" data-user-id="' + escapeHtml(user.id) + '" onclick="resetUserPassword(this.dataset.userId)" class="px-2.5 py-1.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-[10px] font-semibold">Enviar enlace de contraseña</button></div></td>';
