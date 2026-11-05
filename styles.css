@@ -373,3 +373,19 @@ img { max-width: 100%; }
     flex: 0 0 auto;
   }
 }
+
+
+/* Mantener la barra de retorno debajo del encabezado fijo durante el desplazamiento. */
+#role-preview-bar {
+  top: calc(5rem + env(safe-area-inset-top, 0px));
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  #role-preview-bar {
+    top: calc(8rem + env(safe-area-inset-top, 0px));
+  }
+}
+@media (max-width: 640px) {
+  #role-preview-bar {
+    top: calc(9.5rem + env(safe-area-inset-top, 0px));
+  }
+}
