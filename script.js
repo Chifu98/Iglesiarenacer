@@ -21,7 +21,7 @@ function hasServerMinistryPermissions() {
   return !!(currentUser && currentUser.ministry === "Servidor");
 }
 function isMemberOnly() {
-  return !!(currentUser && hasRole("miembro") && !hasRole("admin") && !hasRole("pastor") &&
+  return !!(currentUser && (hasRole("miembro") || hasRole("hermano")) && !hasRole("admin") && !hasRole("pastor") &&
     !hasRole("lider") && !hasServerMinistryPermissions());
 }
 let members = [];
