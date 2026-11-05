@@ -1,4 +1,4 @@
-const CACHE_NAME = "renacer-pwa-v13";
+const CACHE_NAME = "renacer-pwa-v14";
 const APP_SHELL = [
   "/",
   "/index.html",
