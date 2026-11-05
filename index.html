@@ -112,8 +112,7 @@
           <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Dirección / Residencia</label><input id="public-member-address" type="text" maxlength="250" placeholder="Calle, número, comuna" autocomplete="street-address" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Estado civil *</label><select id="public-member-marital" required onchange="togglePublicSpouseField()" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="Soltero (a)">Soltero (a)</option><option value="Novio (a)">Novio (a)</option><option value="Casado (a)">Casado (a)</option><option value="Viudo (a)">Viudo (a)</option></select></div>
-            <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Ministerio</label><select id="public-member-ministry" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="General">General</option><option value="Alabanza">Alabanza</option><option value="Servidor">Servidores</option><option value="Niños">Niños</option><option value="Jóvenes">Jóvenes</option><option value="Oración">Oración</option><option value="Evangelismo">Evangelismo</option><option value="Redes">Redes</option><option value="Damas">Damas</option><option value="Matrimonio">Matrimonio</option><option value="Hombres">Hombres</option></select></div>
-          </div>
+                     </div>
           <div id="public-spouse-field" class="hidden"><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nombre de cónyuge / pareja</label><input id="public-member-spouse" type="text" maxlength="150" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">¿Bautizado? *</label><select id="public-member-baptized" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-sm dark:text-white"><option value="No" selected>No</option><option value="Sí">Sí</option></select></div>
@@ -228,6 +227,38 @@
             <i data-lucide="id-card" class="w-4 h-4"></i> Ver mi ficha
           </button>
         </div>
+      </section>
+
+      <section id="member-ministry-module" class="hidden rounded-2xl border border-amber-300/60 dark:border-amber-700/40 bg-white dark:bg-slate-800 p-5 sm:p-6 shadow-sm">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0"><i data-lucide="users" class="w-5 h-5"></i></div>
+          <div class="min-w-0 flex-1">
+            <h3 class="font-bold text-slate-900 dark:text-white">Únete a un ministerio</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">Busca el ministerio en el que deseas servir. Tu ingreso debe ser autorizado por su líder o por Administración.</p>
+            <p id="member-ministry-message" class="text-xs text-slate-500 dark:text-slate-400 mt-3"></p>
+            <div id="member-ministry-pending" class="hidden mt-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200"></div>
+            <form id="member-ministry-form" onsubmit="submitMemberMinistryRequest(event)" class="hidden mt-4 flex flex-col sm:flex-row gap-3">
+              <select id="member-ministry-select" required class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white">
+                <option value="">Selecciona un ministerio</option>
+                <option value="Alabanza">Alabanza</option><option value="Servidor">Servidores</option>
+                <option value="Niños">Niños</option><option value="Jóvenes">Jóvenes</option>
+                <option value="Oración">Oración</option><option value="Evangelismo">Evangelismo</option>
+                <option value="Redes">Redes</option><option value="Damas">Damas</option>
+                <option value="Matrimonio">Matrimonio</option><option value="Hombres">Hombres</option>
+              </select>
+              <button id="member-ministry-submit" type="submit" class="px-4 py-2.5 rounded-xl bg-church-900 hover:bg-church-800 text-white text-sm font-semibold">Solicitar ingreso</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="ministry-requests-module" class="hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div><h3 class="font-bold text-slate-900 dark:text-white">Solicitudes para ministerios</h3><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Autoriza o rechaza ingresos a tu ministerio.</p></div>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Revisión</span>
+        </div>
+        <div id="ministry-requests-list" class="space-y-3"></div>
+        <p id="ministry-requests-empty" class="hidden text-sm text-slate-500 dark:text-slate-400 py-3">No hay solicitudes pendientes.</p>
       </section>
 
       <!-- SUMMARY METRICS CARDS -->
@@ -1011,6 +1042,27 @@
           </div>
         </div>
 
+        <div id="view-ministry-management" class="hidden border-t border-slate-100 dark:border-slate-700 pt-3 space-y-3">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Gestión de ministerio</p>
+          <div id="view-admin-ministry-controls" class="hidden space-y-2">
+            <label for="view-admin-ministry-select" class="text-xs text-slate-600 dark:text-slate-300">Asignar ministerio</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <select id="view-admin-ministry-select" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm">
+                <option value="General">General</option><option value="Alabanza">Alabanza</option>
+                <option value="Servidor">Servidores</option><option value="Niños">Niños</option>
+                <option value="Jóvenes">Jóvenes</option><option value="Oración">Oración</option>
+                <option value="Evangelismo">Evangelismo</option><option value="Redes">Redes</option>
+                <option value="Damas">Damas</option><option value="Matrimonio">Matrimonio</option><option value="Hombres">Hombres</option>
+              </select>
+              <button type="button" onclick="adminAssignMemberMinistry()" class="px-4 py-2 rounded-lg bg-church-900 text-white text-sm font-semibold">Guardar ministerio</button>
+            </div>
+            <p class="text-[11px] text-slate-500">Administración puede asignar directamente cualquier ministerio o devolver al hermano a General.</p>
+          </div>
+          <div id="view-leader-ministry-controls" class="hidden space-y-2">
+            <button type="button" onclick="removeMemberFromMyMinistry()" class="px-4 py-2 rounded-lg border border-amber-400 text-amber-800 dark:text-amber-300 text-sm font-semibold">Retirar de mi ministerio y devolver a General</button>
+            <p class="text-[11px] text-slate-500">Solo puedes retirar miembros del ministerio que lideras.</p>
+          </div>
+        </div>
         <div id="view-admin-access-controls" class="hidden border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
           <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Acceso a la aplicación</p>
           <p id="view-admin-access-status" class="text-xs text-slate-600 dark:text-slate-300">Esta ficha todavía no tiene una cuenta de acceso.</p>
