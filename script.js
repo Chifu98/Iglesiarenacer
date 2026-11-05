@@ -368,7 +368,7 @@ async function submitPublicMemberRegistration(event) {
   const maritalStatus = document.getElementById("public-member-marital").value;
   const spouseName = (maritalStatus === "Casado (a)" || maritalStatus === "Novio (a)")
     ? document.getElementById("public-member-spouse").value.trim() : "";
-  const ministry = document.getElementById("public-member-ministry").value;
+  const ministry = "General";
   const baptized = document.getElementById("public-member-baptized").value;
   const birthday = document.getElementById("public-member-birthday").value;
 
@@ -634,6 +634,154 @@ function showAppView() {
   renderAnnouncements();
   renderBirthdayModule();
   refreshAnnouncementPushButton();
+}
+
+
+async function refreshMinistryModules() {
+  if (!currentUser) return;
+  const memberModule = document.getElementById("member-ministry-module");
+  const reviewModule = document.getElementById("ministry-requests-module");
+
+  if (isMemberOnly() && currentUser.memberId && memberModule) {
+    const ownMember = members.find(m => String(m.id) === String(currentUser.memberId));
+    let request = null;
+    const { data, error } = await window.supabaseClient.rpc("mi_estado_solicitud_ministerio");
+    if (error) console.warn("No se pudo consultar el estado de la solicitud de ministerio:", error);
+    else request = Array.isArray(data) && data.length ? data[0] : null;
+
+    const eligible = !!ownMember && ownMember.status === "Activo" && (ownMember.ministry || "General") === "General";
+    memberModule.classList.toggle("hidden", !eligible);
+    const form = document.getElementById("member-ministry-form");
+    const pending = document.getElementById("member-ministry-pending");
+    const message = document.getElementById("member-ministry-message");
+    if (form && pending && message) {
+      if (request && request.estado === "pendiente") {
+        form.classList.add("hidden");
+        pending.classList.remove("hidden");
+        message.textContent = "Tu solicitud para " + request.ministerio + " está pendiente de autorización del líder o de Administración.";
+      } else {
+        pending.classList.add("hidden");
+        form.classList.remove("hidden");
+        message.textContent = request && request.estado === "rechazado"
+          ? "Tu solicitud anterior no fue aprobada. Puedes escoger un ministerio y enviar una nueva solicitud."
+          : "Escoge el ministerio al que deseas integrarte. Tu ingreso quedará pendiente hasta ser autorizado.";
+      }
+    }
+  } else if (memberModule) {
+    memberModule.classList.add("hidden");
+  }
+
+  const canReview = hasRole("admin") || hasRole("lider");
+  if (reviewModule) reviewModule.classList.toggle("hidden", !canReview);
+  if (canReview && reviewModule) {
+    const list = document.getElementById("ministry-requests-list");
+    const empty = document.getElementById("ministry-requests-empty");
+    const { data, error } = await window.supabaseClient.rpc("listar_solicitudes_ministerio_pendientes");
+    if (error) {
+      console.warn("No se pudieron cargar las solicitudes de ministerio:", error);
+      if (list) list.innerHTML = "";
+      if (empty) { empty.textContent = "No se pudieron cargar las solicitudes: " + error.message; empty.classList.remove("hidden"); }
+      return;
+    }
+    if (!list || !empty) return;
+    list.innerHTML = "";
+    const rows = data || [];
+    empty.classList.toggle("hidden", rows.length > 0);
+    empty.textContent = "No hay solicitudes pendientes para los ministerios que puedes administrar.";
+    rows.forEach(item => {
+      const card = document.createElement("article");
+      card.className = "rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3";
+      const info = document.createElement("div");
+      info.innerHTML = '<p class="font-semibold text-slate-900 dark:text-white">' + escapeHtml(item.nombre) + '</p>' +
+        '<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Solicita ingresar a <strong>' + escapeHtml(item.ministerio) + '</strong></p>' +
+        '<p class="text-[11px] text-slate-400 mt-1">' + escapeHtml(new Date(item.creado_en).toLocaleString("es-CL")) + '</p>';
+      const actions = document.createElement("div");
+      actions.className = "flex gap-2 shrink-0";
+      const approve = document.createElement("button");
+      approve.type = "button"; approve.textContent = "Autorizar";
+      approve.className = "px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold";
+      approve.addEventListener("click", () => resolveMinistryRequest(item.solicitud_id, true));
+      const reject = document.createElement("button");
+      reject.type = "button"; reject.textContent = "Rechazar";
+      reject.className = "px-3 py-2 rounded-lg border border-rose-300 text-rose-700 dark:text-rose-300 text-xs font-semibold";
+      reject.addEventListener("click", () => resolveMinistryRequest(item.solicitud_id, false));
+      actions.append(approve, reject);
+      card.append(info, actions);
+      list.append(card);
+    });
+  }
+}
+
+async function submitMemberMinistryRequest(event) {
+  event.preventDefault();
+  if (!isMemberOnly() || !currentUser.memberId) return;
+  const select = document.getElementById("member-ministry-select");
+  const button = document.getElementById("member-ministry-submit");
+  const ministry = select ? select.value : "";
+  if (!ministry) { alert("Selecciona un ministerio."); return; }
+  if (button) { button.disabled = true; button.textContent = "Enviando solicitud..."; }
+  try {
+    const { error } = await window.supabaseClient.rpc("solicitar_ingreso_ministerio", { p_ministerio: ministry });
+    if (error) throw error;
+    await refreshMinistryModules();
+    alert("Tu solicitud fue enviada. El ministerio aparecerá en tu ficha cuando sea autorizada.");
+  } catch (error) {
+    alert("No se pudo enviar la solicitud: " + error.message);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "Solicitar ingreso"; }
+  }
+}
+
+async function resolveMinistryRequest(id, approve) {
+  const action = approve ? "autorizar" : "rechazar";
+  if (!confirm("¿Deseas " + action + " esta solicitud de ministerio?")) return;
+  try {
+    const { error } = await window.supabaseClient.rpc("resolver_solicitud_ministerio", {
+      p_solicitud_id: id, p_aprobar: approve
+    });
+    if (error) throw error;
+    await refreshCloudData();
+    renderDashboard(); renderTable(); renderBirthdayModule();
+    await refreshMinistryModules();
+    alert(approve ? "Ingreso al ministerio autorizado." : "Solicitud rechazada.");
+  } catch (error) {
+    alert("No se pudo " + action + " la solicitud: " + error.message);
+  }
+}
+
+async function removeMemberFromMyMinistry() {
+  const id = window.currentDetailsMemberId;
+  if (!id || !confirm("¿Retirar a este hermano de tu ministerio y devolverlo a General?")) return;
+  try {
+    const { error } = await window.supabaseClient.rpc("quitar_miembro_de_ministerio", { p_miembro_id: String(id) });
+    if (error) throw error;
+    await refreshCloudData();
+    renderDashboard(); renderTable(); renderBirthdayModule();
+    viewDetails(id);
+    await refreshMinistryModules();
+    alert("El hermano ahora pertenece a General.");
+  } catch (error) {
+    alert("No se pudo retirar al hermano del ministerio: " + error.message);
+  }
+}
+
+async function adminAssignMemberMinistry() {
+  const id = window.currentDetailsMemberId;
+  const select = document.getElementById("view-admin-ministry-select");
+  if (!id || !select) return;
+  try {
+    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
+      p_miembro_id: String(id), p_ministerio: select.value
+    });
+    if (error) throw error;
+    await refreshCloudData();
+    renderDashboard(); renderTable(); renderBirthdayModule();
+    viewDetails(id);
+    await refreshMinistryModules();
+    alert("Ministerio actualizado correctamente.");
+  } catch (error) {
+    alert("No se pudo asignar el ministerio: " + error.message);
+  }
 }
 
 function startRealtimeSync() {
@@ -2805,6 +2953,22 @@ function viewDetails(id) {
   if (leaderNotesText) leaderNotesText.textContent = member.leaderNotes || 'Sin notas de líderes.';
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
   if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
+  const ministryControls = document.getElementById("view-ministry-management");
+  if (ministryControls) {
+    const ownMember = currentUser && currentUser.memberId
+      ? members.find(m => String(m.id) === String(currentUser.memberId)) : null;
+    const ownMinistry = ownMember ? (ownMember.ministry || "General") : "";
+    const isAdmin = hasRole("admin");
+    const canLeaderRemove = hasRole("lider") && ownMinistry !== "General" &&
+      (member.ministry || "General") === ownMinistry && String(member.id) !== String(currentUser.memberId);
+    ministryControls.classList.toggle("hidden", !(isAdmin || canLeaderRemove));
+    const adminControls = document.getElementById("view-admin-ministry-controls");
+    const leaderControls = document.getElementById("view-leader-ministry-controls");
+    if (adminControls) adminControls.classList.toggle("hidden", !isAdmin);
+    if (leaderControls) leaderControls.classList.toggle("hidden", !canLeaderRemove);
+    const ministrySelect = document.getElementById("view-admin-ministry-select");
+    if (ministrySelect) ministrySelect.value = member.ministry || "General";
+  }
   const accessControls = document.getElementById("view-admin-access-controls");
   if (accessControls) {
     const linkedAccount = users.find(user => String(user.memberId) === String(member.id));
