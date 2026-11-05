@@ -859,7 +859,7 @@ function scheduleCloudRefresh() {
 function applyRolePermissions() {
   const isAdmin = hasRole("admin");
   const isServerRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
-  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"));
+  const canManageMembers = (hasRole("admin") || hasRole("pastor") || hasRole("servidor"));
   const canPastoralNotes = isAdmin || hasRole("pastor");
   const canLeaderNotes = canPastoralNotes || hasRole("lider");
   const canViewVisitCards = isAdmin || hasRole("pastor") || hasRole("lider") || hasRole("servidor");
@@ -2367,7 +2367,7 @@ function renderTable() {
   const statusFilter = document.getElementById('filter-status').value;
 
   const serverRestricted = currentUser && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
-  const canEdit = currentUser && !serverRestricted && (hasRole("admin") || hasRole("pastor") || hasRole("lider"));
+  const canEdit = currentUser && !serverRestricted && (hasRole("admin") || hasRole("pastor"));
   const canAddPastoralNote = currentUser && (hasRole("admin") || hasRole("pastor"));
   const canAddLeaderNote = currentUser && hasRole("lider");
 
@@ -2550,7 +2550,7 @@ function toggleVisitInvitationFields() {
 }
 
 function openModal(isEdit = false) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor")) || (isEdit && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor"))) return;
   const modal = document.getElementById('member-modal');
   const title = document.getElementById('modal-title');
   
@@ -2799,7 +2799,7 @@ async function handleFormSubmit(e) {
 
 function editMember(id) {
   const serverRestricted = hasRole("servidor") && !hasRole("admin") && !hasRole("pastor");
-  if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor") || hasRole("lider"))) return;
+  if (!currentUser || serverRestricted || !(hasRole("admin") || hasRole("pastor"))) return;
   const member = members.find(m => m.id === id);
   if (!member) return;
 
