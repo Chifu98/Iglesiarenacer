@@ -1437,6 +1437,7 @@ function renderUsersTable() {
     { value: "pastor", label: "Pastor" },
     { value: "admin", label: "Administrador" }
   ];
+  const ministryChoices = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
 
   [...members].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es")).forEach(member => {
     const linkedUser = users.find(user => String(user.memberId) === String(member.id));
@@ -1445,47 +1446,72 @@ function renderUsersTable() {
     const name = document.createElement("td");
     name.className = "py-3 px-3 font-semibold text-slate-900 dark:text-white";
     name.textContent = member.name || "Sin nombre";
+
     const roleCell = document.createElement("td");
-    roleCell.className = "py-2.5 px-3";
-    const select = document.createElement("select");
-    select.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
-    select.setAttribute("aria-label", "Rol de acceso de " + (member.name || "miembro"));
+    roleCell.className = "py-2.5 px-3 min-w-[145px]";
+    const roleSelect = document.createElement("select");
+    roleSelect.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
+    roleSelect.setAttribute("aria-label", "Rol de acceso de " + (member.name || "miembro"));
+    const currentRole = linkedUser ? ((linkedUser.roles && linkedUser.roles[0]) || linkedUser.role || "miembro") : "miembro";
     roleChoices.forEach(choice => {
       const option = document.createElement("option");
       option.value = choice.value;
       option.textContent = choice.label;
-      select.appendChild(option);
+      if (choice.value === "lider" && (member.status !== "Activo" || !member.ministry || member.ministry === "General")) {
+        option.disabled = true;
+        option.textContent = "Líder (requiere ministerio activo)";
+      }
+      roleSelect.appendChild(option);
     });
-    if (linkedUser) {
-      const activeRole = (linkedUser.roles && linkedUser.roles[0]) || linkedUser.role || "miembro";
-      select.value = roleChoices.some(choice => choice.value === activeRole) ? activeRole : "miembro";
-      select.disabled = linkedUser.id === currentUser.id;
-      select.id = "member-role-" + member.id;
-    } else {
-      select.value = "miembro";
-      select.disabled = true;
+    roleSelect.value = roleChoices.some(choice => choice.value === currentRole) ? currentRole : "miembro";
+    roleSelect.disabled = !linkedUser || linkedUser.id === currentUser.id;
+    if (linkedUser) roleSelect.id = "member-role-" + member.id;
+    roleCell.appendChild(roleSelect);
+
+    const ministryCell = document.createElement("td");
+    ministryCell.className = "py-2.5 px-3 min-w-[155px]";
+    const ministrySelect = document.createElement("select");
+    ministrySelect.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
+    ministrySelect.setAttribute("aria-label", "Ministerio asignado de " + (member.name || "miembro"));
+    ministryChoices.forEach(ministry => {
+      const option = document.createElement("option");
+      option.value = ministry;
+      option.textContent = ministry;
+      if (currentRole === "lider" && ministry === "General") option.disabled = true;
+      ministrySelect.appendChild(option);
+    });
+    ministrySelect.value = ministryChoices.includes(member.ministry) ? member.ministry : "General";
+    ministrySelect.disabled = !linkedUser || linkedUser.id === currentUser.id || member.status !== "Activo";
+    if (linkedUser) ministrySelect.id = "member-ministry-" + member.id;
+    ministryCell.appendChild(ministrySelect);
+    if (member.status !== "Activo") {
+      const hint = document.createElement("p");
+      hint.className = "mt-1 text-[10px] text-slate-500";
+      hint.textContent = "Solo miembros activos pueden cambiar de ministerio";
+      ministryCell.appendChild(hint);
     }
-    roleCell.appendChild(select);
+
     if (linkedUser && linkedUser.id !== currentUser.id) {
       const save = document.createElement("button");
       save.type = "button";
-      save.className = "ml-2 mt-1 sm:mt-0 px-3 py-2 rounded-lg bg-church-800 hover:bg-church-900 text-white text-xs font-semibold";
+      save.className = "ml-1 mt-1 sm:mt-0 px-3 py-2 rounded-lg bg-church-800 hover:bg-church-900 text-white text-xs font-semibold";
       save.textContent = "Guardar";
       save.addEventListener("click", () => saveMemberRole(member.id));
       roleCell.appendChild(save);
     } else if (linkedUser && linkedUser.id === currentUser.id) {
       const note = document.createElement("p");
       note.className = "mt-1 text-[10px] text-amber-600 dark:text-amber-400";
-      note.textContent = "No puedes cambiar tu propio rol";
+      note.textContent = "No puedes cambiar tu propio rol ni ministerio";
       roleCell.appendChild(note);
     }
+
     const accountCell = document.createElement("td");
     accountCell.className = "py-3 px-3 text-xs";
     accountCell.textContent = linkedUser
       ? (linkedUser.active ? "Cuenta activa" : "Cuenta pendiente/inactiva") + " · " + (linkedUser.username || "")
       : "Sin cuenta vinculada";
     accountCell.classList.add(linkedUser ? "text-slate-600" : "text-amber-600", "dark:text-slate-400");
-    tr.append(name, roleCell, accountCell);
+    tr.append(name, roleCell, ministryCell, accountCell);
     tbody.appendChild(tr);
   });
 }
@@ -1494,28 +1520,77 @@ async function saveMemberRole(memberId) {
   if (!currentUser || !hasRole("admin")) return;
   const member = members.find(item => String(item.id) === String(memberId));
   const linkedUser = users.find(user => String(user.memberId) === String(memberId));
-  const select = document.getElementById("member-role-" + memberId);
+  const roleSelect = document.getElementById("member-role-" + memberId);
+  const ministrySelect = document.getElementById("member-ministry-" + memberId);
   const allowedRoles = ["admin", "pastor", "lider", "miembro"];
-  if (!member || !linkedUser || !select || linkedUser.id === currentUser.id || !allowedRoles.includes(select.value)) {
-    alert("No se puede asignar el rol: verifica que el miembro tenga una cuenta vinculada.");
+  const allowedMinistries = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
+  if (!member || !linkedUser || !roleSelect || !ministrySelect || linkedUser.id === currentUser.id ||
+      !allowedRoles.includes(roleSelect.value) || !allowedMinistries.includes(ministrySelect.value)) {
+    alert("No se puede guardar: verifica la cuenta vinculada y las asignaciones.");
     return;
   }
-  const nextRoles = [select.value];
-  if (JSON.stringify(nextRoles) === JSON.stringify(linkedUser.roles || [linkedUser.role])) return;
-  if (!confirm("¿Asignar el rol " + roleDisplayName(select.value) + " a " + member.name + "?")) {
+
+  const nextRole = roleSelect.value;
+  const nextMinistry = ministrySelect.value;
+  const previousRole = (linkedUser.roles && linkedUser.roles[0]) || linkedUser.role || "miembro";
+  const previousMinistry = member.ministry || "General";
+  if (nextRole === "lider" && (member.status !== "Activo" || nextMinistry === "General")) {
+    alert("Para asignar el rol Líder, la ficha debe estar Activa y tener un ministerio distinto de General.");
+    return;
+  }
+  if (member.status !== "Activo" && nextMinistry !== previousMinistry) {
+    alert("Solo puedes cambiar el ministerio de un miembro con estado Activo.");
+    return;
+  }
+  if (nextRole === previousRole && nextMinistry === previousMinistry) return;
+
+  const changes = [];
+  if (nextRole !== previousRole) changes.push("rol " + roleDisplayName(nextRole));
+  if (nextMinistry !== previousMinistry) changes.push("ministerio " + nextMinistry);
+  if (!confirm("Guardar para " + member.name + ": " + changes.join(" y ") + "?")) {
     renderUsersTable();
     return;
   }
-  const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", linkedUser.id);
-  if (error) {
-    alert("No se pudo actualizar el rol: " + error.message);
+
+  const updateRole = async () => {
+    if (nextRole === previousRole) return;
+    const { error } = await window.supabaseClient.from("perfiles_app")
+      .update({ roles: [nextRole] }).eq("id", linkedUser.id);
+    if (error) throw error;
+  };
+  const updateMinistry = async () => {
+    if (nextMinistry === previousMinistry) return;
+    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
+      p_miembro_id: String(member.id),
+      p_ministerio: nextMinistry
+    });
+    if (error) throw error;
+  };
+
+  try {
+    // Primero se retira el rol de líder antes de permitir General; en los demás casos
+    // se asigna primero el ministerio para que nunca exista un líder sin ministerio.
+    if (previousRole === "lider" && nextRole !== "lider" && nextMinistry === "General") {
+      await updateRole();
+      await updateMinistry();
+    } else {
+      await updateMinistry();
+      await updateRole();
+    }
+    await refreshCloudData();
+    await loadProfilesFromCloud();
     renderUsersTable();
-    return;
+    alert("Rol y ministerio actualizados correctamente. La persona deberá actualizar la página para aplicar los permisos.");
+  } catch (error) {
+    console.error("No se pudo actualizar rol/ministerio:", error);
+    await refreshCloudData().catch(() => {});
+    await loadProfilesFromCloud().catch(() => {});
+    renderUsersTable();
+    alert("No se pudo completar la asignación: " + error.message);
   }
-  await loadProfilesFromCloud();
-  renderUsersTable();
-  alert("Rol actualizado correctamente. La persona deberá actualizar la página para aplicar los permisos.");
 }
+
+
 
 function renderApprovedAccessTable() {
   const tbody = document.getElementById("approved-users-table-body");
