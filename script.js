@@ -2665,7 +2665,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"))) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("servidor"))) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -2688,7 +2688,7 @@ async function handleFormSubmit(e) {
   if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasRole("servidor"))) return;
 
   const id = document.getElementById("member-id").value;
-  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor") && !hasRole("lider")) {
+  if (id && hasRole("servidor") && !hasRole("admin") && !hasRole("pastor")) {
     alert("El rol Servidor solo puede crear miembros, no editar registros existentes.");
     return;
   }
