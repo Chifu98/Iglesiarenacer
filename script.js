@@ -2338,7 +2338,7 @@ function getFilteredRequests() {
       matchesTime = (now - reqDate) <= oneDayMs;
     }
 
-    const matchesOwner = ownershipFilter !== 'mine' || (currentUser && req.createdBy === currentUser.id);
+    const matchesOwner = ownershipFilter !== 'mine' || (currentUser && currentUser.memberId && req.memberId === currentUser.memberId);
     return matchesSearch && matchesTime && matchesOwner;
   });
 }
@@ -2346,7 +2346,7 @@ function getFilteredRequests() {
 function renderRequests() {
   const ownerFilter = document.getElementById('filter-request-owner');
   if (ownerFilter) {
-    const memberCanFilterOwn = isMemberOnly();
+    const memberCanFilterOwn = !!(currentUser && currentUser.memberId && (hasRole("miembro") || hasRole("hermano")));
     ownerFilter.classList.toggle('hidden', !memberCanFilterOwn);
     if (!memberCanFilterOwn) ownerFilter.value = 'all';
   }
