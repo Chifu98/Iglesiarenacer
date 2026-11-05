@@ -291,21 +291,7 @@
         <div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between hover:shadow-md transition">
           <div>
             <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">En Visita</p>
-            <h3 id="stat-visits" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">0</h3>
-            <div class="flex items-center gap-2 mt-1">
-              <button onclick="shareVisits('txt')" title="Descargar como .txt" class="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5">
-                <i data-lucide="file-text" class="w-3 h-3"></i>.TXT
-              </button>
-              <span class="text-slate-300">|</span>
-              <button onclick="shareVisits('image')" title="Generar Imagen" class="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5">
-                <i data-lucide="image" class="w-3 h-3"></i>IMG
-              </button>
-              <span class="text-slate-300">|</span>
-              <button onclick="shareVisits('whatsapp')" title="Compartir WhatsApp" class="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 font-semibold">
-                <i data-lucide="share-2" class="w-3 h-3"></i>WSP
-              </button>
-            </div>
-          </div>
+            <h3 id="stat-visits" class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">0</h3></div>
           <div class="p-3 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
             <i data-lucide="user-plus" class="w-6 h-6"></i>
           </div>
@@ -397,19 +383,6 @@
               <option value="11">Noviembre</option>
               <option value="12">Diciembre</option>
             </select>
-
-            <!-- Export/Share Buttons -->
-            <div class="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
-              <button onclick="shareBirthdays('txt')" title="Descargar como TXT" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
-                <i data-lucide="file-text" class="w-4 h-4"></i> .TXT
-              </button>
-              <button onclick="shareBirthdays('image')" title="Descargar como Imagen" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
-                <i data-lucide="image" class="w-4 h-4"></i> Imagen
-              </button>
-              <button onclick="shareBirthdays('whatsapp')" title="Compartir en WhatsApp" class="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm">
-                <i data-lucide="share-2" class="w-4 h-4"></i> WhatsApp
-              </button>
-            </div>
           </div>
         </div>
 
@@ -458,21 +431,7 @@
                     class="px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
               <option value="all">Todas las Peticiones</option>
               <option value="last-day">Último Día (24 hrs)</option>
-            </select>
-
-            <div class="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3">
-              <button onclick="shareRequests('txt')" title="Descargar como archivo TXT" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
-                <i data-lucide="file-text" class="w-4 h-4"></i> .TXT
-              </button>
-              <button onclick="shareRequests('image')" title="Descargar Imagen estilizada" class="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/40 text-slate-700 dark:text-slate-200 hover:text-amber-600 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
-                <i data-lucide="image" class="w-4 h-4"></i> Imagen
-              </button>
-              <button onclick="shareRequests('whatsapp')" title="Compartir en WhatsApp" class="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow-sm">
-                <i data-lucide="share-2" class="w-4 h-4"></i> WhatsApp
-              </button>
-            </div>
-          </div>
-        </div>
+            </select></div>
 
         <div id="requests-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Dynamic request cards go here -->
@@ -493,9 +452,14 @@
             </h3>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Información, avisos y actividades importantes de Iglesia Renacer.</p>
           </div>
-          <button id="btn-new-announcement" type="button" onclick="openAnnouncementModal()" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-bold shadow-sm">
-            <i data-lucide="plus" class="w-4 h-4"></i> Nuevo anuncio
-          </button>
+          <div class="flex items-center gap-2">
+            <button id="refresh-announcements-button" type="button" onclick="refreshAnnouncements()" class="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-semibold">
+              <i id="refresh-announcements-icon" data-lucide="refresh-cw" class="w-4 h-4"></i><span id="refresh-announcements-label">Actualizar</span>
+            </button>
+            <button id="btn-new-announcement" type="button" onclick="openAnnouncementModal()" class="hidden inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-church-900 text-sm font-bold shadow-sm">
+              <i data-lucide="plus" class="w-4 h-4"></i> Nuevo anuncio
+            </button>
+          </div>
         </div>
         <div id="announcements-list" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
         <div id="announcements-empty" class="hidden text-center py-8">
