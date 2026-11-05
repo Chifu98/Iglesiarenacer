@@ -1430,7 +1430,7 @@ function renderUsersTable() {
   const tbody = document.getElementById("users-table-body");
   tbody.innerHTML = "";
 
-  users.filter(user => !(user.active || user.requestStatus === "aprobado")).forEach(user => {
+  users.filter(user => !(user.active === true && user.requestStatus === "aprobado")).forEach(user => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
 
@@ -1486,7 +1486,7 @@ function renderApprovedAccessTable() {
   const status = document.getElementById("approved-users-status");
   if (!tbody) return;
   tbody.innerHTML = "";
-  const approved = users.filter(user => user.active || user.requestStatus === "aprobado");
+  const approved = users.filter(user => user.active === true && user.requestStatus === "aprobado");
   if (!approved.length) {
     if (status) status.textContent = "Todavía no hay cuentas aprobadas.";
     return;
