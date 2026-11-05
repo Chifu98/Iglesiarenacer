@@ -23,23 +23,18 @@ function startRolePreview(role, selectedMinistry = "") {
   if (!supported.includes(role)) return;
   if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles] };
 
-  const activeMember = members.find(member => member.status === "Activo");
-  const ownMember = activeMember || members[0];
   const ministry = role === "lider"
     ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
-      (rolePreviewMinistries.includes(currentUser?.ministry) ? currentUser.ministry :
+      (rolePreviewMinistries.includes(rolePreviewOriginalUser.ministry) ? rolePreviewOriginalUser.ministry :
         (rolePreviewMinistries.find(name => members.some(member => member.status === "Activo" && member.ministry === name)) || "Alabanza")))
     : "";
-  const leaderMember = role === "lider"
-    ? members.find(member => member.status === "Activo" && member.ministry === ministry)
-    : null;
+  // Se conserva la identidad y la ficha real del administrador; solo se simulan rol y ministerio en memoria.
   const previewUser = {
     ...rolePreviewOriginalUser,
-    name: role === "admin" ? rolePreviewOriginalUser.name : "Vista de " + roleDisplayName(role),
     roles: role === "servidor" ? ["miembro"] : [role],
     role: role === "servidor" ? "miembro" : role,
-    memberId: role === "admin" || role === "pastor" ? "" : String((role === "lider" ? leaderMember : ownMember)?.id || ""),
-    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (ownMember?.ministry || "General")))
+    memberId: rolePreviewOriginalUser.memberId || "",
+    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (rolePreviewOriginalUser.ministry || "General")))
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
@@ -236,11 +231,13 @@ async function refreshCloudData() {
   if (requestsResult.error) throw requestsResult.error;
   if (announcementsResult.error) throw announcementsResult.error;
 
-  if (currentUser && currentUser.memberId) {
-    const ownMemberRow = (membersResult.data || []).find(row => String(row.id) === String(currentUser.memberId));
-    currentUser.ministry = ownMemberRow ? (ownMemberRow.ministry || "General") : "General";
-  } else if (currentUser) {
-    currentUser.ministry = "General";
+  if (currentUser && !rolePreviewActive) {
+    if (currentUser.memberId) {
+      const ownMemberRow = (membersResult.data || []).find(row => String(row.id) === String(currentUser.memberId));
+      currentUser.ministry = ownMemberRow ? (ownMemberRow.ministry || "General") : "General";
+    } else {
+      currentUser.ministry = "General";
+    }
   }
 
   memberBirthdayData = null;
@@ -1004,7 +1001,7 @@ function applyRolePermissions() {
   const btnAddRequest = document.getElementById("btn-add-request");
   const btnManageUsers = document.getElementById("btn-manage-users");
   const rolePreviewControl = document.getElementById("role-preview-control");
-  if (rolePreviewControl) rolePreviewControl.classList.toggle("hidden", !isAdmin);
+  if (rolePreviewControl) rolePreviewControl.classList.toggle("hidden", !(isAdmin || (!!rolePreviewOriginalUser && rolePreviewOriginalUser.roles?.includes("admin"))));
   const pastoralHistory = document.getElementById("view-pastoral-history-section");
   const leaderHistory = document.getElementById("view-leader-history-section");
   if (pastoralHistory) pastoralHistory.classList.toggle("hidden", !canPastoralNotes);
