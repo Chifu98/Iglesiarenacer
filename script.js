@@ -2369,6 +2369,36 @@ function renderRequests() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
+
+async function refreshPrayerRequests() {
+  const button = document.getElementById("refresh-prayer-requests-button");
+  const icon = document.getElementById("refresh-prayer-requests-icon");
+  const label = document.getElementById("refresh-prayer-requests-label");
+  if (!currentUser || !window.supabaseClient) return;
+
+  if (button) button.disabled = true;
+  if (icon) icon.classList.add("animate-spin");
+  if (label) label.textContent = "Actualizando...";
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from("peticiones_oracion")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+
+    prayerRequests = (data || []).map(mapDbRequestToApp);
+    renderRequests();
+  } catch (error) {
+    console.error("No se pudieron actualizar las peticiones de oración:", error);
+    alert("No fue posible actualizar las peticiones de oración. Revisa tu conexión e inténtalo nuevamente.");
+  } finally {
+    if (button) button.disabled = false;
+    if (icon) icon.classList.remove("animate-spin");
+    if (label) label.textContent = "Actualizar";
+  }
+}
+
 function shareRequests(format) {
   const filtered = getFilteredRequests();
   if (filtered.length === 0) {
