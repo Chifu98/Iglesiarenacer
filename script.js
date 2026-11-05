@@ -2343,25 +2343,19 @@ function renderRequests() {
       const reqDate = new Date(req.createdAt);
       const timeFormatted = reqDate.toLocaleDateString('es-CL') + ' · ' + reqDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      const card = document.createElement('div');
-      card.className = "prayer-request-card bg-slate-50 dark:bg-slate-900/60 p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-700/80 flex flex-row items-start justify-between gap-5";
-
+      const card = document.createElement('article');
+      card.className = "prayer-request-card bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col gap-3";
       card.innerHTML = `
-        <div>
-          <div class="flex flex-col gap-1">
-            <span class="prayer-request-name text-lg font-bold text-amber-600 dark:text-amber-400">${escapeHtml(memberName)}</span>
-            <span class="prayer-request-date text-sm text-slate-400 flex items-center gap-2">
+        <div class="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-700 pb-3">
+          <div class="min-w-0">
+            <span class="prayer-request-name block text-base font-bold text-amber-600 dark:text-amber-400">${escapeHtml(memberName)}</span>
+            <span class="prayer-request-date mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <i data-lucide="clock" class="w-3 h-3"></i> ${escapeHtml(timeFormatted)}
             </span>
           </div>
-          <p class="prayer-request-text text-base leading-relaxed font-medium text-slate-800 dark:text-slate-200 mt-4">"${escapeHtml(req.text)}"</p>
+          ${canEdit ? `<button onclick="deleteRequest('${escapeHtml(req.id)}')" title="Eliminar petición" aria-label="Eliminar petición" class="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
         </div>
-        ${canEdit ? `
-        <div class="flex justify-end pt-2 border-t border-slate-200/60 dark:border-slate-800">
-          <button onclick="deleteRequest('${escapeHtml(req.id)}')" title="Eliminar petición" class="text-slate-400 hover:text-rose-600 transition">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </div>` : ''}
+        <p class="prayer-request-text text-sm leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">${escapeHtml(req.text)}</p>
       `;
       container.appendChild(card);
     });
