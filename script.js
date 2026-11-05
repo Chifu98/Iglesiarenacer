@@ -2752,16 +2752,75 @@ function closeModal() {
   document.getElementById('member-modal').classList.add('hidden');
 }
 
+let requestSelectedMemberId = null;
+let requestSearchTimer = null;
+let requestSearchSequence = 0;
+
 function openRequestModal() {
   if (!currentUser) return;
   document.getElementById("request-form").reset();
-  document.getElementById("request-member-name").value = currentUser.name || "";
-  if (isMemberOnly() && !currentUser.memberId) {
-    alert("Tu usuario no tiene vinculado un registro de miembro. Contacta al administrador.");
-    return;
-  }
+  const nameInput = document.getElementById("request-member-name");
+  nameInput.value = currentUser.name || "";
+  requestSelectedMemberId = currentUser.memberId || null;
+  const results = document.getElementById("request-member-results");
+  if (results) { results.innerHTML = ""; results.classList.add("hidden"); }
   document.getElementById('request-modal').classList.remove('hidden');
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
+async function searchRequestMembers() {
+  const input = document.getElementById("request-member-name");
+  const results = document.getElementById("request-member-results");
+  if (!input || !results) return;
+  requestSelectedMemberId = null;
+  const term = input.value.trim();
+  const sequence = ++requestSearchSequence;
+  if (requestSearchTimer) clearTimeout(requestSearchTimer);
+  if (term.length < 2) {
+    results.innerHTML = "";
+    results.classList.add("hidden");
+    return;
+  }
+  results.innerHTML = '<div class="px-3 py-2 text-xs text-slate-500">Buscando miembros...</div>';
+  results.classList.remove("hidden");
+  requestSearchTimer = setTimeout(async () => {
+    try {
+      const { data, error } = await window.supabaseClient.rpc("buscar_miembros_para_peticion", { p_busqueda: term });
+      if (sequence !== requestSearchSequence) return;
+      if (error) throw error;
+      results.innerHTML = "";
+      if (!data || !data.length) {
+        results.innerHTML = '<div class="px-3 py-2 text-xs text-slate-500">No se encontró una ficha. La petición quedará sin asociar.</div>';
+        return;
+      }
+      data.forEach(member => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "w-full text-left px-3 py-2 hover:bg-amber-50 dark:hover:bg-slate-700 flex items-center justify-between gap-3";
+        const name = document.createElement("span");
+        name.className = "text-sm font-medium text-slate-800 dark:text-slate-100";
+        name.textContent = member.name;
+        const status = document.createElement("span");
+        status.className = "text-xs text-slate-500 dark:text-slate-400 shrink-0";
+        status.textContent = member.status || "Ficha";
+        option.append(name, status);
+        option.addEventListener("click", () => selectRequestMember(member.id, member.name));
+        results.appendChild(option);
+      });
+    } catch (error) {
+      console.error("Error buscando miembros para petición:", error);
+      if (sequence === requestSearchSequence) {
+        results.innerHTML = '<div class="px-3 py-2 text-xs text-rose-600">No fue posible buscar en la base de datos.</div>';
+      }
+    }
+  }, 250);
+}
+
+function selectRequestMember(memberId, memberName) {
+  requestSelectedMemberId = memberId;
+  document.getElementById("request-member-name").value = memberName;
+  const results = document.getElementById("request-member-results");
+  if (results) { results.innerHTML = ""; results.classList.add("hidden"); }
 }
 
 function closeRequestModal() {
@@ -2773,12 +2832,7 @@ async function handleRequestSubmit(e) {
   if (!currentUser) return;
 
   const memberName = document.getElementById("request-member-name").value.trim();
-  const linkedMember = currentUser.memberId
-    ? members.find(member => String(member.id) === String(currentUser.memberId))
-    : null;
-  const isOwnRequest = linkedMember &&
-    memberName.localeCompare(linkedMember.name || currentUser.name || "", "es", { sensitivity: "base" }) === 0;
-  const memberId = isOwnRequest ? linkedMember.id : null;
+  const memberId = requestSelectedMemberId || null;
   if (!memberName) {
     alert("Escribe el nombre de quien solicita la oración.");
     return;
