@@ -39,7 +39,7 @@ function startRolePreview(role, selectedMinistry = "") {
     roles: role === "servidor" ? ["miembro"] : [role],
     role: role === "servidor" ? "miembro" : role,
     memberId: role === "admin" || role === "pastor" ? "" : String((role === "lider" ? leaderMember : ownMember)?.id || ""),
-    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (ownMember?.ministry || "General"))))
+    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (ownMember?.ministry || "General")))
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
