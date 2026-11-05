@@ -78,7 +78,8 @@ function mapDbMemberToApp(row) {
     avatar: row.avatar || "",
     inviterMemberId: row.inviter_member_id || "",
     inviterName: row.inviter_name || "",
-    inviterRelationship: row.inviter_relationship || ""
+    inviterRelationship: row.inviter_relationship || "",
+    createdAt: row.created_at || ""
   };
 }
 
@@ -101,6 +102,7 @@ function mapAppMemberToDb(member) {
     inviter_member_id: member.status !== "Activo" ? (member.inviterMemberId || null) : null,
     inviter_name: member.status !== "Activo" ? (member.inviterName || null) : null,
     inviter_relationship: member.status !== "Activo" ? (member.inviterRelationship || null) : null,
+    created_at: member.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 }
@@ -1688,41 +1690,70 @@ function renderVisitCards() {
   const container = document.getElementById("visit-cards-list");
   const empty = document.getElementById("visit-cards-empty");
   const count = document.getElementById("visit-cards-count");
+  const archivedContainer = document.getElementById("visit-cards-archived-list");
+  const archivedSection = document.getElementById("visit-cards-archived-section");
+  const archivedCount = document.getElementById("visit-cards-archived-count");
   if (!module || !container || !empty || !count) return;
   const canView = canViewVisitsModule();
   module.classList.toggle("hidden", !canView);
-  if (!canView) { container.replaceChildren(); return; }
+  if (!canView) {
+    container.replaceChildren();
+    if (archivedContainer) archivedContainer.replaceChildren();
+    return;
+  }
 
-  const visits = members.filter(member => member.status === "En Visita");
-  count.textContent = visits.length + (visits.length === 1 ? " visita" : " visitas");
+  const now = Date.now();
+  const visitRecords = members.filter(member => member.status === "En Visita");
+  const isRecentVisit = member => {
+    const createdAt = member.createdAt ? new Date(member.createdAt).getTime() : NaN;
+    return Number.isFinite(createdAt) && createdAt > now - 24 * 60 * 60 * 1000;
+  };
+  const activeVisits = visitRecords.filter(isRecentVisit);
+  const archivedVisits = visitRecords.filter(member => !isRecentVisit(member));
+
+  count.textContent = activeVisits.length + (activeVisits.length === 1 ? " visita activa" : " visitas activas");
   container.replaceChildren();
-  empty.classList.toggle("hidden", visits.length > 0);
+  empty.classList.toggle("hidden", activeVisits.length > 0);
+  if (archivedSection) archivedSection.classList.toggle("hidden", archivedVisits.length === 0);
+  if (archivedCount) archivedCount.textContent = String(archivedVisits.length);
+  if (archivedContainer) archivedContainer.replaceChildren();
 
-  visits.forEach(member => {
+  const renderCard = (member, archived = false) => {
     const card = document.createElement("article");
-    card.className = "relative overflow-hidden rounded-2xl border border-amber-200 dark:border-amber-700/50 bg-gradient-to-br from-white via-amber-50/70 to-white dark:from-slate-800 dark:via-slate-800 dark:to-slate-900 p-5 shadow-sm";
+    card.className = "relative overflow-hidden rounded-2xl border " +
+      (archived
+        ? "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+        : "border-amber-200 dark:border-amber-700/50 bg-gradient-to-br from-white via-amber-50/70 to-white dark:from-slate-800 dark:via-slate-800 dark:to-slate-900") +
+      " p-5 shadow-sm";
     const initials = (member.name || "?").trim().split(/\\s+/).map(part => part[0]).slice(0,2).join("").toUpperCase();
     const inviter = member.inviterName || "No especificado";
     const relationship = member.inviterRelationship || "No especificado";
+    const createdAt = member.createdAt ? new Date(member.createdAt) : null;
+    const dateLabel = createdAt && !Number.isNaN(createdAt.getTime())
+      ? createdAt.toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })
+      : "Fecha de creación no disponible";
     card.innerHTML = `
-      <div class="absolute -right-8 -top-8 w-28 h-28 rounded-full bg-amber-400/10"></div>
       <div class="relative flex items-start gap-3">
-        <div class="w-12 h-12 shrink-0 rounded-xl bg-church-900 text-amber-300 flex items-center justify-center font-bold text-sm">${escapeHtml(initials)}</div>
+        <div class="w-12 h-12 shrink-0 rounded-xl ${archived ? "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300" : "bg-church-900 text-amber-300"} flex items-center justify-center font-bold text-sm">${escapeHtml(initials)}</div>
         <div class="min-w-0 flex-1">
-          <p class="text-[10px] uppercase tracking-[0.18em] font-bold text-amber-700 dark:text-amber-400">Nueva visita</p>
+          <p class="text-[10px] uppercase tracking-[0.18em] font-bold ${archived ? "text-slate-500" : "text-amber-700 dark:text-amber-400"}">${archived ? "Visita archivada" : "Nueva visita"}</p>
           <h4 class="font-bold text-slate-900 dark:text-white text-lg leading-tight break-words">${escapeHtml(member.name || "Sin nombre")}</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Creada: ${escapeHtml(dateLabel)}</p>
         </div>
-        <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">En Visita</span>
+        <span class="shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${archived ? "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300" : "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"}">${archived ? "Archivada" : "En Visita"}</span>
       </div>
-      <div class="relative mt-5 space-y-3 border-t border-amber-200/70 dark:border-slate-700 pt-4">
+      <div class="relative mt-5 space-y-3 border-t border-slate-200/70 dark:border-slate-700 pt-4">
         <div class="flex items-start gap-2"><i data-lucide="user-round-plus" class="w-4 h-4 mt-0.5 text-amber-600 shrink-0"></i><div class="min-w-0"><p class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Invitado por</p><p class="text-sm font-semibold text-slate-800 dark:text-slate-100 break-words">${escapeHtml(inviter)}</p></div></div>
         <div class="flex items-start gap-2"><i data-lucide="heart-handshake" class="w-4 h-4 mt-0.5 text-amber-600 shrink-0"></i><div class="min-w-0"><p class="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">Parentesco / relación</p><p class="text-sm text-slate-700 dark:text-slate-300 break-words">${escapeHtml(relationship)}</p></div></div>
       </div>
-      ${canDeleteVisitCards() ? `<div class="relative mt-4 pt-3 border-t border-amber-200/70 dark:border-slate-700 flex justify-end"><button type="button" onclick="deleteVisitCard('${escapeHtml(String(member.id))}')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar tarjeta</button></div>` : ""}
+      ${canDeleteVisitCards() ? `<div class="relative mt-4 pt-3 border-t border-slate-200/70 dark:border-slate-700 flex justify-end"><button type="button" onclick="deleteVisitCard('${escapeHtml(String(member.id))}')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar tarjeta</button></div>` : ""}
     `;
-    container.appendChild(card);
-  });
-  if (window.lucide) if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+    return card;
+  };
+
+  activeVisits.forEach(member => container.appendChild(renderCard(member)));
+  if (archivedContainer) archivedVisits.forEach(member => archivedContainer.appendChild(renderCard(member, true)));
+  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 
 async function refreshVisitCards() {
