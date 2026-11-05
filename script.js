@@ -1439,7 +1439,10 @@ function renderUsersTable() {
   ];
   const ministryChoices = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
 
-  [...members].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es")).forEach(member => {
+  // La asignación de roles solo debe mostrar fichas con estado Activo.
+  members.filter(member => member.status === "Activo")
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es"))
+    .forEach(member => {
     const linkedUser = users.find(user => String(user.memberId) === String(member.id));
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50";
