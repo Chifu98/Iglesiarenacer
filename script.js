@@ -242,20 +242,24 @@ async function refreshCloudData() {
     }
   }
 
-  memberBirthdayData = null;
-  if (isMemberOnly()) {
-    const { data: birthdayRows, error: birthdayError } = await client.rpc("listar_cumpleanos_congregacion");
-    if (birthdayError) {
-      console.warn("No se pudo cargar el listado de cumpleaños autorizado:", birthdayError);
-      memberBirthdayData = [];
-    } else {
-      memberBirthdayData = (birthdayRows || []).map(row => ({
-        name: row.nombre || "",
-        birthday: row.cumpleanos || "",
-        avatar: "",
-        phone: ""
+  // El listado de cumpleaños se obtiene mediante una RPC de datos mínimos para todos los perfiles activos.
+  // Así no depende del alcance de lectura de fichas que tenga cada rol.
+  memberBirthdayData = [];
+  const { data: birthdayRows, error: birthdayError } = await client.rpc("listar_cumpleanos_congregacion");
+  if (birthdayError) {
+    console.warn("No se pudo cargar el listado de cumpleaños autorizado:", birthdayError);
+    if (hasRole("admin") || hasRole("pastor")) {
+      memberBirthdayData = (membersResult.data || []).map(row => ({
+        name: row.name || "", birthday: row.birthday || "", avatar: "", phone: ""
       }));
     }
+  } else {
+    memberBirthdayData = (birthdayRows || []).map(row => ({
+      name: row.nombre || "",
+      birthday: row.cumpleanos || "",
+      avatar: "",
+      phone: ""
+    }));
   }
 
   let privateNotes = new Map();
@@ -2337,7 +2341,7 @@ function previewAvatar(event) {
 
 function getBirthdayMembersForSelectedMonth() {
   const monthSelect = document.getElementById('share-birthday-month').value;
-  const source = isMemberOnly() ? (memberBirthdayData || []) : members;
+  const source = memberBirthdayData || members;
   return source.filter(m => {
     if (!m.birthday) return false;
     const parts = m.birthday.split('-');
