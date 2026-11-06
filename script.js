@@ -167,6 +167,7 @@ function mapDbMemberToApp(row) {
     spouseType: row.spouse_type || "none",
     spouseName: row.spouse_name || "",
     spouseId: row.spouse_id || "",
+    ministries: Array.isArray(row.ministries) ? row.ministries : (row.ministry && row.ministry !== "General" ? [row.ministry] : []),
     ministry: row.ministry || "General",
     status: row.status || "Activo",
     baptized: row.baptized || "No",
@@ -193,6 +194,7 @@ function mapAppMemberToDb(member) {
     spouse_name: member.spouseName || null,
     spouse_id: member.spouseId || null,
     ministry: member.ministry || "General",
+    ministries: Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== "General" ? [member.ministry] : []),
     status: member.status || "Activo",
     baptized: member.baptized || null,
     birthday: member.birthday || null,
@@ -240,9 +242,11 @@ async function refreshCloudData() {
   if (currentUser && !rolePreviewActive) {
     if (currentUser.memberId) {
       const ownMemberRow = (membersResult.data || []).find(row => String(row.id) === String(currentUser.memberId));
-      currentUser.ministry = ownMemberRow ? (ownMemberRow.ministry || "General") : "General";
+      currentUser.ministries = ownMemberRow && Array.isArray(ownMemberRow.ministries) ? ownMemberRow.ministries : (ownMemberRow && ownMemberRow.ministry !== "General" ? [ownMemberRow.ministry] : []);
+      currentUser.ministry = ownMemberRow ? (ownMemberRow.ministry || currentUser.ministries[0] || "General") : "General";
     } else {
       currentUser.ministry = "General";
+      currentUser.ministries = [];
     }
   }
 
@@ -780,30 +784,27 @@ async function refreshMinistryModules() {
   const memberModule = document.getElementById("member-ministry-module");
   const reviewModule = document.getElementById("ministry-requests-module");
 
-  if (isMemberOnly() && currentUser.memberId && memberModule) {
+  if (currentUser.memberId && memberModule && !rolePreviewActive) {
     const ownMember = members.find(m => String(m.id) === String(currentUser.memberId));
-    let request = null;
+    let requests = [];
     const { data, error } = await window.supabaseClient.rpc("mi_estado_solicitud_ministerio");
-    if (error) console.warn("No se pudo consultar el estado de la solicitud de ministerio:", error);
-    else request = Array.isArray(data) && data.length ? data[0] : null;
-
-    const eligible = !!ownMember && ownMember.status === "Activo" && (ownMember.ministry || "General") === "General";
+    if (error) console.warn("No se pudo consultar el estado de las solicitudes de ministerio:", error);
+    else requests = Array.isArray(data) ? data : [];
+    const approved = ownMember && Array.isArray(ownMember.ministries) ? ownMember.ministries : (ownMember && ownMember.ministry !== "General" ? [ownMember.ministry] : []);
+    const pendingNames = requests.filter(item => item.estado === "pendiente").map(item => item.ministerio_solicitado);
+    const rejectedNames = requests.filter(item => item.estado === "rechazado").map(item => item.ministerio_solicitado);
+    const eligible = !!ownMember && ownMember.status === "Activo";
     memberModule.classList.toggle("hidden", !eligible);
     const form = document.getElementById("member-ministry-form");
     const pending = document.getElementById("member-ministry-pending");
     const message = document.getElementById("member-ministry-message");
+    const select = document.getElementById("member-ministry-select");
+    if (select) Array.from(select.options).forEach(option => { if (option.value) option.disabled = approved.includes(option.value) || pendingNames.includes(option.value); });
     if (form && pending && message) {
-      if (request && request.estado === "pendiente") {
-        form.classList.add("hidden");
-        pending.classList.remove("hidden");
-        message.textContent = "Tu solicitud para " + request.ministerio + " está pendiente de autorización del líder o de Administración.";
-      } else {
-        pending.classList.add("hidden");
-        form.classList.remove("hidden");
-        message.textContent = request && request.estado === "rechazado"
-          ? "Tu solicitud anterior no fue aprobada. Puedes escoger un ministerio y enviar una nueva solicitud."
-          : "Escoge el ministerio al que deseas integrarte. Tu ingreso quedará pendiente hasta ser autorizado.";
-      }
+      pending.classList.toggle("hidden", pendingNames.length === 0);
+      pending.textContent = pendingNames.length ? "Solicitudes pendientes: " + pendingNames.join(", ") + ". Cada una será revisada por el líder de ese ministerio o por Administración." : "";
+      form.classList.toggle("hidden", !eligible || !select || !Array.from(select.options).some(option => option.value && !option.disabled));
+      message.textContent = rejectedNames.length ? "No se aprobaron estas solicitudes: " + rejectedNames.join(", ") + ". Puedes volver a solicitarlas o escoger otro ministerio." : "Puedes solicitar ingreso a varios ministerios. Cada solicitud se revisa de forma independiente.";
     }
   } else if (memberModule) {
     memberModule.classList.add("hidden");
@@ -850,9 +851,9 @@ async function refreshMinistryModules() {
   }
 }
 
-async function submitMemberMinistryRequest(event) {
+async async function submitMemberMinistryRequest(event) {
   event.preventDefault();
-  if (!isMemberOnly() || !currentUser.memberId) return;
+  if (!currentUser || !currentUser.memberId || rolePreviewActive) return;
   const select = document.getElementById("member-ministry-select");
   const button = document.getElementById("member-ministry-submit");
   const ministry = select ? select.value : "";
@@ -870,7 +871,7 @@ async function submitMemberMinistryRequest(event) {
   }
 }
 
-async function resolveMinistryRequest(id, approve) {
+async async function resolveMinistryRequest(id, approve) {
   const action = approve ? "autorizar" : "rechazar";
   if (!confirm("¿Deseas " + action + " esta solicitud de ministerio?")) return;
   try {
@@ -903,13 +904,14 @@ async function removeMemberFromMyMinistry() {
   }
 }
 
-async function adminAssignMemberMinistry() {
+async async function adminAssignMemberMinistry() {
   const id = window.currentDetailsMemberId;
   const select = document.getElementById("view-admin-ministry-select");
   if (!id || !select) return;
+  const ministries = Array.from(select.selectedOptions).map(option => option.value).filter(Boolean);
   try {
-    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
-      p_miembro_id: String(id), p_ministerio: select.value
+    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerios", {
+      p_miembro_id: String(id), p_ministerios: ministries
     });
     if (error) throw error;
     await refreshCloudData();
@@ -2307,7 +2309,7 @@ function renderDashboard() {
   const active = members.filter(m => m.status === 'Activo').length;
   const visits = countRecentVisitCards();
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
-  const activeMinistries = new Set(members.map(m => m.ministry).filter(m => m && m !== 'General')).size;
+  const activeMinistries = new Set(members.flatMap(m => Array.isArray(m.ministries) ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : []))).size;
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-active').textContent = active;
@@ -2665,7 +2667,7 @@ function renderTable() {
   tbody.innerHTML = '';
 
   const roleScopedMembers = rolePreviewActive && hasRole("lider")
-    ? members.filter(member => member.ministry === currentUser.ministry)
+    ? members.filter(member => (Array.isArray(member.ministries) ? member.ministries : [member.ministry]).includes(currentUser.ministry))
     : rolePreviewActive && isMemberOnly()
       ? members.filter(member => String(member.id) === String(currentUser.memberId))
       : members;
@@ -2676,7 +2678,8 @@ function renderTable() {
       (m.email && m.email.toLowerCase().includes(searchVal));
     
     const matchesMarital = maritalFilter === '' || m.maritalStatus === maritalFilter;
-    const matchesMinistry = ministryFilter === '' || m.ministry === ministryFilter;
+    const memberMinistries = Array.isArray(m.ministries) ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : []);
+    const matchesMinistry = ministryFilter === '' || memberMinistries.includes(ministryFilter) || (ministryFilter === 'General' && memberMinistries.length === 0);
     const matchesStatus = statusFilter === '' || m.status === statusFilter;
 
     return matchesSearch && matchesMarital && matchesMinistry && matchesStatus;
@@ -3096,7 +3099,8 @@ async function handleFormSubmit(e) {
     spouseType: spouseType,
     spouseName: spouseName,
     spouseId: spouseId,
-    ministry: document.getElementById("input-ministry").value,
+    ministries: Array.from(document.getElementById("input-ministry").selectedOptions).map(option => option.value).filter(Boolean),
+    ministry: Array.from(document.getElementById("input-ministry").selectedOptions).map(option => option.value).filter(Boolean)[0] || "General",
     status: (hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor"))
       ? "En Visita"
       : document.getElementById("input-status").value,
@@ -3213,7 +3217,9 @@ function editMember(id) {
     }
   }
 
-  document.getElementById('input-ministry').value = member.ministry || 'General';
+  const ministrySelect = document.getElementById('input-ministry');
+  const memberMinistries = Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== 'General' ? [member.ministry] : []);
+  Array.from(ministrySelect.options).forEach(option => { option.selected = memberMinistries.includes(option.value); });
   document.getElementById('input-status').value = member.status || 'Activo';
   document.getElementById('input-baptized').value = member.baptized || 'Sí';
   document.getElementById('input-birthday').value = member.birthday || '';
@@ -3322,7 +3328,8 @@ function viewDetails(id) {
   document.getElementById('view-spouse-label').textContent = member.maritalStatus === 'Casado (a)' ? 'Cónyuge' : 'Pareja / Novio(a)';
   document.getElementById('view-spouse').textContent = spouseDisplay;
 
-  document.getElementById('view-ministry').textContent = member.ministry || 'General';
+  const displayMinistries = Array.isArray(member.ministries) && member.ministries.length ? member.ministries : (member.ministry && member.ministry !== 'General' ? [member.ministry] : []);
+  document.getElementById('view-ministry').textContent = displayMinistries.length ? displayMinistries.join(', ') : 'General';
   document.getElementById('view-baptized').textContent = member.baptized;
   document.getElementById('view-address').textContent = member.address || 'Sin dirección';
   document.getElementById('view-date').textContent = member.birthday ? formatDate(member.birthday) : 'N/A';
@@ -3343,18 +3350,19 @@ function viewDetails(id) {
   if (ministryControls) {
     const ownMember = currentUser && currentUser.memberId
       ? members.find(m => String(m.id) === String(currentUser.memberId)) : null;
-    const ownMinistry = ownMember ? (ownMember.ministry || "General") : "";
     const isAdmin = hasRole("admin");
     const canAssignMinistry = isAdmin || hasRole("pastor");
-    const canLeaderRemove = hasRole("lider") && ownMinistry !== "General" &&
-      (member.ministry || "General") === ownMinistry && String(member.id) !== String(currentUser.memberId);
+    const canLeaderRemove = false;
     ministryControls.classList.toggle("hidden", rolePreviewActive || !(canAssignMinistry || canLeaderRemove));
     const adminControls = document.getElementById("view-admin-ministry-controls");
     const leaderControls = document.getElementById("view-leader-ministry-controls");
     if (adminControls) adminControls.classList.toggle("hidden", !canAssignMinistry);
     if (leaderControls) leaderControls.classList.toggle("hidden", !canLeaderRemove);
     const ministrySelect = document.getElementById("view-admin-ministry-select");
-    if (ministrySelect) ministrySelect.value = member.ministry || "General";
+    if (ministrySelect) {
+      const assigned = Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== "General" ? [member.ministry] : []);
+      Array.from(ministrySelect.options).forEach(option => { option.selected = assigned.includes(option.value); });
+    }
   }
   const pastorLeaderControls = document.getElementById("view-pastor-leader-controls");
   if (pastorLeaderControls) {
