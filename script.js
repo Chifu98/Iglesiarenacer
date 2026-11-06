@@ -84,7 +84,7 @@ document.addEventListener("click", event => {
   if (!target) return;
   if (target.closest("#role-preview-bar")) return;
   const action = target.getAttribute("onclick") || "";
-  if (/showTab|switchTab|showSection|navigateTo|setActiveTab|changeTab/i.test(action)) return;
+  if (/showTab|switchTab|showSection|navigateTo|setActiveTab|changeTab|viewCurrentMemberProfile|viewDetails|closeDetailsModal/i.test(action)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   alert("La vista por roles es solo de consulta. Sal de la vista previa para realizar acciones.");
@@ -2489,7 +2489,7 @@ function renderRequests() {
     }
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions());
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || (hasServerMinistryPermissions() && !rolePreviewActive));
 
   container.innerHTML = '';
 
@@ -2865,8 +2865,10 @@ function openModal(isEdit = false) {
     handleMaritalStatusChange();
     const restrictedServer = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
     const adminFields = document.getElementById("member-admin-only-fields");
+    const adminContactFields = document.getElementById("member-admin-contact-fields");
     const adminFieldsSecondary = document.getElementById("member-admin-only-fields-secondary");
     if (adminFields) adminFields.classList.toggle("hidden", restrictedServer);
+    if (adminContactFields) adminContactFields.classList.toggle("hidden", restrictedServer);
     if (adminFieldsSecondary) adminFieldsSecondary.classList.toggle("hidden", restrictedServer);
     const serverHint = document.getElementById("server-visit-only-hint");
     if (serverHint) serverHint.classList.toggle("hidden", !restrictedServer);
@@ -2876,7 +2878,7 @@ function openModal(isEdit = false) {
       statusInput.value = restrictedServer ? "En Visita" : "Activo";
     }
     // Los campos ocultos no deben bloquear el envío por validaciones HTML.
-    document.querySelectorAll("#member-admin-only-fields [required], #member-admin-only-fields-secondary [required]").forEach(input => {
+    document.querySelectorAll("#member-admin-only-fields [required], #member-admin-contact-fields [required], #member-admin-only-fields-secondary [required]").forEach(input => {
       input.required = !restrictedServer && ["input-phone","input-marital-status","input-status","input-baptized","input-birthday"].includes(input.id);
     });
     toggleVisitInvitationFields();
@@ -3019,7 +3021,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions())) return;
+  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || (hasServerMinistryPermissions() && !rolePreviewActive))) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
@@ -3328,11 +3330,11 @@ function viewDetails(id) {
   if (leaderHistory) leaderHistory.classList.toggle("hidden", !canLeader);
   const addPastoral = document.getElementById("add-pastoral-note-button");
   const addLeader = document.getElementById("add-leader-note-button");
-  if (addPastoral) addPastoral.classList.toggle("hidden", !canPastoral);
-  if (addLeader) addLeader.classList.toggle("hidden", !hasRole("lider"));
+  if (addPastoral) addPastoral.classList.toggle("hidden", !canPastoral || rolePreviewActive);
+  if (addLeader) addLeader.classList.toggle("hidden", !hasRole("lider") || rolePreviewActive);
   loadAntecedentNotes(member.id).catch(error => console.error("No se pudo cargar el historial:", error));
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
-  if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
+  if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", rolePreviewActive || !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
   const ministryControls = document.getElementById("view-ministry-management");
   if (ministryControls) {
     const ownMember = currentUser && currentUser.memberId
@@ -3341,7 +3343,7 @@ function viewDetails(id) {
     const isAdmin = hasRole("admin");
     const canLeaderRemove = hasRole("lider") && ownMinistry !== "General" &&
       (member.ministry || "General") === ownMinistry && String(member.id) !== String(currentUser.memberId);
-    ministryControls.classList.toggle("hidden", !(isAdmin || canLeaderRemove));
+    ministryControls.classList.toggle("hidden", rolePreviewActive || !(isAdmin || canLeaderRemove));
     const adminControls = document.getElementById("view-admin-ministry-controls");
     const leaderControls = document.getElementById("view-leader-ministry-controls");
     if (adminControls) adminControls.classList.toggle("hidden", !isAdmin);
@@ -3352,7 +3354,7 @@ function viewDetails(id) {
   const accessControls = document.getElementById("view-admin-access-controls");
   if (accessControls) {
     const linkedAccount = users.find(user => String(user.memberId) === String(member.id));
-    accessControls.classList.toggle("hidden", !(currentUser && hasRole("admin")));
+    accessControls.classList.toggle("hidden", rolePreviewActive || !(currentUser && hasRole("admin")));
     const accessButton = document.getElementById("view-create-access-button");
     const accessStatus = document.getElementById("view-admin-access-status");
     if (accessButton) {
