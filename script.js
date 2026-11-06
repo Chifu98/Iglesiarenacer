@@ -14,27 +14,28 @@ let currentUser = null;
 
 let rolePreviewOriginalUser = null;
 let rolePreviewActive = false;
-const rolePreviewMinistries = ["Alabanza", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
+const rolePreviewMinistries = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
 
 function startRolePreview(role, selectedMinistry = "") {
   const adminUser = rolePreviewOriginalUser || currentUser;
   if (!adminUser || !adminUser.roles?.includes("admin")) return;
-  const supported = ["admin", "pastor", "lider", "miembro", "servidor"];
+  const supported = ["admin", "pastor", "lider", "miembro"];
   if (!supported.includes(role)) return;
   if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles] };
 
-  const ministry = role === "lider"
-    ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
-      (rolePreviewMinistries.includes(rolePreviewOriginalUser.ministry) ? rolePreviewOriginalUser.ministry :
-        (rolePreviewMinistries.find(name => members.some(member => member.status === "Activo" && member.ministry === name)) || "Alabanza")))
-    : "";
+  const originalMinistry = rolePreviewOriginalUser.ministry || "General";
+  const ministry = role === "pastor" ? "General" :
+    (role === "lider" || role === "miembro"
+      ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
+        (rolePreviewMinistries.includes(originalMinistry) ? originalMinistry : "General"))
+      : originalMinistry);
   // Se conserva la identidad y la ficha real del administrador; solo se simulan rol y ministerio en memoria.
   const previewUser = {
     ...rolePreviewOriginalUser,
-    roles: role === "servidor" ? ["miembro"] : [role],
-    role: role === "servidor" ? "miembro" : role,
+    roles: [role],
+    role,
     memberId: rolePreviewOriginalUser.memberId || "",
-    ministry: role === "servidor" ? "Servidor" : (role === "pastor" ? "General" : (role === "lider" ? ministry : (rolePreviewOriginalUser.ministry || "General")))
+    ministry: role === "pastor" ? "General" : ministry
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
@@ -42,12 +43,13 @@ function startRolePreview(role, selectedMinistry = "") {
   if (bar) {
     bar.classList.toggle("hidden", !rolePreviewActive);
     const label = document.getElementById("role-preview-label");
-    if (label) label.textContent = roleDisplayName(role) + (role === "lider" ? " · " + ministry : role === "servidor" ? " · Ministerio Servidor" : "");
+    if (label) label.textContent = roleDisplayName(role) + ((role === "lider" || role === "miembro") ? " · " + ministry : "");
   }
   const ministryControl = document.getElementById("role-preview-ministry-control");
   const ministrySelect = document.getElementById("role-preview-ministry-select");
-  if (ministryControl) ministryControl.classList.toggle("hidden", !rolePreviewActive || role !== "lider");
-  if (ministrySelect && role === "lider") ministrySelect.value = ministry;
+  const canChooseMinistry = role === "lider" || role === "miembro";
+  if (ministryControl) ministryControl.classList.toggle("hidden", !rolePreviewActive || !canChooseMinistry);
+  if (ministrySelect && canChooseMinistry) ministrySelect.value = ministry;
   const selector = document.getElementById("role-preview-select");
   if (selector) selector.value = role;
   const app = document.getElementById("app-container");
@@ -56,8 +58,8 @@ function startRolePreview(role, selectedMinistry = "") {
 }
 
 function changeRolePreviewMinistry(ministry) {
-  if (!rolePreviewActive || !rolePreviewOriginalUser) return;
-  startRolePreview("lider", ministry);
+  if (!rolePreviewActive || !rolePreviewOriginalUser || !["lider", "miembro"].includes(currentUser?.role)) return;
+  startRolePreview(currentUser.role, ministry);
 }
 
 function stopRolePreview() {
