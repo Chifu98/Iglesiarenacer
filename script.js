@@ -288,9 +288,18 @@ async function refreshCloudData() {
     });
   }
 
+  let memberRolesById = new Map();
+  const { data: memberRoleRows, error: memberRoleError } = await client.rpc("listar_roles_por_miembro");
+  if (memberRoleError) {
+    console.warn("No se pudieron cargar los roles vinculados a las fichas:", memberRoleError);
+  } else {
+    memberRolesById = new Map((memberRoleRows || []).map(row => [String(row.miembro_id), Array.isArray(row.roles) ? row.roles : []]));
+  }
+
   members = await Promise.all((membersResult.data || []).map(async row => {
     const member = {
       ...mapDbMemberToApp(row),
+      roles: memberRolesById.get(String(row.id)) || (currentUser && String(currentUser.memberId) === String(row.id) ? (currentUser.roles || [currentUser.role].filter(Boolean)) : []),
       notes: privateNotes.get(row.id) || "",
       leaderNotes: (leaderNotes.get(row.id) || []).join("\n\n")
     };
@@ -2650,6 +2659,7 @@ function renderTable() {
   const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
   const maritalFilter = document.getElementById('filter-marital-status').value;
   const ministryFilter = document.getElementById('filter-ministry').value;
+  const roleFilter = document.getElementById('filter-role')?.value || '';
   const statusFilter = document.getElementById('filter-status').value;
 
   const serverRestricted = currentUser && hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
@@ -2673,9 +2683,11 @@ function renderTable() {
     const matchesMarital = maritalFilter === '' || m.maritalStatus === maritalFilter;
     const memberMinistries = Array.isArray(m.ministries) ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : []);
     const matchesMinistry = ministryFilter === '' || memberMinistries.includes(ministryFilter) || (ministryFilter === 'General' && memberMinistries.length === 0);
+    const memberRoles = Array.isArray(m.roles) ? m.roles : [];
+    const matchesRole = roleFilter === '' || memberRoles.includes(roleFilter);
     const matchesStatus = statusFilter === '' || m.status === statusFilter;
 
-    return matchesSearch && matchesMarital && matchesMinistry && matchesStatus;
+    return matchesSearch && matchesMarital && matchesMinistry && matchesRole && matchesStatus;
   });
 
   if (filtered.length === 0) {
@@ -2708,6 +2720,11 @@ function renderTable() {
               <p class="text-xs text-slate-500 dark:text-slate-400">${escapeHtml(m.phone)} ${m.email ? '• ' + escapeHtml(m.email) : ''}</p>
             </div>
           </div>
+        </td>
+        <td class="py-3 px-4">
+          <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+            ${escapeHtml((Array.isArray(m.roles) ? m.roles : []).map(roleDisplayName).join(', ') || 'Sin cuenta')}
+          </span>
         </td>
         <td class="py-3 px-4">
           <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
@@ -3322,6 +3339,9 @@ function viewDetails(id) {
   document.getElementById('view-spouse').textContent = spouseDisplay;
 
   const displayMinistries = Array.isArray(member.ministries) && member.ministries.length ? member.ministries : (member.ministry && member.ministry !== 'General' ? [member.ministry] : []);
+  const displayRoles = Array.isArray(member.roles) ? member.roles : [];
+  const roleNode = document.getElementById('view-role');
+  if (roleNode) roleNode.textContent = displayRoles.length ? displayRoles.map(roleDisplayName).join(', ') : 'Sin cuenta asociada';
   document.getElementById('view-ministry').textContent = displayMinistries.length ? displayMinistries.join(', ') : 'General';
   document.getElementById('view-baptized').textContent = member.baptized;
   document.getElementById('view-address').textContent = member.address || 'Sin dirección';
@@ -3487,6 +3507,8 @@ function resetFilters() {
   document.getElementById('search-input').value = '';
   document.getElementById('filter-marital-status').value = '';
   document.getElementById('filter-ministry').value = '';
+  const roleFilter = document.getElementById('filter-role');
+  if (roleFilter) roleFilter.value = '';
   document.getElementById('filter-status').value = '';
   renderTable();
 }
