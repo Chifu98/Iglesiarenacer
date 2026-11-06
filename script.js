@@ -2179,7 +2179,7 @@ function canViewVisitsModule() {
 }
 
 function canDeleteVisitCards() {
-  return !!(currentUser && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()));
+  return !!(currentUser && !rolePreviewActive && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()));
 }
 
 function renderVisitCards() {
@@ -2489,7 +2489,7 @@ function renderRequests() {
     }
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || (hasServerMinistryPermissions() && !rolePreviewActive));
+  const canEdit = !!(currentUser && !rolePreviewActive && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions()));
 
   container.innerHTML = '';
 
@@ -3021,7 +3021,7 @@ async function handleRequestSubmit(e) {
 }
 
 async function deleteRequest(id) {
-  if (!currentUser || !(hasRole("admin") || hasRole("pastor") || (hasServerMinistryPermissions() && !rolePreviewActive))) return;
+  if (!currentUser || rolePreviewActive || !(hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions())) return;
   if (!confirm("¿Estás seguro de eliminar esta petición de oración?")) return;
 
   const { error } = await window.supabaseClient
