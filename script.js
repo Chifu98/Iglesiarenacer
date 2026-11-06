@@ -2718,7 +2718,7 @@ function renderTable() {
         </td>
         <td class="py-3 px-4">
           <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-            ${escapeHtml(m.ministry || 'General')}
+            ${escapeHtml((Array.isArray(m.ministries) && m.ministries.length ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : [])).join(', ') || 'General')}
           </span>
         </td>
         <td class="py-3 px-4 text-xs font-medium text-slate-700 dark:text-slate-300">
