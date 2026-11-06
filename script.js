@@ -3356,6 +3356,13 @@ function viewDetails(id) {
     const ministrySelect = document.getElementById("view-admin-ministry-select");
     if (ministrySelect) ministrySelect.value = member.ministry || "General";
   }
+  const pastorLeaderControls = document.getElementById("view-pastor-leader-controls");
+  if (pastorLeaderControls) {
+    const canManageLeaderRole = !rolePreviewActive && (hasRole("admin") || hasRole("pastor"));
+    pastorLeaderControls.classList.toggle("hidden", !canManageLeaderRole);
+    if (canManageLeaderRole) loadMemberLeaderRoleState(member.id);
+  }
+
   const accessControls = document.getElementById("view-admin-access-controls");
   if (accessControls) {
     const linkedAccount = users.find(user => String(user.memberId) === String(member.id));
@@ -3377,6 +3384,71 @@ function viewDetails(id) {
   if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
+
+let currentMemberLeaderRole = false;
+let currentMemberLeaderRoleAvailable = false;
+
+async function loadMemberLeaderRoleState(memberId) {
+  const status = document.getElementById("view-pastor-leader-status");
+  const button = document.getElementById("view-pastor-leader-button");
+  currentMemberLeaderRoleAvailable = false;
+  if (status) status.textContent = "Comprobando cuenta vinculada...";
+  if (button) { button.disabled = true; button.textContent = "Comprobando..."; }
+  try {
+    const { data, error } = await window.supabaseClient.rpc("pastor_estado_rol_lider", {
+      p_miembro_id: String(memberId)
+    });
+    if (error) throw error;
+    if (data === null) {
+      if (status) status.textContent = "No hay una cuenta activa y aprobada vinculada a esta ficha.";
+      if (button) button.textContent = "Cuenta no disponible";
+      return;
+    }
+    currentMemberLeaderRole = data === true;
+    currentMemberLeaderRoleAvailable = true;
+    if (status) status.textContent = currentMemberLeaderRole
+      ? "Esta persona tiene asignado el rol Líder."
+      : "Esta persona no tiene asignado el rol Líder.";
+    if (button) {
+      button.disabled = false;
+      button.textContent = currentMemberLeaderRole ? "Quitar rol Líder" : "Asignar rol Líder";
+      button.className = currentMemberLeaderRole
+        ? "px-4 py-2 rounded-lg border border-amber-500 text-amber-800 dark:text-amber-300 text-sm font-semibold"
+        : "px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold";
+    }
+  } catch (error) {
+    console.error("No se pudo consultar el rol Líder:", error);
+    if (status) status.textContent = "No se pudo comprobar la asignación de rol.";
+    if (button) button.textContent = "No disponible";
+  }
+}
+
+async function toggleMemberLeaderRole() {
+  if (!currentUser || rolePreviewActive || !(hasRole("admin") || hasRole("pastor")) ||
+      !window.currentDetailsMemberId || !currentMemberLeaderRoleAvailable) return;
+  const assign = !currentMemberLeaderRole;
+  const action = assign ? "asignar" : "quitar";
+  if (!confirm("¿Confirmas " + action + " el rol Líder a esta persona?")) return;
+  const button = document.getElementById("view-pastor-leader-button");
+  if (button) { button.disabled = true; button.textContent = "Guardando..."; }
+  try {
+    const { data, error } = await window.supabaseClient.rpc("pastor_cambiar_rol_lider", {
+      p_miembro_id: String(window.currentDetailsMemberId),
+      p_asignar: assign
+    });
+    if (error) throw error;
+    currentMemberLeaderRole = data === true;
+    await refreshCloudData();
+    await loadProfilesFromCloud().catch(() => {});
+    await loadMemberLeaderRoleState(window.currentDetailsMemberId);
+    alert(currentMemberLeaderRole ? "Rol Líder asignado correctamente." : "Rol Líder quitado correctamente.");
+  } catch (error) {
+    console.error("No se pudo actualizar el rol Líder:", error);
+    if (button) button.disabled = false;
+    alert("No se pudo actualizar el rol Líder: " + error.message);
+    await loadMemberLeaderRoleState(window.currentDetailsMemberId);
+  }
+}
 
 async function changeOwnProfilePhoto(event) {
   const file = event.target.files && event.target.files[0];
