@@ -1443,14 +1443,8 @@ async function saveUserRoles(userId) {
   const { error } = await window.supabaseClient.from("perfiles_app").update({ roles: nextRoles }).eq("id", userId);
   if (error) { alert("No se pudieron actualizar los roles: " + error.message); renderUsersTable(); return; }
 
-  let ministryWarning = "";
-  if (nextRoles.includes("pastor") && targetUser.memberId) {
-    const { error: ministryError } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
-      p_miembro_id: String(targetUser.memberId), p_ministerio: "General"
-    });
-    if (ministryError) ministryWarning = " El rol se actualizó, pero no se pudo cambiar su ficha a General: " + ministryError.message;
-    else await refreshCloudData();
-  }
+  // Cambiar el rol a Pastor no modifica los ministerios aprobados de su ficha.
+  const ministryWarning = "";
   await loadProfilesFromCloud(); renderUsersTable();
   alert("Roles actualizados." + (nextRoles.includes("pastor") ? " La ficha asociada queda en el ministerio General." : "") + ministryWarning + " El usuario deberá actualizar la página para aplicar los permisos.");
 }
@@ -1495,14 +1489,8 @@ async function linkUserToMember(userId, memberId) {
     return;
   }
 
-  let ministryWarning = "";
-  if (normalizedMemberId && (targetUser.roles || []).includes("pastor")) {
-    const { error: ministryError } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
-      p_miembro_id: String(normalizedMemberId), p_ministerio: "General"
-    });
-    if (ministryError) ministryWarning = " La vinculación se guardó, pero no se pudo cambiar la ficha a General: " + ministryError.message;
-    else await refreshCloudData();
-  }
+  // Vincular una cuenta de Pastor no elimina los ministerios ya aprobados en la ficha.
+  const ministryWarning = "";
   await loadProfilesFromCloud();
   renderUsersTable();
   alert((normalizedMemberId
