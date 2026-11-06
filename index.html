@@ -803,6 +803,7 @@
       <form id="member-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4 overflow-y-auto flex-grow">
         <input type="hidden" id="member-id">
 
+        <div id="member-admin-only-fields">
         <div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
           <div id="avatar-preview-container" class="w-16 h-16 rounded-full bg-church-800 text-amber-300 font-bold flex items-center justify-center text-lg overflow-hidden shrink-0 border-2 border-amber-400/50">
             <span id="avatar-preview-initials">--</span>
@@ -812,6 +813,9 @@
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Fotografía de Perfil</label>
             <input type="file" id="input-avatar-file" accept="image/*" onchange="previewAvatar(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-500 file:text-church-900 hover:file:bg-amber-600 cursor-pointer">
           </div>
+        </div>
+
+
         </div>
 
         <div>
@@ -853,6 +857,11 @@
           </div>
           <p class="text-[11px] text-amber-800 dark:text-amber-300">Estos datos se utilizan para el seguimiento mientras la persona esté «En Visita» y se borran al pasar a «Activo».</p>
         </div>
+
+        <div id="server-visit-only-hint" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800/60 dark:bg-amber-900/20 dark:text-amber-300">
+          Registro simplificado de visita: solo puedes ingresar el nombre y los datos de la tarjeta de visita. Los demás antecedentes quedan reservados para Administración y Pastorado.
+        </div>
+        <div id="member-admin-only-fields-secondary">
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -912,7 +921,6 @@
               <option value="En Visita">En Visita</option>
               <option value="Inactivo">Inactivo</option>
             </select>
-            <p id="server-visit-only-hint" class="hidden mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">El ministerio Servidores solo puede registrar personas con estado «En Visita». La activación corresponde a Administración o Pastorado.</p>
           </div>
 
           <div>
@@ -929,6 +937,8 @@
           <input type="date" id="input-birthday" required class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
         </div>
 
+
+        </div>
 
         <input type="hidden" id="input-notes" value="">
         <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-700">
