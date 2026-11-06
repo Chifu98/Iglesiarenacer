@@ -517,7 +517,17 @@
             <option value="Viudo (a)">Viudo (a)</option>
           </select>
 
-          <select id="filter-ministry" 
+          <select id="filter-role"
+                  onchange="renderTable()"
+                  class="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
+            <option value="">Todos los Roles</option>
+            <option value="admin">Administrador</option>
+            <option value="pastor">Pastor</option>
+            <option value="lider">Líder</option>
+            <option value="miembro">Miembro</option>
+          </select>
+
+          <select id="filter-ministry"
                   onchange="renderTable()" 
                   class="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-amber-500">
             <option value="">Todos los Ministerios</option>
@@ -554,6 +564,7 @@
             <thead>
               <tr class="bg-slate-100/70 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                 <th class="py-3.5 px-4">Hermano / Contacto</th>
+                <th class="py-3.5 px-4">Rol</th>
                 <th class="py-3.5 px-4">Ministerio</th>
                 <th class="py-3.5 px-4">Estado Civil</th>
                 <th class="py-3.5 px-4">Bautizado</th>
@@ -1032,7 +1043,11 @@
             <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-spouse">--</p>
           </div>
           <div>
-            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Ministerio / Rol</p>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Rol</p>
+            <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-role">--</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase">Ministerios</p>
             <p class="font-medium text-slate-800 dark:text-slate-200 mt-0.5" id="view-ministry">--</p>
           </div>
           <div>
