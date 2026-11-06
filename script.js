@@ -25,10 +25,9 @@ function startRolePreview(role, selectedMinistry = "") {
 
   const originalMinistry = rolePreviewOriginalUser.ministry || "General";
   const ministry = role === "pastor" ? "General" :
-    (role === "lider" || role === "miembro"
-      ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
-        (rolePreviewMinistries.includes(originalMinistry) ? originalMinistry : "General"))
-      : originalMinistry);
+    role === "miembro" ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry : "General") :
+    role === "lider" ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
+      (rolePreviewMinistries.includes(originalMinistry) ? originalMinistry : "General")) : originalMinistry;
   // Se conserva la identidad y la ficha real del administrador; solo se simulan rol y ministerio en memoria.
   const previewUser = {
     ...rolePreviewOriginalUser,
@@ -3346,12 +3345,13 @@ function viewDetails(id) {
       ? members.find(m => String(m.id) === String(currentUser.memberId)) : null;
     const ownMinistry = ownMember ? (ownMember.ministry || "General") : "";
     const isAdmin = hasRole("admin");
+    const canAssignMinistry = isAdmin || hasRole("pastor");
     const canLeaderRemove = hasRole("lider") && ownMinistry !== "General" &&
       (member.ministry || "General") === ownMinistry && String(member.id) !== String(currentUser.memberId);
-    ministryControls.classList.toggle("hidden", rolePreviewActive || !(isAdmin || canLeaderRemove));
+    ministryControls.classList.toggle("hidden", rolePreviewActive || !(canAssignMinistry || canLeaderRemove));
     const adminControls = document.getElementById("view-admin-ministry-controls");
     const leaderControls = document.getElementById("view-leader-ministry-controls");
-    if (adminControls) adminControls.classList.toggle("hidden", !isAdmin);
+    if (adminControls) adminControls.classList.toggle("hidden", !canAssignMinistry);
     if (leaderControls) leaderControls.classList.toggle("hidden", !canLeaderRemove);
     const ministrySelect = document.getElementById("view-admin-ministry-select");
     if (ministrySelect) ministrySelect.value = member.ministry || "General";
