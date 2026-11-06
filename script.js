@@ -794,7 +794,8 @@ async function refreshMinistryModules() {
   const memberModule = document.getElementById("member-ministry-module");
   const reviewModule = document.getElementById("ministry-requests-module");
 
-  if (currentUser.memberId && memberModule && !rolePreviewActive) {
+  const canApplyToMinistries = !!currentUser && !hasRole("admin") && !hasRole("pastor");
+  if (canApplyToMinistries && currentUser.memberId && memberModule && !rolePreviewActive) {
     const ownMember = members.find(m => String(m.id) === String(currentUser.memberId));
     let requests = [];
     const { data, error } = await window.supabaseClient.rpc("mi_estado_solicitud_ministerio");
@@ -803,7 +804,7 @@ async function refreshMinistryModules() {
     const approved = ownMember && Array.isArray(ownMember.ministries) ? ownMember.ministries : (ownMember && ownMember.ministry !== "General" ? [ownMember.ministry] : []);
     const pendingNames = requests.filter(item => item.estado === "pendiente").map(item => item.ministerio_solicitado);
     const rejectedNames = requests.filter(item => item.estado === "rechazado").map(item => item.ministerio_solicitado);
-    const eligible = !!ownMember && ownMember.status === "Activo";
+    const eligible = canApplyToMinistries && !!ownMember && ownMember.status === "Activo";
     memberModule.classList.toggle("hidden", !eligible);
     const form = document.getElementById("member-ministry-form");
     const pending = document.getElementById("member-ministry-pending");
