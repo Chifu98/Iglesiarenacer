@@ -1581,7 +1581,7 @@ function renderUsersTable() {
     { value: "pastor", label: "Pastor" },
     { value: "admin", label: "Administrador" }
   ];
-  const ministryChoices = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
+  const ministryChoices = ["Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
 
   // La asignación de roles solo debe mostrar fichas con estado Activo.
   members.filter(member => member.status === "Activo")
@@ -1606,7 +1606,7 @@ function renderUsersTable() {
       const option = document.createElement("option");
       option.value = choice.value;
       option.textContent = choice.label;
-      if (choice.value === "lider" && (member.status !== "Activo" || !member.ministry || member.ministry === "General")) {
+      if (choice.value === "lider" && (member.status !== "Activo" || !(Array.isArray(member.ministries) ? member.ministries.length : (member.ministry && member.ministry !== "General")))) {
         option.disabled = true;
         option.textContent = "Líder (requiere ministerio activo)";
       }
@@ -1621,16 +1621,18 @@ function renderUsersTable() {
     ministryCell.className = "py-2.5 px-3 min-w-[155px]";
     ministryCell.dataset.label = "Ministerio asignado";
     const ministrySelect = document.createElement("select");
+    ministrySelect.multiple = true;
+    ministrySelect.size = 4;
     ministrySelect.className = "w-full max-w-xs px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-xs";
     ministrySelect.setAttribute("aria-label", "Ministerio asignado de " + (member.name || "miembro"));
     ministryChoices.forEach(ministry => {
       const option = document.createElement("option");
       option.value = ministry;
       option.textContent = ministry;
-      if (currentRole === "lider" && ministry === "General") option.disabled = true;
       ministrySelect.appendChild(option);
     });
-    ministrySelect.value = ministryChoices.includes(member.ministry) ? member.ministry : "General";
+    const assignedMinistries = Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== "General" ? [member.ministry] : []);
+    Array.from(ministrySelect.options).forEach(option => { option.selected = assignedMinistries.includes(option.value); });
     ministrySelect.disabled = !linkedUser || linkedUser.id === currentUser.id || member.status !== "Activo";
     if (linkedUser) ministrySelect.id = "member-ministry-" + member.id;
     ministryCell.appendChild(ministrySelect);
@@ -1674,30 +1676,31 @@ async function saveMemberRole(memberId) {
   const roleSelect = document.getElementById("member-role-" + memberId);
   const ministrySelect = document.getElementById("member-ministry-" + memberId);
   const allowedRoles = ["admin", "pastor", "lider", "miembro"];
-  const allowedMinistries = ["General", "Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
+  const allowedMinistries = ["Alabanza", "Servidor", "Niños", "Jóvenes", "Oración", "Evangelismo", "Redes", "Damas", "Matrimonio", "Hombres"];
   if (!member || !linkedUser || !roleSelect || !ministrySelect || linkedUser.id === currentUser.id ||
-      !allowedRoles.includes(roleSelect.value) || !allowedMinistries.includes(ministrySelect.value)) {
+      !allowedRoles.includes(roleSelect.value) || Array.from(ministrySelect.selectedOptions).some(option => !allowedMinistries.includes(option.value))) {
     alert("No se puede guardar: verifica la cuenta vinculada y las asignaciones.");
     return;
   }
 
   const nextRole = roleSelect.value;
-  const nextMinistry = ministrySelect.value;
+  const nextMinistries = Array.from(ministrySelect.selectedOptions).map(option => option.value);
   const previousRole = (linkedUser.roles && linkedUser.roles[0]) || linkedUser.role || "miembro";
-  const previousMinistry = member.ministry || "General";
-  if (nextRole === "lider" && (member.status !== "Activo" || nextMinistry === "General")) {
-    alert("Para asignar el rol Líder, la ficha debe estar Activa y tener un ministerio distinto de General.");
+  const previousMinistries = Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== "General" ? [member.ministry] : []);
+  const ministriesChanged = JSON.stringify([...nextMinistries].sort()) !== JSON.stringify([...previousMinistries].sort());
+  if (nextRole === "lider" && (member.status !== "Activo" || nextMinistries.length === 0)) {
+    alert("Para asignar el rol Líder, la ficha debe estar Activa y tener al menos un ministerio aprobado.");
     return;
   }
-  if (member.status !== "Activo" && nextMinistry !== previousMinistry) {
-    alert("Solo puedes cambiar el ministerio de un miembro con estado Activo.");
+  if (member.status !== "Activo" && ministriesChanged) {
+    alert("Solo puedes cambiar los ministerios de un miembro con estado Activo.");
     return;
   }
-  if (nextRole === previousRole && nextMinistry === previousMinistry) return;
+  if (nextRole === previousRole && !ministriesChanged) return;
 
   const changes = [];
   if (nextRole !== previousRole) changes.push("rol " + roleDisplayName(nextRole));
-  if (nextMinistry !== previousMinistry) changes.push("ministerio " + nextMinistry);
+  if (ministriesChanged) changes.push("ministerios " + (nextMinistries.join(", ") || "General"));
   if (!confirm("Guardar para " + member.name + ": " + changes.join(" y ") + "?")) {
     renderUsersTable();
     return;
@@ -1710,10 +1713,10 @@ async function saveMemberRole(memberId) {
     if (error) throw error;
   };
   const updateMinistry = async () => {
-    if (nextMinistry === previousMinistry) return;
-    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerio", {
+    if (!ministriesChanged) return;
+    const { error } = await window.supabaseClient.rpc("admin_asignar_ministerios", {
       p_miembro_id: String(member.id),
-      p_ministerio: nextMinistry
+      p_ministerios: nextMinistries
     });
     if (error) throw error;
   };
@@ -1721,7 +1724,7 @@ async function saveMemberRole(memberId) {
   try {
     // Primero se retira el rol de líder antes de permitir General; en los demás casos
     // se asigna primero el ministerio para que nunca exista un líder sin ministerio.
-    if (previousRole === "lider" && nextRole !== "lider" && nextMinistry === "General") {
+    if (previousRole === "lider" && nextRole !== "lider" && nextMinistries.length === 0) {
       await updateRole();
       await updateMinistry();
     } else {
