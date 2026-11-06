@@ -2489,7 +2489,7 @@ function renderRequests() {
     }
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
-  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasRole("lider") || hasServerMinistryPermissions());
+  const canEdit = currentUser && (hasRole("admin") || hasRole("pastor") || hasServerMinistryPermissions());
 
   container.innerHTML = '';
 
@@ -2864,13 +2864,21 @@ function openModal(isEdit = false) {
 
     handleMaritalStatusChange();
     const restrictedServer = hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor");
-    const statusInput = document.getElementById("input-status");
-    if (statusInput) {
-      statusInput.disabled = restrictedServer;
-      statusInput.value = restrictedServer ? "En Visita" : "Activo";
-    }
+    const adminFields = document.getElementById("member-admin-only-fields");
+    const adminFieldsSecondary = document.getElementById("member-admin-only-fields-secondary");
+    if (adminFields) adminFields.classList.toggle("hidden", restrictedServer);
+    if (adminFieldsSecondary) adminFieldsSecondary.classList.toggle("hidden", restrictedServer);
     const serverHint = document.getElementById("server-visit-only-hint");
     if (serverHint) serverHint.classList.toggle("hidden", !restrictedServer);
+    const statusInput = document.getElementById("input-status");
+    if (statusInput) {
+      statusInput.disabled = false;
+      statusInput.value = restrictedServer ? "En Visita" : "Activo";
+    }
+    // Los campos ocultos no deben bloquear el envío por validaciones HTML.
+    document.querySelectorAll("#member-admin-only-fields [required], #member-admin-only-fields-secondary [required]").forEach(input => {
+      input.required = !restrictedServer && ["input-phone","input-marital-status","input-status","input-baptized","input-birthday"].includes(input.id);
+    });
     toggleVisitInvitationFields();
     title.textContent = 'Agregar Nuevo Hermano';
   } else {
