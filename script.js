@@ -776,6 +776,7 @@ function showAppView() {
   renderAnnouncements();
   renderBirthdayModule();
   refreshAnnouncementPushButton();
+  refreshMinistryModules();
 }
 
 
@@ -851,7 +852,7 @@ async function refreshMinistryModules() {
   }
 }
 
-async async function submitMemberMinistryRequest(event) {
+async function submitMemberMinistryRequest(event) {
   event.preventDefault();
   if (!currentUser || !currentUser.memberId || rolePreviewActive) return;
   const select = document.getElementById("member-ministry-select");
@@ -871,7 +872,7 @@ async async function submitMemberMinistryRequest(event) {
   }
 }
 
-async async function resolveMinistryRequest(id, approve) {
+async function resolveMinistryRequest(id, approve) {
   const action = approve ? "autorizar" : "rechazar";
   if (!confirm("¿Deseas " + action + " esta solicitud de ministerio?")) return;
   try {
@@ -904,7 +905,7 @@ async function removeMemberFromMyMinistry() {
   }
 }
 
-async async function adminAssignMemberMinistry() {
+async function adminAssignMemberMinistry() {
   const id = window.currentDetailsMemberId;
   const select = document.getElementById("view-admin-ministry-select");
   if (!id || !select) return;
@@ -2161,7 +2162,8 @@ function renderPersonalWelcomeCard() {
   roleNode.textContent = assignedRoles.length ? assignedRoles.map(role => roleDisplayName(role).toUpperCase()).join(" + ") : "USUARIO";
   roleNode.classList.toggle("hidden", !roleNode.textContent);
 
-  ministryNode.textContent = linkedMember ? (linkedMember.ministry || "General") : "";
+  const welcomeMinistries = linkedMember && Array.isArray(linkedMember.ministries) ? linkedMember.ministries : (linkedMember && linkedMember.ministry !== "General" ? [linkedMember.ministry] : []);
+  ministryNode.textContent = linkedMember ? (welcomeMinistries.join(", ") || "General") : "";
   ministryNode.classList.toggle("hidden", !linkedMember);
   statusNode.textContent = linkedMember ? (linkedMember.status || "Activo") : "";
   statusNode.classList.toggle("hidden", !linkedMember);
