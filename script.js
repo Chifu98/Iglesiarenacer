@@ -799,12 +799,14 @@ async function refreshMinistryModules() {
   const reviewModule = document.getElementById("ministry-requests-module");
 
   const canApplyToMinistries = !!currentUser && !hasRole("admin") && !hasRole("pastor");
-  if (canApplyToMinistries && currentUser.memberId && memberModule && !rolePreviewActive) {
+  if (canApplyToMinistries && currentUser.memberId && memberModule) {
     const ownMember = members.find(m => String(m.id) === String(currentUser.memberId));
     let requests = [];
-    const { data, error } = await window.supabaseClient.rpc("mi_estado_solicitud_ministerio");
-    if (error) console.warn("No se pudo consultar el estado de las solicitudes de ministerio:", error);
-    else requests = Array.isArray(data) ? data : [];
+    if (!rolePreviewActive) {
+      const { data, error } = await window.supabaseClient.rpc("mi_estado_solicitud_ministerio");
+      if (error) console.warn("No se pudo consultar el estado de las solicitudes de ministerio:", error);
+      else requests = Array.isArray(data) ? data : [];
+    }
     const approved = ownMember && Array.isArray(ownMember.ministries) ? ownMember.ministries : (ownMember && ownMember.ministry !== "General" ? [ownMember.ministry] : []);
     const pendingNames = requests.filter(item => item.estado === "pendiente").map(item => item.ministerio_solicitado);
     const rejectedNames = requests.filter(item => item.estado === "rechazado").map(item => item.ministerio_solicitado);
@@ -819,7 +821,9 @@ async function refreshMinistryModules() {
       pending.classList.toggle("hidden", pendingNames.length === 0);
       pending.textContent = pendingNames.length ? "Solicitudes pendientes: " + pendingNames.join(", ") + ". Cada una será revisada por el líder de ese ministerio o por Administración." : "";
       form.classList.toggle("hidden", !eligible || !select || !Array.from(select.options).some(option => option.value && !option.disabled));
-      message.textContent = rejectedNames.length ? "No se aprobaron estas solicitudes: " + rejectedNames.join(", ") + ". Puedes volver a solicitarlas o escoger otro ministerio." : "Puedes solicitar ingreso a varios ministerios. Cada solicitud se revisa de forma independiente.";
+      message.textContent = rolePreviewActive
+        ? "Vista previa de solo lectura: puedes revisar cómo aparece esta opción, pero no enviar solicitudes."
+        : rejectedNames.length ? "No se aprobaron estas solicitudes: " + rejectedNames.join(", ") + ". Puedes volver a solicitarlas o escoger otro ministerio." : "Puedes solicitar ingreso a varios ministerios. Cada solicitud se revisa de forma independiente.";
     }
   } else if (memberModule) {
     memberModule.classList.add("hidden");
