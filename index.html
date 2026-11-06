@@ -168,7 +168,6 @@
               <option value="pastor" class="bg-slate-900 text-amber-400">Vista: Pastor</option>
               <option value="lider" class="bg-slate-900 text-amber-400">Vista: Líder</option>
               <option value="miembro" class="bg-slate-900 text-amber-400">Vista: Miembro</option>
-              <option value="servidor" class="bg-slate-900 text-amber-400">Vista: Servidor</option>
             </select>
           </div>
 
@@ -222,9 +221,10 @@
         <div id="role-preview-ministry-control" class="hidden flex items-center gap-2">
           <label for="role-preview-ministry-select" class="text-xs font-semibold text-amber-400">Ministerio</label>
           <select id="role-preview-ministry-select" onchange="changeRolePreviewMinistry(this.value)" class="max-w-[12rem] px-3 py-2 rounded-lg bg-slate-900 border border-slate-600 text-amber-400 text-xs font-bold focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30">
-            <option value="Alabanza">Alabanza</option><option value="Niños">Niños</option><option value="Jóvenes">Jóvenes</option>
-            <option value="Oración">Oración</option><option value="Evangelismo">Evangelismo</option><option value="Redes">Redes</option>
-            <option value="Damas">Damas</option><option value="Matrimonio">Matrimonio</option><option value="Hombres">Hombres</option>
+            <option value="General">General</option><option value="Alabanza">Alabanza</option><option value="Servidor">Servidor</option>
+            <option value="Niños">Niños</option><option value="Jóvenes">Jóvenes</option><option value="Oración">Oración</option>
+            <option value="Evangelismo">Evangelismo</option><option value="Redes">Redes</option><option value="Damas">Damas</option>
+            <option value="Matrimonio">Matrimonio</option><option value="Hombres">Hombres</option>
           </select>
         </div>
         <button id="role-preview-exit" type="button" onclick="stopRolePreview()" class="shrink-0 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-500/50 text-amber-400 text-xs font-bold transition">Volver a Administrador</button>
