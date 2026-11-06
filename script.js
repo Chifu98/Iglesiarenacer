@@ -2644,8 +2644,35 @@ function renderAntecedentHistory(memberId, type) {
     const date = note.created_at ? new Date(note.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible";
     meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + date;
     card.append(body, meta);
+    if (hasRole("admin") && !rolePreviewActive) {
+      const actions = document.createElement("div");
+      actions.className = "flex justify-end";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400";
+      remove.textContent = "Eliminar nota";
+      remove.addEventListener("click", () => deleteAntecedentNote(note.id, memberId));
+      actions.appendChild(remove);
+      card.appendChild(actions);
+    }
     target.appendChild(card);
   });
+}
+
+async function deleteAntecedentNote(noteId, memberId) {
+  if (!hasRole("admin") || rolePreviewActive) return;
+  if (!confirm("¿Seguro que deseas eliminar esta nota? Esta acción no se puede deshacer.")) return;
+  const { error } = await window.supabaseClient.from("notas_antecedentes").delete().eq("id", noteId);
+  if (error) {
+    alert("No se pudo eliminar la nota: " + error.message);
+    return;
+  }
+  try {
+    await loadAntecedentNotes(memberId);
+  } catch (refreshError) {
+    console.error(refreshError);
+    alert("La nota se eliminó, pero no se pudo actualizar el historial. Vuelve a abrir la ficha.");
+  }
 }
 
 async function openPrivateNoteModal(memberId, type) {
