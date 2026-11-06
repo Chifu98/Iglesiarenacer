@@ -2688,6 +2688,29 @@ async function savePrivateNote(event) {
   }
 }
 
+let memberSortState = { field: "name", direction: "asc" };
+
+function toggleMemberSort(field) {
+  if (field !== "name" && field !== "baptized") return;
+  if (memberSortState.field === field) {
+    memberSortState.direction = memberSortState.direction === "asc" ? "desc" : "asc";
+  } else {
+    memberSortState = { field, direction: "asc" };
+  }
+  renderTable();
+}
+
+function updateMemberSortIndicators() {
+  const nameButton = document.getElementById("sort-members-name");
+  const baptizedButton = document.getElementById("sort-members-baptized");
+  const nameIndicator = document.getElementById("sort-members-name-indicator");
+  const baptizedIndicator = document.getElementById("sort-members-baptized-indicator");
+  if (nameButton) nameButton.parentElement.setAttribute("aria-sort", memberSortState.field === "name" ? (memberSortState.direction === "asc" ? "ascending" : "descending") : "none");
+  if (baptizedButton) baptizedButton.parentElement.setAttribute("aria-sort", memberSortState.field === "baptized" ? (memberSortState.direction === "asc" ? "ascending" : "descending") : "none");
+  if (nameIndicator) nameIndicator.textContent = memberSortState.field === "name" ? (memberSortState.direction === "asc" ? "↑" : "↓") : "↕";
+  if (baptizedIndicator) baptizedIndicator.textContent = memberSortState.field === "baptized" ? (memberSortState.direction === "asc" ? "↑" : "↓") : "↕";
+}
+
 function renderTable() {
   const tbody = document.getElementById('members-table-body');
   const emptyState = document.getElementById('empty-state');
@@ -2722,6 +2745,17 @@ function renderTable() {
 
     return matchesSearch && matchesMarital && matchesMinistry && matchesRole && matchesStatus;
   });
+
+  const sortDirection = memberSortState.direction === "asc" ? 1 : -1;
+  filtered.sort((a, b) => {
+    if (memberSortState.field === "baptized") {
+      const aBaptized = a.baptized === "Sí" ? 1 : 0;
+      const bBaptized = b.baptized === "Sí" ? 1 : 0;
+      return (bBaptized - aBaptized) * sortDirection;
+    }
+    return String(a.name || "").trim().localeCompare(String(b.name || "").trim(), "es", { sensitivity: "base", numeric: true }) * sortDirection;
+  });
+  updateMemberSortIndicators();
 
   if (filtered.length === 0) {
     if (emptyState) emptyState.classList.remove('hidden');
