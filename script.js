@@ -181,7 +181,8 @@ function mapDbMemberToApp(row) {
     inviterMemberId: row.inviter_member_id || "",
     inviterName: row.inviter_name || "",
     inviterRelationship: row.inviter_relationship || "",
-    createdAt: row.created_at || ""
+    createdAt: row.created_at || "",
+    createdBy: row.created_by || ""
   };
 }
 
@@ -2212,7 +2213,7 @@ function renderVisitCards() {
   }
 
   const now = Date.now();
-  const visitRecords = visitCards.filter(member => member.status === "En Visita");
+  const visitRecords = getRolePreviewScopedVisitCards().filter(member => member.status === "En Visita");
   const isRecentVisit = member => {
     const createdAt = member.createdAt ? new Date(member.createdAt).getTime() : NaN;
     return Number.isFinite(createdAt) && createdAt > now - 24 * 60 * 60 * 1000;
@@ -2299,9 +2300,17 @@ async function deleteVisitCard(id) {
   renderDashboard();
 }
 
+function getRolePreviewScopedVisitCards() {
+  if (rolePreviewActive && hasServerMinistryPermissions() && !hasRole("admin") && !hasRole("pastor")) {
+    const previewUserId = rolePreviewOriginalUser?.id;
+    return previewUserId ? visitCards.filter(card => String(card.createdBy || "") === String(previewUserId)) : [];
+  }
+  return visitCards;
+}
+
 function countRecentVisitCards() {
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  return visitCards.filter(member => {
+  return getRolePreviewScopedVisitCards().filter(member => {
     if (member.status !== "En Visita" || !member.createdAt) return false;
     const createdAt = new Date(member.createdAt).getTime();
     return Number.isFinite(createdAt) && createdAt > cutoff;
