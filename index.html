@@ -1072,6 +1072,12 @@
             <p class="text-[11px] text-slate-500">Solo puedes retirar miembros del ministerio que lideras.</p>
           </div>
         </div>
+        <div id="view-pastor-leader-controls" class="hidden border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Rol de liderazgo</p>
+          <p id="view-pastor-leader-status" class="text-xs text-slate-600 dark:text-slate-300">Comprobando cuenta vinculada...</p>
+          <button id="view-pastor-leader-button" type="button" onclick="toggleMemberLeaderRole()" class="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed" disabled>Comprobando...</button>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">Pastores y administración pueden asignar o quitar el rol Líder. Si la persona también es Pastor, conservará sus funciones pastorales.</p>
+        </div>
         <div id="view-admin-access-controls" class="hidden border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
           <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Acceso a la aplicación</p>
           <p id="view-admin-access-status" class="text-xs text-slate-600 dark:text-slate-300">Esta ficha todavía no tiene una cuenta de acceso.</p>
