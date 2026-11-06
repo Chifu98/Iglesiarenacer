@@ -21,20 +21,21 @@ function startRolePreview(role, selectedMinistry = "") {
   if (!adminUser || !adminUser.roles?.includes("admin")) return;
   const supported = ["admin", "pastor", "lider", "miembro"];
   if (!supported.includes(role)) return;
-  if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles] };
+  if (!rolePreviewOriginalUser) rolePreviewOriginalUser = { ...currentUser, roles: [...currentUser.roles], ministries: [...(currentUser.ministries || [])] };
 
   const originalMinistry = rolePreviewOriginalUser.ministry || "General";
   const ministry = role === "pastor" ? "General" :
     role === "miembro" ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry : "General") :
     role === "lider" ? (rolePreviewMinistries.includes(selectedMinistry) ? selectedMinistry :
       (rolePreviewMinistries.includes(originalMinistry) ? originalMinistry : "General")) : originalMinistry;
-  // Se conserva la identidad y la ficha real del administrador; solo se simulan rol y ministerio en memoria.
+  // La identidad y los datos reales del administrador se conservan; la simulación solo afecta permisos y filtros visuales.
   const previewUser = {
     ...rolePreviewOriginalUser,
     roles: [role],
     role,
     memberId: rolePreviewOriginalUser.memberId || "",
-    ministry: role === "pastor" ? "General" : ministry
+    ministry: role === "pastor" ? "General" : ministry,
+    ministries: role === "pastor" ? [] : (ministry === "General" ? [] : [ministry])
   };
   currentUser = previewUser;
   rolePreviewActive = role !== "admin";
@@ -86,8 +87,10 @@ document.addEventListener("click", event => {
   // La navegación, los filtros, las pestañas y la consulta de información siguen disponibles.
   // Solo se bloquean acciones que puedan cambiar datos o permisos.
   const action = (target.getAttribute("onclick") || "").trim();
-  const mutationAction = /^(?:create|save|update|edit|delete|remove|approve|reject|assign|handlePasswordReset|reset|upload|submit|archive|restore|add|send|publish|toggleAnnouncementNotifications|adminAssign|removeMember)/i;
-  if (!mutationAction.test(action)) return;
+  const label = (target.getAttribute("aria-label") || target.getAttribute("title") || target.textContent || "").trim();
+  const mutationAction = /^(?:create|save|update|edit|delete|remove|approve|reject|assign|handlePasswordReset|reset|upload|submit|archive|restore|add|send|publish|toggleAnnouncementNotifications|adminAssign|removeMember|confirm|execute|process|complete|apply)/i;
+  const mutationLabel = /^(?:editar|eliminar|borrar|guardar|crear|aprobar|rechazar|asignar|restablecer|archivar|restaurar|publicar|enviar|solicitar|quitar|desactivar)\b/i;
+  if (!mutationAction.test(action) && !mutationLabel.test(label)) return;
 
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -835,7 +838,7 @@ async function refreshMinistryModules() {
     }
     if (!list || !empty) return;
     list.innerHTML = "";
-    const rows = data || [];
+    const rows = (data || []).filter(item => !(rolePreviewActive && hasRole("lider")) || item.ministerio === currentUser.ministry);
     empty.classList.toggle("hidden", rows.length > 0);
     empty.textContent = "No hay solicitudes pendientes para los ministerios que puedes administrar.";
     rows.forEach(item => {
@@ -2305,21 +2308,38 @@ function countRecentVisitCards() {
   }).length;
 }
 
+function getRolePreviewScopedMembers() {
+  if (!rolePreviewActive) return members;
+  if (hasRole("lider")) {
+    return members.filter(member => {
+      const ministries = Array.isArray(member.ministries) ? member.ministries : (member.ministry && member.ministry !== "General" ? [member.ministry] : []);
+      return ministries.includes(currentUser.ministry);
+    });
+  }
+  if (isMemberOnly()) return currentUser.memberId ? members.filter(member => String(member.id) === String(currentUser.memberId)) : [];
+  if (hasServerMinistryPermissions()) return [];
+  return members;
+}
+
 function renderDashboard() {
   renderPersonalWelcomeCard();
   renderVisitCards();
-  const total = members.length;
-  const active = members.filter(m => m.status === 'Activo').length;
+  const scopedMembers = getRolePreviewScopedMembers();
+  const total = scopedMembers.length;
+  const active = scopedMembers.filter(m => m.status === 'Activo').length;
   const visits = countRecentVisitCards();
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
-  const activeMinistries = new Set(members.flatMap(m => Array.isArray(m.ministries) ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : []))).size;
+  const activeMinistries = new Set(scopedMembers.flatMap(m => Array.isArray(m.ministries) ? m.ministries : (m.ministry && m.ministry !== 'General' ? [m.ministry] : []))).size;
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-active').textContent = active;
   document.getElementById('stat-visits').textContent = visits;
   document.getElementById('stat-active-pct').textContent = `${activePct}% del total`;
   document.getElementById('stat-ministries').textContent = activeMinistries;
-  document.getElementById('stat-requests').textContent = prayerRequests.length;
+  const scopedRequests = rolePreviewActive && isMemberOnly()
+    ? prayerRequests.filter(req => String(req.memberId) === String(currentUser.memberId))
+    : prayerRequests;
+  document.getElementById('stat-requests').textContent = scopedRequests.length;
 }
 
 function zoomImage(src) {
@@ -2351,7 +2371,9 @@ function previewAvatar(event) {
 function getBirthdayMembersForSelectedMonth() {
   const monthSelect = document.getElementById('share-birthday-month').value;
   const source = memberBirthdayData || members;
+  const scopedIds = new Set(getRolePreviewScopedMembers().map(member => String(member.id)));
   return source.filter(m => {
+    if (rolePreviewActive && !scopedIds.has(String(m.id))) return false;
     if (!m.birthday) return false;
     const parts = m.birthday.split('-');
     return parts.length >= 2 && parts[1] === monthSelect;
@@ -2463,6 +2485,7 @@ function getFilteredRequests() {
   const oneDayMs = 24 * 60 * 60 * 1000;
 
   return prayerRequests.filter(req => {
+    if (rolePreviewActive && isMemberOnly() && String(req.memberId) !== String(currentUser.memberId)) return false;
     const member = members.find(m => m.id === req.memberId);
     const memberName = member ? member.name.toLowerCase() : '';
     const matchesSearch = req.text.toLowerCase().includes(searchVal) || memberName.includes(searchVal);
@@ -2670,11 +2693,7 @@ function renderTable() {
 
   tbody.innerHTML = '';
 
-  const roleScopedMembers = rolePreviewActive && hasRole("lider")
-    ? members.filter(member => (Array.isArray(member.ministries) ? member.ministries : [member.ministry]).includes(currentUser.ministry))
-    : rolePreviewActive && isMemberOnly()
-      ? members.filter(member => String(member.id) === String(currentUser.memberId))
-      : members;
+  const roleScopedMembers = getRolePreviewScopedMembers();
   const filtered = roleScopedMembers.filter(m => {
     const matchesSearch = 
       m.name.toLowerCase().includes(searchVal) || 
