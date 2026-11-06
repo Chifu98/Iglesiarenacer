@@ -108,7 +108,7 @@ function roleDisplayName(role) {
   return ({ hermano: "Miembro", miembro: "Miembro", admin: "Administrador", pastor: "Pastor", lider: "Líder" })[role] || role;
 }
 function hasServerMinistryPermissions() {
-  return !!(currentUser && currentUser.ministry === "Servidor");
+  return !!(currentUser && (currentUser.ministry === "Servidor" || (Array.isArray(currentUser.ministries) && currentUser.ministries.includes("Servidor"))));
 }
 function isMemberOnly() {
   return !!(currentUser && (hasRole("miembro") || hasRole("hermano")) && !hasRole("admin") && !hasRole("pastor") &&
