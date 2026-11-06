@@ -83,11 +83,16 @@ document.addEventListener("click", event => {
   const target = event.target.closest("button, input[type='submit']");
   if (!target) return;
   if (target.closest("#role-preview-bar")) return;
-  const action = target.getAttribute("onclick") || "";
-  if (/showTab|switchTab|showSection|navigateTo|setActiveTab|changeTab|viewCurrentMemberProfile|viewDetails|closeDetailsModal/i.test(action)) return;
+
+  // La navegación, los filtros, las pestañas y la consulta de información siguen disponibles.
+  // Solo se bloquean acciones que puedan cambiar datos o permisos.
+  const action = (target.getAttribute("onclick") || "").trim();
+  const mutationAction = /^(?:create|save|update|edit|delete|remove|approve|reject|assign|handlePasswordReset|reset|upload|submit|archive|restore|add|send|publish|toggleAnnouncementNotifications|adminAssign|removeMember)/i;
+  if (!mutationAction.test(action)) return;
+
   event.preventDefault();
   event.stopImmediatePropagation();
-  alert("La vista por roles es solo de consulta. Sal de la vista previa para realizar acciones.");
+  alert("La vista por roles es solo de consulta. Puedes navegar y consultar los menús, pero debes salir de la vista previa para modificar información.");
 }, true);
 
 document.addEventListener("submit", event => {
