@@ -2642,7 +2642,8 @@ function renderAntecedentHistory(memberId, type) {
     const meta = document.createElement("p");
     meta.className = "text-[11px] text-slate-500 dark:text-slate-400";
     const date = note.created_at ? new Date(note.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible";
-    meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + date;
+    const authorRole = note.autor_rol || "Rol no disponible";
+    meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + authorRole + " · " + date;
     card.append(body, meta);
     const canDelete = !rolePreviewActive && (
       hasRole("admin") ||
