@@ -580,3 +580,137 @@ img { max-width: 100%; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Formulario de alta y edición de miembros: responsive en móvil, iPad/tablet y PC. */
+#member-modal,
+#member-modal > div,
+#member-modal #member-form,
+#member-modal #member-form > *,
+#member-modal #member-form label,
+#member-modal #member-form input,
+#member-modal #member-form select,
+#member-modal #member-form textarea,
+#member-modal #member-form button {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#member-modal > div {
+  width: min(100%, 46rem);
+  max-height: min(92dvh, 58rem);
+}
+#member-modal > div > div:first-child {
+  gap: 1rem;
+  flex: 0 0 auto;
+}
+#member-modal #modal-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#member-modal #member-form {
+  width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+#member-modal #member-form input:not([type="radio"]):not([type="checkbox"]):not([type="file"]),
+#member-modal #member-form select,
+#member-modal #member-form textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  font-size: 16px;
+}
+#member-modal #member-form select[multiple] {
+  min-height: 9rem;
+  height: auto;
+}
+#member-modal #member-form label,
+#member-modal #member-form p,
+#member-modal #member-form button {
+  overflow-wrap: anywhere;
+}
+#member-modal #member-form > .pt-4:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .65rem;
+}
+#member-modal #member-form > .pt-4:last-child button {
+  min-height: 2.75rem;
+  white-space: normal;
+}
+#member-modal #member-form input[type="file"] {
+  width: 100%;
+  min-width: 0;
+  font-size: .8rem;
+}
+#member-modal #member-form input[type="file"]::file-selector-button {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  #member-modal {
+    padding: .35rem !important;
+    align-items: flex-end !important;
+  }
+  #member-modal > div {
+    width: 100%;
+    max-height: 96dvh;
+    border-radius: 1rem 1rem .5rem .5rem;
+  }
+  #member-modal > div > div:first-child {
+    padding: .85rem 1rem;
+    align-items: flex-start;
+  }
+  #member-modal #modal-title {
+    font-size: 1rem;
+    line-height: 1.35rem;
+  }
+  #member-modal #member-form {
+    padding: .9rem;
+    gap: 1rem;
+  }
+  #member-modal #member-form .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #member-modal #member-form .flex.items-center {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  #member-modal #member-form .pt-4:last-child {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  #member-modal #member-form .pt-4:last-child button {
+    width: 100%;
+  }
+  #member-modal #member-form input[type="file"]::file-selector-button {
+    margin: 0 .35rem .35rem 0;
+    padding: .55rem .7rem;
+  }
+}
+@media (min-width: 641px) and (max-width: 1024px) {
+  #member-modal {
+    padding: .75rem !important;
+  }
+  #member-modal > div {
+    width: min(100%, 48rem);
+    max-height: 94dvh;
+  }
+  #member-modal #member-form {
+    padding: 1.2rem;
+  }
+  #member-modal #member-form .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1025px) {
+  #member-modal > div {
+    width: min(100%, 52rem);
+    max-height: 90dvh;
+  }
+  #member-modal #member-form {
+    padding: 1.5rem;
+  }
+}
