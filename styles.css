@@ -389,3 +389,194 @@ img { max-width: 100%; }
     top: calc(9.5rem + env(safe-area-inset-top, 0px));
   }
 }
+
+
+/* Ficha personal: controles, tarjetas y textos fluidos en móvil, tablet/iPad y escritorio. */
+#details-modal,
+#details-modal > div,
+#details-modal-content,
+#details-modal-content > *,
+#details-modal-content section,
+#details-modal-content section > *,
+#details-modal-content button,
+#details-modal-content select,
+#details-modal-content p,
+#details-modal-content h3,
+#details-modal-content h4 {
+  min-width: 0;
+  max-width: 100%;
+}
+#details-modal > div {
+  width: min(100%, 76rem);
+}
+#details-modal-content {
+  width: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+#details-modal-content > div,
+#details-modal-content section,
+#details-modal-content article {
+  overflow-wrap: anywhere;
+}
+#details-modal-content button {
+  white-space: normal;
+  line-height: 1.35;
+  min-height: 2.65rem;
+  text-align: center;
+}
+#details-modal-content input,
+#details-modal-content select,
+#details-modal-content textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+#view-history-grid {
+  align-items: start;
+}
+#view-history-grid > section > div:first-child {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+#view-history-grid > section > div:first-child > div {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+#view-pastoral-history article,
+#view-leader-history article {
+  overflow-wrap: anywhere;
+}
+#view-pastoral-history article > p,
+#view-leader-history article > p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#view-pastoral-history article button,
+#view-leader-history article button {
+  padding: .55rem .8rem;
+  border-radius: .65rem;
+}
+#view-avatar-container {
+  flex: 0 0 auto;
+}
+#view-name {
+  overflow-wrap: anywhere;
+}
+#view-ministry-management .flex,
+#view-admin-ministry-controls .flex {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+#view-admin-ministry-select {
+  min-height: 8rem;
+}
+#details-modal button:focus-visible,
+#details-modal select:focus-visible,
+#details-modal input:focus-visible,
+#details-modal textarea:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  #details-modal {
+    padding: .35rem !important;
+    align-items: flex-end !important;
+  }
+  #details-modal > div {
+    width: 100%;
+    max-height: 96dvh;
+    border-radius: 1rem 1rem .5rem .5rem;
+  }
+  #details-modal > div > div:first-child {
+    padding: .85rem 1rem;
+    gap: .75rem;
+  }
+  #details-modal-content {
+    padding: .85rem;
+    gap: 1rem;
+  }
+  #details-modal-content > div:first-child {
+    align-items: flex-start;
+    gap: .75rem;
+  }
+  #view-name {
+    font-size: 1.05rem;
+    line-height: 1.35rem;
+  }
+  #details-modal-content .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #details-modal-content [class*="col-span-"] {
+    grid-column: auto / span 1;
+  }
+  #view-history-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  #view-history-grid > section > div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .6rem;
+  }
+  #view-history-grid > section > div:first-child > button {
+    width: 100%;
+  }
+  #view-pastoral-history,
+  #view-leader-history {
+    max-height: 16rem;
+    padding-right: .1rem;
+  }
+  #details-modal-content button {
+    width: 100%;
+  }
+  #details-modal-content #view-pastoral-history button,
+  #details-modal-content #view-leader-history button {
+    width: auto;
+  }
+  #view-admin-ministry-controls .flex {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  #details-modal {
+    padding: .75rem !important;
+  }
+  #details-modal > div {
+    width: 100%;
+    max-height: 94dvh;
+  }
+  #details-modal-content {
+    padding: 1.1rem;
+  }
+  #details-modal-content .grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #details-modal-content .grid.grid-cols-1.lg\\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #view-history-grid > section > div:first-child {
+    flex-wrap: wrap;
+  }
+  #view-history-grid > section > div:first-child > button {
+    flex: 0 1 auto;
+  }
+  #details-modal-content button {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1025px) {
+  #details-modal-content {
+    padding: 1.5rem;
+  }
+  #view-history-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
