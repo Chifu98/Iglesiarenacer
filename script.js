@@ -311,7 +311,7 @@ async function refreshCloudData() {
     return member;
   }));
   const antecedentResult = await client.from("notas_antecedentes")
-    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,created_at")
+    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,autor_rol,created_at")
     .order("created_at", { ascending: false });
   if (antecedentResult.error) throw antecedentResult.error;
   antecedentNotes = antecedentResult.data || [];
@@ -2612,7 +2612,7 @@ function downloadFile(content, fileName, contentType) {
 let privateNoteContext = null;
 async function loadAntecedentNotes(memberId) {
   const { data, error } = await window.supabaseClient.from("notas_antecedentes")
-    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,created_at")
+    .select("id,miembro_id,tipo,contenido,autor_id,autor_nombre,autor_rol,created_at")
     .eq("miembro_id", String(memberId))
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -2642,7 +2642,7 @@ function renderAntecedentHistory(memberId, type) {
     const meta = document.createElement("p");
     meta.className = "text-[11px] text-slate-500 dark:text-slate-400";
     const date = note.created_at ? new Date(note.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible";
-    const authorRole = note.autor_rol || "Rol no disponible";
+    const authorRole = (note.autor_rol || "Rol no disponible").split(" / ").map(role => ({ admin: "Admin", pastor: "Pastor", lider: "Líder", miembro: "Miembro", hermano: "Miembro" }[role.trim()] || role.trim())).join(" / ");
     meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + authorRole + " · " + date;
     card.append(body, meta);
     const canDelete = !rolePreviewActive && (
@@ -2674,9 +2674,13 @@ async function deleteAntecedentNote(noteId, memberId, type) {
   );
   if (!allowed) return;
   if (!confirm("¿Seguro que deseas eliminar esta nota? Esta acción no se puede deshacer.")) return;
-  const { error } = await window.supabaseClient.from("notas_antecedentes").delete().eq("id", noteId);
+  const { data: deletedRows, error } = await window.supabaseClient.from("notas_antecedentes").delete().eq("id", noteId).select("id");
   if (error) {
     alert("No se pudo eliminar la nota: " + error.message);
+    return;
+  }
+  if (!deletedRows || deletedRows.length === 0) {
+    alert("No se eliminó la nota: Supabase no autorizó la operación para este rol o la nota ya no existe.");
     return;
   }
   try {
