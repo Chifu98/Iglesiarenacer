@@ -3497,9 +3497,14 @@ function viewDetails(id) {
   }
   const pastorLeaderControls = document.getElementById("view-pastor-leader-controls");
   if (pastorLeaderControls) {
-    const canManageLeaderRole = !rolePreviewActive && (hasRole("admin") || hasRole("pastor"));
+    const targetRoles = Array.isArray(member.roles) ? member.roles.map(role => String(role).toLowerCase()) : [];
+    const targetIsAdminOrPastor = targetRoles.includes("admin") || targetRoles.includes("pastor");
+    const canManageLeaderRole = !rolePreviewActive &&
+      (hasRole("admin") || hasRole("pastor")) &&
+      !targetIsAdminOrPastor;
     pastorLeaderControls.classList.toggle("hidden", !canManageLeaderRole);
     if (canManageLeaderRole) loadMemberLeaderRoleState(member.id);
+    else currentMemberLeaderRoleAvailable = false;
   }
 
   const accessControls = document.getElementById("view-admin-access-controls");
@@ -3528,6 +3533,12 @@ let currentMemberLeaderRole = false;
 let currentMemberLeaderRoleAvailable = false;
 
 async function loadMemberLeaderRoleState(memberId) {
+  const member = members.find(item => String(item.id) === String(memberId));
+  const targetRoles = Array.isArray(member?.roles) ? member.roles.map(role => String(role).toLowerCase()) : [];
+  if (targetRoles.includes("admin") || targetRoles.includes("pastor")) {
+    currentMemberLeaderRoleAvailable = false;
+    return;
+  }
   const status = document.getElementById("view-pastor-leader-status");
   const button = document.getElementById("view-pastor-leader-button");
   currentMemberLeaderRoleAvailable = false;
@@ -3563,6 +3574,9 @@ async function loadMemberLeaderRoleState(memberId) {
 }
 
 async function toggleMemberLeaderRole() {
+  const targetMember = members.find(item => String(item.id) === String(window.currentDetailsMemberId));
+  const targetRoles = Array.isArray(targetMember?.roles) ? targetMember.roles.map(role => String(role).toLowerCase()) : [];
+  if (targetRoles.includes("admin") || targetRoles.includes("pastor")) return;
   if (!currentUser || rolePreviewActive || !(hasRole("admin") || hasRole("pastor")) ||
       !window.currentDetailsMemberId || !currentMemberLeaderRoleAvailable) return;
   const assign = !currentMemberLeaderRole;
