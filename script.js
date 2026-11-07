@@ -2644,14 +2644,19 @@ function renderAntecedentHistory(memberId, type) {
     const date = note.created_at ? new Date(note.created_at).toLocaleString("es-CL", { dateStyle: "medium", timeStyle: "short" }) : "Fecha no disponible";
     meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + date;
     card.append(body, meta);
-    if (hasRole("admin") && !rolePreviewActive) {
+    const canDelete = !rolePreviewActive && (
+      hasRole("admin") ||
+      (hasRole("pastor") && type === "pastoral") ||
+      (hasRole("lider") && type === "lider" && note.autor_id === currentUser?.id)
+    );
+    if (canDelete) {
       const actions = document.createElement("div");
       actions.className = "flex justify-end";
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400";
       remove.textContent = "Eliminar nota";
-      remove.addEventListener("click", () => deleteAntecedentNote(note.id, memberId));
+      remove.addEventListener("click", () => deleteAntecedentNote(note.id, memberId, type));
       actions.appendChild(remove);
       card.appendChild(actions);
     }
@@ -2659,8 +2664,14 @@ function renderAntecedentHistory(memberId, type) {
   });
 }
 
-async function deleteAntecedentNote(noteId, memberId) {
-  if (!hasRole("admin") || rolePreviewActive) return;
+async function deleteAntecedentNote(noteId, memberId, type) {
+  const note = antecedentNotes.find(item => String(item.id) === String(noteId));
+  const allowed = !!note && !rolePreviewActive && (
+    hasRole("admin") ||
+    (hasRole("pastor") && type === "pastoral") ||
+    (hasRole("lider") && type === "lider" && note.autor_id === currentUser?.id)
+  );
+  if (!allowed) return;
   if (!confirm("¿Seguro que deseas eliminar esta nota? Esta acción no se puede deshacer.")) return;
   const { error } = await window.supabaseClient.from("notas_antecedentes").delete().eq("id", noteId);
   if (error) {
@@ -2679,7 +2690,7 @@ async function openPrivateNoteModal(memberId, type) {
   const member = members.find(item => String(item.id) === String(memberId));
   if (!member || !currentUser) return;
   if (type === "pastoral" && !(hasRole("admin") || hasRole("pastor"))) return;
-  if (type === "leader" && !hasRole("lider")) return;
+  if (type === "leader" && !(hasRole("admin") || hasRole("lider"))) return;
   privateNoteContext = { memberId: String(memberId), type };
   document.getElementById("private-note-title").textContent = type === "pastoral" ? "Nuevo antecedente pastoral" : "Nuevo antecedente de líder";
   document.getElementById("private-note-member").textContent = member.name;
@@ -2699,7 +2710,7 @@ async function savePrivateNote(event) {
   if (!note) { alert("Escribe un comentario antes de guardar."); return; }
   const type = privateNoteContext.type === "pastoral" ? "pastoral" : "lider";
   if (type === "pastoral" && !(hasRole("admin") || hasRole("pastor"))) return;
-  if (type === "lider" && !hasRole("lider")) return;
+  if (type === "lider" && !(hasRole("admin") || hasRole("lider"))) return;
   const memberId = privateNoteContext.memberId;
   const { error } = await window.supabaseClient.from("notas_antecedentes").insert({
     miembro_id: memberId, tipo: type, contenido: note
@@ -3449,7 +3460,7 @@ function viewDetails(id) {
   const addPastoral = document.getElementById("add-pastoral-note-button");
   const addLeader = document.getElementById("add-leader-note-button");
   if (addPastoral) addPastoral.classList.toggle("hidden", !canPastoral || rolePreviewActive);
-  if (addLeader) addLeader.classList.toggle("hidden", !hasRole("lider") || rolePreviewActive);
+  if (addLeader) addLeader.classList.toggle("hidden", !(hasRole("admin") || hasRole("lider")) || rolePreviewActive);
   loadAntecedentNotes(member.id).catch(error => console.error("No se pudo cargar el historial:", error));
   const ownPhotoControls = document.getElementById("view-own-photo-controls");
   if (ownPhotoControls) ownPhotoControls.classList.toggle("hidden", rolePreviewActive || !(currentUser && currentUser.memberId && String(currentUser.memberId) === String(member.id)));
