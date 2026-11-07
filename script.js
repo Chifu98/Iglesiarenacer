@@ -2647,7 +2647,7 @@ function renderAntecedentHistory(memberId, type) {
     const canDelete = !rolePreviewActive && (
       hasRole("admin") ||
       (hasRole("pastor") && type === "pastoral") ||
-      (hasRole("lider") && type === "lider" && note.autor_id === currentUser?.id)
+      (hasRole("lider") && type === "lider")
     );
     if (canDelete) {
       const actions = document.createElement("div");
@@ -2669,7 +2669,7 @@ async function deleteAntecedentNote(noteId, memberId, type) {
   const allowed = !!note && !rolePreviewActive && (
     hasRole("admin") ||
     (hasRole("pastor") && type === "pastoral") ||
-    (hasRole("lider") && type === "lider" && note.autor_id === currentUser?.id)
+    (hasRole("lider") && type === "lider")
   );
   if (!allowed) return;
   if (!confirm("¿Seguro que deseas eliminar esta nota? Esta acción no se puede deshacer.")) return;
