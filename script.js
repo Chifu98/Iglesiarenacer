@@ -2645,10 +2645,14 @@ function renderAntecedentHistory(memberId, type) {
     const authorRole = (note.autor_rol || "Rol no disponible").split(" / ").map(role => ({ admin: "Admin", pastor: "Pastor", lider: "Líder", miembro: "Miembro", hermano: "Miembro" }[role.trim()] || role.trim())).join(" / ");
     meta.textContent = "Registrado por " + (note.autor_nombre || "Usuario") + " · " + authorRole + " · " + date;
     card.append(body, meta);
+    const noteRoles = (note.autor_rol || "").split(" / ").map(role => role.trim().toLowerCase());
+    const adminAuthored = noteRoles.includes("admin");
+    const leaderOwnOrAdminNote = hasRole("lider") && type === "lider" &&
+      (String(note.autor_id || "") === String(currentUser?.id || "") || adminAuthored);
     const canDelete = !rolePreviewActive && (
       hasRole("admin") ||
       (hasRole("pastor") && type === "pastoral") ||
-      (hasRole("lider") && type === "lider")
+      leaderOwnOrAdminNote
     );
     if (canDelete) {
       const actions = document.createElement("div");
@@ -2667,10 +2671,14 @@ function renderAntecedentHistory(memberId, type) {
 
 async function deleteAntecedentNote(noteId, memberId, type) {
   const note = antecedentNotes.find(item => String(item.id) === String(noteId));
+  const noteRoles = (note?.autor_rol || "").split(" / ").map(role => role.trim().toLowerCase());
+  const adminAuthored = noteRoles.includes("admin");
+  const leaderOwnOrAdminNote = hasRole("lider") && type === "lider" &&
+    (String(note?.autor_id || "") === String(currentUser?.id || "") || adminAuthored);
   const allowed = !!note && !rolePreviewActive && (
     hasRole("admin") ||
     (hasRole("pastor") && type === "pastoral") ||
-    (hasRole("lider") && type === "lider")
+    leaderOwnOrAdminNote
   );
   if (!allowed) return;
   if (!confirm("¿Seguro que deseas eliminar esta nota? Esta acción no se puede deshacer.")) return;
